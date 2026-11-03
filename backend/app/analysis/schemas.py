@@ -540,12 +540,17 @@ class MetricsComparison(BaseModel):
 
 
 class TrendPoint(BaseModel):
+    """One experiment on the project recovery trend."""
+
     experiment_id: int
     code: str
     performed_on: str
     recovery_mean_pct: float | None
     recovery_rsd_pct: float | None
-    flag_count: int
+    flag_count: int = Field(description="QC flags needing attention (warning + critical)")
+    info_flag_count: int = Field(
+        default=0, description="Informational flags (severity info), not counted above"
+    )
     source_result_ids: list[int]
 
 

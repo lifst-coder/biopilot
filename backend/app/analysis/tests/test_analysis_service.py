@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -78,6 +79,12 @@ def test_trend_covers_all_experiments(session: Session, seeded: dict[str, int]) 
     assert [t.code for t in trend] == [f"#0{n}" for n in range(18, 25)]
     no_recovery = {t.code for t in trend if t.recovery_mean_pct is None}
     assert no_recovery == {"#021", "#023"}
+    # ISSUES P1-4: info flags (loq_above_lowest_level) are counted apart from flag_count.
+    for t in trend:
+        flags = service.get_metrics(session, t.experiment_id).flags
+        assert t.flag_count == sum(1 for f in flags if f.severity != "info")
+        assert t.info_flag_count == sum(1 for f in flags if f.severity == "info")
+    assert any(t.info_flag_count for t in trend)
 
 
 def test_recovery_without_calibration_is_skipped(session: Session, seeded: dict[str, int]) -> None:
@@ -387,3 +394,68 @@ def test_report_renders_stored_values(session: Session, seeded: dict[str, int]) 
     md23, _, _ = service.build_report(session, seeded["#023"], "markdown")
     assert "low_level_replicates" in md23
     assert service.list_methods()[0].kind == "calibration"
+
+
+def test_missing_or_non_finite_numbers_are_never_stored(
+    session: Session, seeded: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ISSUES P1-3: an empty/NaN/inf numeric cell is reported in ``skipped``, not stored.
+
+    ELN rejects such cells at upload; this simulates a dataset stored before that check
+    by serving a CSV with a blank ``analyte_area`` and an ``inf`` ``is_area``.
+    """
+    exp_id = _experiment(session, seeded, "#905")
+    clean = _cal_csv({"solvent": 0.01})
+    eln.create_dataset(
+        session, exp_id, DatasetCreate(kind="calibration", filename="c.csv", content=clean)
+    )
+    lines = clean.splitlines()
+    lines[2] = "C2,2.0,x,,1000,solvent"
+    lines[4] = "C4,10.0,x,100.0,inf,solvent"
+    broken = "\n".join(lines) + "\n"
+    monkeypatch.setattr(service.eln, "get_dataset_content", lambda _s, _id: broken)
+    before = session.query(AnalysisResult).count()
+    res = service.run_experiment(session, exp_id)
+    assert res.results == [] and res.created == 0
+    (msg,) = [s for s in res.skipped if s.startswith("calibration:")]
+    assert "analyte_area rows 2" in msg and "is_area rows 4" in msg
+    assert session.query(AnalysisResult).count() == before
+
+
+def test_non_finite_output_is_not_stored(
+    session: Session, seeded: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The store step refuses any NaN/inf in an output, whatever produced it."""
+    exp_id = _experiment(session, seeded, "#906")
+    eln.create_dataset(
+        session,
+        exp_id,
+        DatasetCreate(kind="calibration", filename="c.csv", content=_cal_csv({"solvent": 0.01})),
+    )
+    real = service._calibration_output
+
+    def nan_slope(*args: object, **kwargs: object):  # type: ignore[no-untyped-def]
+        out, flags, cal_map = real(*args, **kwargs)  # type: ignore[arg-type]
+        out.analytes[0].slope = float("nan")
+        return out, flags, cal_map
+
+    monkeypatch.setattr(service, "_calibration_output", nan_slope)
+    res = service.run_experiment(session, exp_id)
+    assert "calibration" not in {r.kind for r in res.results}
+    assert any("non-finite values in output (analytes[0].slope)" in s for s in res.skipped)
+
+
+def test_holm_keeps_an_underflowed_zero_p_value(
+    session: Session, seeded: dict[str, int], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ISSUES P1-5: p = 0.0 (underflow) is the smallest p, not 1.0."""
+    real = service.calc.welch_t_test
+
+    def zero_p(*args: object, **kwargs: object) -> service.calc.WelchResult:
+        return replace(real(*args, **kwargs), p_value=0.0)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(service.calc, "welch_t_test", zero_p)
+    cmp = service.compare(session, seeded["#018"], seeded["#024"])
+    tested = [d for d in cmp.per_analyte if d.p_value is not None]
+    assert tested and all(d.p_value == 0.0 for d in tested)
+    assert all(d.p_holm == 0.0 and d.significant for d in tested)

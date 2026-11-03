@@ -4,6 +4,20 @@ Defaults follow SANTE/11312/2021 (pesticide residue method validation). Flags ar
 *deterministic checks* against configurable thresholds, not interpretation —
 interpretation belongs to Partner. Every flag carries the label of the criteria
 version it was judged against (``criteria_version``).
+
+Severity policy (decided 2026-11-03, ISSUES ★1 / P1-4):
+
+* ``critical`` — the number cannot be used as reported (recovery or calibration out of
+  criteria, IS suppression, identification not confirmed, unsupported calibration type).
+* ``warning`` — the number stands but needs a look before it is trusted. Grubbs
+  ``outlier_suspected`` and ``uncertainty_high`` stay here: both say a stored value may
+  not represent the method (one injection pulls the mean; the expanded uncertainty is
+  wider than the criterion), which a reviewer must see. They are not demoted to info.
+* ``info`` — context that never fails a run: ``loq_above_lowest_level`` only.
+
+Counts shown as "flags" (Overview trend ``flag_count``, Memory ``qc_changes``) are
+warning + critical; info flags are counted separately (``info_flag_count``,
+``qc_info_changes``).
 """
 
 from __future__ import annotations

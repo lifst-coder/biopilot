@@ -8885,6 +8885,7 @@
         "type": "object"
       },
       "TrendPoint": {
+        "description": "One experiment on the project recovery trend.",
         "properties": {
           "code": {
             "title": "Code",
@@ -8895,7 +8896,14 @@
             "type": "integer"
           },
           "flag_count": {
+            "description": "QC flags needing attention (warning + critical)",
             "title": "Flag Count",
+            "type": "integer"
+          },
+          "info_flag_count": {
+            "default": 0,
+            "description": "Informational flags (severity info), not counted above",
+            "title": "Info Flag Count",
             "type": "integer"
           },
           "performed_on": {

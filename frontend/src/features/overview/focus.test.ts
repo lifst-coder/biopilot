@@ -9,6 +9,7 @@ const point = (id: number, mean: number | null, flags = 0): TrendPoint => ({
   recovery_mean_pct: mean,
   recovery_rsd_pct: null,
   flag_count: flags,
+  info_flag_count: 0,
   source_result_ids: [],
 });
 const criteria = { recovery_min_pct: 70, recovery_max_pct: 120 } as AcceptanceCriteria;

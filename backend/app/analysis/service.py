@@ -86,7 +86,7 @@ from app.analysis.schemas import (
 from app.core.audit import Actor, record_event
 from app.core.errors import NotFoundError
 from app.eln import service as eln
-from app.eln.schemas import ConditionBlock, DatasetOut
+from app.eln.schemas import DATASET_NUMERIC_COLUMNS, ConditionBlock, DatasetOut
 
 __all__ = ["METHOD_VERSIONS"]  # re-exported: CLAUDE.md refers to service.METHOD_VERSIONS
 
@@ -259,8 +259,41 @@ def _store(
     return _to_out(row), True
 
 
-def _frame(session: Session, dataset: DatasetOut) -> pd.DataFrame:
-    return pd.read_csv(io.StringIO(eln.get_dataset_content(session, dataset.id)))
+def _frame(session: Session, dataset: DatasetOut, *, check: bool = True) -> pd.DataFrame:
+    """The stored CSV of ``dataset`` as a frame.
+
+    With ``check`` (default) every contract numeric column must hold finite numbers:
+    an empty cell, ``nan`` or ``inf`` raises :class:`ValueError` naming the rows, which
+    the caller reports in ``skipped`` instead of computing a NaN result (ISSUES P1-3).
+    """
+    frame = pd.read_csv(io.StringIO(eln.get_dataset_content(session, dataset.id)))
+    if check:
+        problems: list[str] = []
+        for col in sorted(DATASET_NUMERIC_COLUMNS & set(frame.columns)):
+            values = pd.to_numeric(frame[col], errors="coerce").to_numpy(dtype=float)
+            rows = [int(i) + 1 for i in np.flatnonzero(~np.isfinite(values))]
+            if rows:
+                shown = ", ".join(str(r) for r in rows[:5]) + (" …" if len(rows) > 5 else "")
+                problems.append(f"{col} rows {shown}")
+        if problems:
+            raise ValueError(
+                f"dataset {dataset.id} has missing or non-finite numeric values "
+                f"({'; '.join(problems)}) — re-upload a corrected CSV (supersedes)"
+            )
+    return frame
+
+
+def _non_finite_paths(value: Any, path: str = "") -> list[str]:
+    """Paths of NaN/±inf floats inside a dumped output (``per_analyte[2].slope``)."""
+    if isinstance(value, float):
+        return [] if np.isfinite(value) else [path or "<root>"]
+    if isinstance(value, dict):
+        return [
+            p for k, v in value.items() for p in _non_finite_paths(v, f"{path}.{k}" if path else k)
+        ]
+    if isinstance(value, list | tuple):
+        return [p for i, v in enumerate(value) for p in _non_finite_paths(v, f"{path}[{i}]")]
+    return []
 
 
 _CALIBRATION_ALIASES: dict[str, str] = {
@@ -636,6 +669,15 @@ def run_experiment(session: Session, experiment_id: int, *, actor: Actor = "user
         flags: list[QCFlag],
     ) -> None:
         nonlocal created
+        bad = _non_finite_paths(output.model_dump(mode="python")) + [
+            f"flags[{i}].value" for i, f in enumerate(flags) if not np.isfinite(f.value)
+        ]
+        if bad:
+            # Last line of defence: a NaN/inf never becomes an immutable stored result.
+            skipped.append(
+                f"{kind}: non-finite values in output ({', '.join(bad[:3])}) — not stored"
+            )
+            return
         result, is_new = _store(
             session,
             experiment_id=experiment_id,
@@ -680,7 +722,9 @@ def run_experiment(session: Session, experiment_id: int, *, actor: Actor = "user
                     calibration_type_flag(
                         unsupported_type,
                         SUPPORTED_CALIBRATION_TYPES,
-                        len(_frame(session, rec)) if (rec := latest.get("recovery")) else 0,
+                        len(_frame(session, rec, check=False))
+                        if (rec := latest.get("recovery"))
+                        else 0,
                         label,
                     ),
                 ]
@@ -704,13 +748,13 @@ def run_experiment(session: Session, experiment_id: int, *, actor: Actor = "user
         elif cond.extraction_volume_ml is None or cond.sample_mass_g is None:
             skipped.append("recovery: condition block lacks extraction_volume_ml/sample_mass_g")
         else:
-            rec_frame = _frame(session, rec_ds)
             params = {
                 **cal_params,
                 "extraction_volume_ml": cond.extraction_volume_ml,
                 "sample_mass_g": cond.sample_mass_g,
             }
             try:
+                rec_frame = _frame(session, rec_ds)
                 cal_no_is = calc.calibrate(cal_frame, weighting, use_is=False)
                 rec_out, rec_flags = _recovery_output(
                     rec_frame,
@@ -908,7 +952,11 @@ def compare(session: Session, a: int, b: int) -> MetricsComparison:
                 delta.cohens_d, delta.hedges_g = w.cohens_d, w.hedges_g
                 tested.append(len(per_analyte))
         per_analyte.append(delta)
-    adjusted = calc.holm_adjust([per_analyte[i].p_value or 1.0 for i in tested])
+    # ``tested`` holds only analytes whose Welch test produced a p-value; an underflowed
+    # p = 0.0 is a real (very small) p-value and must not become 1.0 (ISSUES P1-5).
+    adjusted = calc.holm_adjust(
+        [1.0 if (p := per_analyte[i].p_value) is None else p for i in tested]
+    )
     for i, p_holm in zip(tested, adjusted, strict=True):
         per_analyte[i].p_holm = p_holm
         per_analyte[i].significant = p_holm < alpha
@@ -953,7 +1001,8 @@ def project_trend(session: Session, project_id: int) -> list[TrendPoint]:
                 performed_on=exp.performed_on.isoformat(),
                 recovery_mean_pct=m.recovery_mean_pct,
                 recovery_rsd_pct=m.recovery_rsd_pct,
-                flag_count=len(m.flags),
+                flag_count=sum(1 for f in m.flags if f.severity != "info"),
+                info_flag_count=sum(1 for f in m.flags if f.severity == "info"),
                 source_result_ids=m.source_result_ids,
             )
         )

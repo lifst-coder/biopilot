@@ -5054,14 +5054,26 @@ export interface components {
             /** Title */
             title: string;
         };
-        /** TrendPoint */
+        /**
+         * TrendPoint
+         * @description One experiment on the project recovery trend.
+         */
         TrendPoint: {
             /** Code */
             code: string;
             /** Experiment Id */
             experiment_id: number;
-            /** Flag Count */
+            /**
+             * Flag Count
+             * @description QC flags needing attention (warning + critical)
+             */
             flag_count: number;
+            /**
+             * Info Flag Count
+             * @description Informational flags (severity info), not counted above
+             * @default 0
+             */
+            info_flag_count: number;
             /** Performed On */
             performed_on: string;
             /** Recovery Mean Pct */
