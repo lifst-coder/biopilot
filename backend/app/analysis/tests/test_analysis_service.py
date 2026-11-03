@@ -284,6 +284,35 @@ def test_matrix_matched_calibration_selects_matrix_curve(
     assert mm.input_fingerprint != sv.input_fingerprint  # same dataset, different parameter
 
 
+@pytest.mark.parametrize("declared", ["standard-addition", "post-column infusion"])
+def test_unsupported_calibration_type_is_flagged_not_silently_solvent(
+    session: Session, seeded: dict[str, int], declared: str
+) -> None:
+    """Domain: solvent | matrix-matched | standard-addition. Analysis quantifies only the
+    first two; anything else gets an explicit critical flag and no recovery result."""
+    src = service.latest_results(session, seeded["#018"])
+    exp_id = _experiment(session, seeded, "#907", calibration_type=declared)
+    for kind, ds_ids in (
+        ("calibration", src["calibration"].input_dataset_ids[:1]),
+        ("recovery", src["recovery"].input_dataset_ids[1:]),
+    ):
+        content = eln.get_dataset_content(session, ds_ids[0])
+        eln.create_dataset(
+            session, exp_id, DatasetCreate(kind=kind, filename=f"{kind}.csv", content=content)
+        )
+    res = service.run_experiment(session, exp_id)
+    assert {r.kind for r in res.results} == {"calibration", "limits"}
+    assert any("not supported" in s and declared in s for s in res.skipped)
+    cal = next(r for r in res.results if r.kind == "calibration")
+    (flag,) = [f for f in cal.flags if f.code == "calibration_type_unsupported"]
+    assert flag.severity == "critical" and flag.context["declared"] == declared
+    assert flag.context["supported"] == ["solvent", "matrix-matched"]
+    assert flag.value > 0  # recovery injections left unquantified (rows of the stored CSV)
+    assert cal.parameters["calibration_type_declared"] == declared
+    m = service.get_metrics(session, exp_id)
+    assert m.qc_status == "fail" and m.recovery_mean_pct is None
+
+
 def test_data_problems_are_reported_as_skipped(session: Session, seeded: dict[str, int]) -> None:
     exp_id = _experiment(session, seeded, "#903", calibration_type="matrix-matched")
     solvent_only = _cal_csv({"solvent": 0.01})

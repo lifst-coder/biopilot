@@ -3,11 +3,19 @@ import { Card, EngineBadge, EvidenceChip, SeverityBadge } from "@/components";
 import { formatDateTime } from "@/lib/format";
 
 /** Findings with evidence chips. Numbers shown in chips are stored evidence values. */
-export function CritiqueView({ critique, historyCount }: { critique: CritiqueOut; historyCount: number }) {
+export function CritiqueView({
+  critique,
+  historyCount,
+  title = "비판적 검토 — 세부 지적",
+}: {
+  critique: CritiqueOut;
+  historyCount: number;
+  title?: string;
+}) {
   const evidence = new Map(critique.evidence.map((e) => [e.key, e]));
   return (
     <Card
-      title="비판적 검토"
+      title={title}
       subtitle={`비판 #${critique.id} · ${formatDateTime(critique.created_at)} · 이력 ${historyCount}건`}
       actions={<EngineBadge engine={critique.engine} model={critique.model} />}
     >

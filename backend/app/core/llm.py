@@ -6,13 +6,21 @@ Contract:
 * ``claude`` mode: Claude is asked for JSON matching a Pydantic schema. Any failure
   (network, refusal, schema mismatch) returns ``None`` so callers fall back to rules.
 Both modes therefore always produce the *same output schema* at the call site.
+
+Optional capability: :class:`StreamingLLMGateway` adds :meth:`stream_text` (plain-text
+token streaming, PAR-9). ``ClaudeGateway`` implements it with the Messages API streaming
+helper; ``RulesOnlyGateway`` does not, so callers detect it with ``isinstance`` and fall
+back to a blocking answer. Unlike ``generate``, a stream that fails (network, API error,
+refusal) *raises* :class:`LLMStreamError` — chunks may already have been shown, so the
+caller must explicitly replace them with its rules answer.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from typing import Protocol, TypeVar
+from collections.abc import Iterator
+from typing import Protocol, TypeVar, runtime_checkable
 
 from pydantic import BaseModel, ValidationError
 
@@ -33,6 +41,17 @@ class LLMGateway(Protocol):
     def model_name(self) -> str | None: ...
 
     def generate(self, *, system: str, prompt: str, schema: type[T]) -> T | None: ...
+
+
+@runtime_checkable
+class StreamingLLMGateway(Protocol):
+    """Gateway that can also stream plain text token by token (PAR-9)."""
+
+    def stream_text(self, *, system: str, prompt: str) -> Iterator[str]: ...
+
+
+class LLMStreamError(RuntimeError):
+    """A text stream ended without a usable answer (API error, network, refusal)."""
 
 
 class RulesOnlyGateway:
@@ -101,6 +120,34 @@ class ClaudeGateway:
         except (json.JSONDecodeError, ValidationError):
             logger.warning("Claude output did not match %s; falling back", schema.__name__)
             return None
+
+    def stream_text(self, *, system: str, prompt: str) -> Iterator[str]:
+        """Stream the answer's text deltas (Messages API streaming helper).
+
+        Yields text chunks as they arrive. Raises :class:`LLMStreamError` when the request
+        fails or Claude declines (``stop_reason == "refusal"``, also after a server-side
+        fallback); the caller then replaces the provisional text with its rules answer.
+        """
+        import anthropic
+
+        try:
+            with self._client.beta.messages.stream(
+                model=self._settings.claude_model,
+                max_tokens=16000,
+                system=system,
+                messages=[{"role": "user", "content": prompt}],
+                output_config={"effort": self._settings.claude_effort},
+                betas=["server-side-fallback-2026-07-01"],
+                fallbacks="default",
+            ) as stream:
+                yield from stream.text_stream
+                final = stream.get_final_message()
+        except anthropic.APIStatusError as exc:
+            raise LLMStreamError(f"Claude API error {exc.status_code}") from exc
+        except anthropic.APIConnectionError as exc:
+            raise LLMStreamError("Claude unreachable") from exc
+        if final.stop_reason == "refusal":
+            raise LLMStreamError("Claude declined the request")
 
 
 def _strict_schema(schema: type[BaseModel]) -> dict[str, object]:

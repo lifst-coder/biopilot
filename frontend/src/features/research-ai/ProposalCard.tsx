@@ -1,18 +1,41 @@
 import { useState } from "react";
-import { useDecideProposal } from "@/api/queries";
+import { useDecideProposal, useProposalExperimentDraft } from "@/api/queries";
 import type { DecisionCreate, ProposalOut } from "@/api/types";
 import { Badge, EngineBadge } from "@/components";
 import { formatConditionValue, formatDateTime } from "@/lib/format";
+import { DesignDetails } from "./DesignDetails";
 
 const STATUS_TONE = { pending: "warn", accepted: "ok", modified: "brand", rejected: "neutral" } as const;
+const STATUS_LABEL = { pending: "결정 대기", accepted: "채택", modified: "수정 채택", rejected: "기각" } as const;
+const ACTION_LABEL = { accept: "채택", modify: "수정", reject: "기각" } as const;
 
-/** One proposal with the accept / modify / reject decision form (rationale required). */
-export function ProposalCard({ proposal }: { proposal: ProposalOut }) {
+function DraftPreview({ proposalId }: { proposalId: number }) {
+  const { data, isPending, isError, error } = useProposalExperimentDraft(proposalId);
+  if (isPending) return <p className="text-ink-faint">초안 생성 중…</p>;
+  if (isError) return <p className="text-crit">{error.message}</p>;
+  return (
+    <div className="space-y-1 rounded-md border border-border p-2 text-[11px]">
+      <p>
+        <b>{data.draft.code}</b> · 기준 {data.base_experiment_code} {!data.ready && <Badge tone="warn">미리보기</Badge>}
+      </p>
+      {data.notes.map((n) => (
+        <p key={n} className="text-ink-muted">
+          {n}
+        </p>
+      ))}
+      <pre className="whitespace-pre-wrap font-mono">{data.draft.raw_note}</pre>
+    </div>
+  );
+}
+
+/** One proposal: design, priority factors, and the accept / modify / reject form (rationale required). */
+export function ProposalCard({ proposal, codeOf }: { proposal: ProposalOut; codeOf: (id: number) => string }) {
   const decide = useDecideProposal();
   const [action, setAction] = useState<DecisionCreate["action"]>("accept");
   const [rationale, setRationale] = useState("");
   const [modKey, setModKey] = useState(proposal.changes[0]?.key ?? "");
   const [modValue, setModValue] = useState("");
+  const [showDraft, setShowDraft] = useState(false);
 
   const submit = () => {
     const body: DecisionCreate = {
@@ -27,12 +50,19 @@ export function ProposalCard({ proposal }: { proposal: ProposalOut }) {
   return (
     <article className="flex flex-col gap-2 rounded-md border border-border p-3 text-xs">
       <header className="flex flex-wrap items-center gap-2">
-        <Badge tone={STATUS_TONE[proposal.status]}>{proposal.status}</Badge>
+        <Badge tone={STATUS_TONE[proposal.status]}>{STATUS_LABEL[proposal.status]}</Badge>
         {proposal.origin !== "user" && <EngineBadge engine={proposal.origin === "ai:claude" ? "claude" : "rules"} />}
         <span className="text-ink-faint">P{proposal.id}</span>
+        <span className="ml-auto" title={proposal.priority_factors.map((f) => `${f.name} +${f.points}: ${f.detail}`).join("\n")}>
+          <Badge tone="brand">우선순위 {proposal.priority}</Badge>
+        </span>
       </header>
       <h3 className="text-sm font-medium">{proposal.title}</h3>
       <p className="text-ink-muted">{proposal.description}</p>
+      {proposal.supersedes_proposal_ids.length > 0 && (
+        <p className="text-ai">기각 사유 반영: {proposal.supersedes_proposal_ids.map((id) => `P${id}`).join(", ")} 대체</p>
+      )}
+      {proposal.design && <DesignDetails design={proposal.design} codeOf={codeOf} />}
       {proposal.changes.length > 0 && (
         <ul className="rounded-md bg-subtle p-2 font-mono text-[11px]">
           {proposal.changes.map((c) => (
@@ -42,12 +72,32 @@ export function ProposalCard({ proposal }: { proposal: ProposalOut }) {
           ))}
         </ul>
       )}
+      {proposal.priority_factors.length > 0 && (
+        <ul className="flex flex-wrap gap-1">
+          {proposal.priority_factors.map((f) => (
+            <li key={f.name}>
+              <Badge>
+                {f.name} +{f.points}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+      {proposal.status !== "rejected" && (
+        <button type="button" className="bp-btn-ghost self-start" onClick={() => setShowDraft((v) => !v)}>
+          {showDraft ? "실험 초안 닫기" : "실험 초안 보기"}
+        </button>
+      )}
+      {showDraft && <DraftPreview proposalId={proposal.id} />}
 
       {proposal.decision ? (
         <div className="rounded-md bg-subtle p-2">
-          <b>{proposal.decision.action}</b> · {proposal.decision.decided_by} ·{" "}
+          <b>{ACTION_LABEL[proposal.decision.action]}</b> · {proposal.decision.decided_by} ·{" "}
           {formatDateTime(proposal.decision.created_at)}
-          <p className="mt-0.5 text-ink-muted">{proposal.decision.rationale}</p>
+          <p className="mt-0.5 text-ink-muted">사유: {proposal.decision.rationale}</p>
+          {proposal.decision.constraints.length > 0 && (
+            <p className="text-ink-faint">인식된 제약: {proposal.decision.constraints.join(", ")}</p>
+          )}
           {proposal.decision.modifications.map((m) => (
             <p key={m.key} className="font-mono text-[11px]">
               {m.key} → {formatConditionValue(m.value)}
@@ -66,7 +116,7 @@ export function ProposalCard({ proposal }: { proposal: ProposalOut }) {
                 onClick={() => setAction(a)}
                 className={action === a ? "bp-btn-primary" : "bp-btn-ghost"}
               >
-                {{ accept: "수락", modify: "수정", reject: "거절" }[a]}
+                {ACTION_LABEL[a]}
               </button>
             ))}
           </div>
@@ -78,7 +128,7 @@ export function ProposalCard({ proposal }: { proposal: ProposalOut }) {
           )}
           <textarea
             className="bp-input h-16 resize-none"
-            placeholder="결정 근거 (필수)"
+            placeholder="결정 사유 (필수) — 이후 비판·제안이 이 사유를 참조합니다"
             value={rationale}
             onChange={(e) => setRationale(e.target.value)}
           />

@@ -151,7 +151,8 @@ def test_ask_routes_topics_to_evidence(session: Session, seeded: dict[str, int])
     no_exp = service.ask(
         session, AskRequest(project_id=seeded["project"], question="요약"), gateway=rules
     )
-    assert no_exp.evidence == [] and "7건" in no_exp.answer
+    assert no_exp.intent == "project" and "7건" in no_exp.answer
+    assert all(e.source in {"eln", "analysis"} for e in no_exp.evidence)
 
 
 def test_mode_reporting(fake_gateway_factory) -> None:

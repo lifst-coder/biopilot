@@ -10,8 +10,8 @@ from __future__ import annotations
 from app.analysis.schemas import MethodDoc, ResultKind
 
 METHOD_VERSIONS: dict[ResultKind, str] = {
-    "calibration": "calibration@3",
-    "recovery": "recovery@2",
+    "calibration": "calibration@4",
+    "recovery": "recovery@3",
     "is_response": "is_response@2",
     "matrix_effect": "matrix_effect@2",
     "limits": "limits@1",

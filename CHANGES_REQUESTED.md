@@ -50,7 +50,7 @@
 - 완료 기준: kind `ion_ratio` 업로드 시 `POST /api/analysis/experiments/{id}/run`이 `ion_ratio` 결과 생성
   (Analysis 쪽은 추가 변경 불필요).
 
-## [OPEN] partner — 프로젝트별 기준·신규 지표 사용
+## [DONE] partner — 프로젝트별 기준·신규 지표 사용
 - 요청자: analysis · 날짜: 2026-11-03
 - 필요 이유: 기준이 프로젝트별 버전(ANA-6)이 되었다. `partner/context.py`는 아직 `analysis.get_criteria()`
   (기본값)를 쓰므로 프로젝트 기준을 바꾸면 비판 문구의 기준과 플래그 기준이 어긋날 수 있다.
@@ -58,6 +58,9 @@
   새로 쓸 수 있는 근거 값: `ExperimentMetrics.qc_verdicts / limits / expanded_uncertainty_pct / outlier_count`,
   `MetricsComparison.per_analyte[].p_holm / hedges_g / ci_low / ci_high`, `significant_analytes`.
 - 완료 기준: 기준 v1 생성 후 비판의 기준 Evidence가 v1 값을 인용.
+- **완료(integration, 2026-11-03):** `partner/context.py` 두 곳(`build_context`, `build_project_context`)과
+  `partner/service.py:_pool_index`가 `get_project_criteria(...).active.criteria`를 쓴다.
+  테스트 `app/partner/tests/test_project_criteria.py`. 신규 지표 활용은 남은 작업(ISSUES.md).
 
 ## [OPEN] docs — ARCHITECTURE.md Analysis 계약 갱신
 - 요청자: analysis · 날짜: 2026-11-03
@@ -225,3 +228,79 @@
 - 요청자: memory · 날짜: 2026-11-03
 - 내용: 새 GET 엔드포인트용 `PATH_PARAMS["key"]`와 `QUERY_PARAMS`(recall, compare-conditions) 항목만 추가했다.
   검사 로직은 바꾸지 않았다.
+
+## [DONE] core — LLM 게이트웨이 텍스트 스트리밍 (`stream_text`)
+- 요청자: partner · 날짜: 2026-11-03
+- 필요 이유: PAR-9 `/api/partner/ask/stream`은 게이트웨이가 `stream_text`를 제공할 때만 Claude 토큰을
+  임시(provisional) delta로 흘린다. 현재 `ClaudeGateway`에는 없어서 Claude 모드에서도 검증 후 한 번에 전달된다.
+- 제안하는 계약: `LLMGateway`에 선택 메서드 `stream_text(*, system: str, prompt: str) -> Iterator[str]`
+  (Messages API streaming, 실패 시 예외). Partner는 `app.partner.service.StreamingGateway`
+  (runtime_checkable Protocol)로 감지하므로 추가만 하면 된다. `RulesOnlyGateway`는 구현하지 않는다.
+- 완료 기준: FakeGateway 대역으로 delta 순서 테스트, 네트워크 없는 테스트 유지.
+- **완료(integration, 2026-11-03):** `core/llm.py`에 `StreamingLLMGateway`(runtime_checkable)·`LLMStreamError`·
+  `ClaudeGateway.stream_text`(`client.beta.messages.stream` + `text_stream`, effort, server-side fallback,
+  refusal/API 오류 시 예외) 추가. 테스트 `tests/test_llm_stream.py`(스텁 클라이언트, 거절·연결 오류,
+  스트리밍 미지원 게이트웨이의 비스트리밍 경로, partner `StreamingGateway` 감지).
+
+## [OPEN] memory — 연구자 결정(Decision) 피드백을 Research Memory에 반영
+- 요청자: partner · 날짜: 2026-11-03
+- 필요 이유: 기각·수정 사유는 지금 `partner_decisions`에 저장되고 Partner가 이후 비판·제안에 반영한다
+  (`GET /api/partner/projects/{id}/decisions`). Memory는 Partner를 import할 수 없으므로(의존 방향),
+  Memory 검색·타임라인에서 결정 사유가 보이려면 Partner가 Memory로 밀어 넣는 API가 필요하다.
+- 제안하는 계약: MEM-7 `KnowledgeNote`에 출처 필드 추가 후
+  `memory.service.create_knowledge_note(session, project_id, *, statement, linked_experiment_ids,
+  author, source_ref: str | None = None) -> KnowledgeNoteOut` (불변 + 감사). Partner `decide()`가
+  `source_ref="partner.Decision:<id>"`로 호출한다(Partner 쪽 한 줄 추가는 MEM-7 완료 후 진행).
+- 완료 기준: 기각 사유 텍스트가 `/api/memory/projects/{id}/search` 결과에 나타남.
+
+## [OPEN] analysis — 전·후 첨가 비교(`spike_recovery`) 결과 종류
+- 요청자: partner · 날짜: 2026-11-03
+- 필요 이유: Designer의 최우선 제안(추출 전·후 첨가 비교)은 RE = pre/post, ME = post/용매, PE = pre/용매
+  계산이 필요하다. Partner는 숫자를 계산하지 않으므로 Analysis 결과로 받아야 Critic이 판정을
+  `indeterminate` → `supported/refuted`로 바꿀 수 있다.
+- 제안하는 계약: ELN dataset kind(예: `spike_recovery`: injection_id, analyte, spike_stage(pre|post|solvent),
+  level_ng_ml, analyte_area, is_area) + result kind `spike_recovery`(분석물별 RE·ME·PE, QC 플래그).
+  조건 블록 `spike_stage`를 쓰면 Partner의 `post_spike_recorded`가 이미 이를 인식한다.
+- 완료 기준: 결과가 생기면 `ExperimentMetrics`에 분석물별 RE/ME 필드(추가만).
+
+## [OPEN] analysis — IS 이탈 주입별 회수율 층화 + 요인 실험 분산분석
+- 요청자: partner · 날짜: 2026-11-03
+- 필요 이유: (1) Critic의 "IS 보정 왜곡" 대안 설명을 판정하려면 IS 이탈 주입과 정상 주입의 회수율 비교가
+  필요하다(현재는 "Analysis 결과 없음"을 확정 불가 이유로 표시). (2) Designer의 2×2 요인 실험 결과 판독에
+  주효과·교호작용 검정이 필요하다.
+- 제안하는 계약: `RecoveryOutput.by_is_flag: {flagged: group, normal: group, welch_p}`(추가 필드),
+  result kind `factorial`(조건 블록 `design = factorial 2x2`, `factor_<key>` 값 사용).
+- 완료 기준: 시드 #024에서 by_is_flag 생성, 요인 실험 단위 테스트.
+
+## [OPEN] eln — 조건 블록 키 `calibration_type`·`spike_stage`·`is_addition_stage` 정식 필드화
+- 요청자: partner · 날짜: 2026-11-03
+- 필요 이유: Critic이 매트릭스 매칭 검량선 사용 여부·전/후 첨가 기록·IS 첨가 시점을 이 키로 판단한다.
+  지금은 `ConditionBlock` extra 키라서 라벨·검증이 없다. 시드 실험에는 기록이 없어 "미기록"으로 판정된다.
+- 제안하는 계약: `ConditionBlock`에 `calibration_type: Literal["solvent","matrix-matched","standard-addition"] | None`,
+  `spike_stage: str | None`, `is_addition_stage: Literal["pre-extraction","post-extraction"] | None` +
+  `CONDITION_FIELD_LABELS` 라벨. ELN-8 실험 생성 폼은 `GET /api/partner/proposals/{id}/experiment-draft`의
+  `draft`(ExperimentCreate)를 초기값으로 쓸 수 있다.
+- 완료 기준: 기존 extra 값 하위호환, 라벨 노출.
+
+## [OPEN] frontend shell — Partner 신규 스키마 별칭을 `api/types.ts`에
+- 요청자: partner · 날짜: 2026-11-03
+- 필요 이유: `CriticAssessment`, `ExperimentDesign`, `DecisionHistoryEntry`, `AnswerStatement` 등을 지금은
+  `features/research-ai/types.ts`·`partner-panel/AnswerView.tsx`에서 `Schemas[...]`로 로컬 선언한다.
+- 완료 기준: 공용 별칭 추가 후 Partner 화면은 로컬 별칭을 제거(Partner 담당이 후속 처리).
+
+## [OPEN] eln — `calibration_type` 정식 필드: 도메인 확정 `solvent | matrix-matched | standard-addition`
+- 요청자: integration(병합 세션) · 날짜: 2026-11-03
+- 결정: 세 모듈의 값 도메인을 `solvent | matrix-matched | standard-addition`으로 확정한다(미기록 = `solvent`).
+  계약 상수는 `app.analysis.schemas.CalibrationTypeValue` / `CALIBRATION_TYPE_VALUES`.
+  - Analysis(완료): `solvent`·`matrix-matched`만 정량한다. `standard-addition`과 도메인 밖 값은 더 이상 조용히
+    `solvent`로 처리하지 않고, 검량 결과에 critical 플래그 `calibration_type_unsupported`(context: declared,
+    supported)를 붙이고 회수율·IS 결과를 만들지 않는다(`skipped`에 사유). `calibration@4`, `recovery@3`.
+  - Partner: `knowledge.MATRIX_MATCHED_VALUES`는 standard-addition을 매트릭스 보정으로 본다(화학적으로 맞음).
+    단 Analysis가 아직 정량하지 못하므로 그 실험에는 회수율 근거가 없다.
+- 요청(ELN): `ConditionBlock.calibration_type: Literal["solvent","matrix-matched","standard-addition"] | None`,
+  라벨 "검량 방식", 기존 extra 값 하위호환. analysis·partner의 기존 두 CR(2값/3값)을 이 1건으로 대체한다.
+- 남은 상충(Partner): 설계기 `pre_post_spike` 제안이 `calibration_type = "solvent + matrix-matched"`(두 곡선 모두)를
+  낸다. 도메인 밖 값이므로 ELN 필드가 Literal이 되면 PAR-2 초안이 400이 된다. 제안 값 변경은 제안 서명과
+  seed lab 결정 이력에 영향을 주므로 이번 병합에서는 바꾸지 않았다 → Partner 후속(ISSUES.md).
+- 완료 기준: 필드 추가 후 `test_matrix_matched_calibration_selects_matrix_curve`,
+  `test_unsupported_calibration_type_is_flagged_not_silently_solvent` 통과.

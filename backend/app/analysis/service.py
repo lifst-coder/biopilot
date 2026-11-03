@@ -21,6 +21,7 @@ from app.analysis.criteria import (
     DEFAULT_CRITERIA,
     DEFAULT_CRITERIA_LABEL,
     calibration_flags,
+    calibration_type_flag,
     ion_ratio_flag,
     is_response_flag,
     loq_flag,
@@ -40,6 +41,7 @@ from app.analysis.methods import (
 from app.analysis.models import AnalysisCriteriaVersion, AnalysisResult
 from app.analysis.report import render_csv, render_markdown
 from app.analysis.schemas import (
+    SUPPORTED_CALIBRATION_TYPES,
     AcceptanceCriteria,
     AnalysisOutput,
     AnalysisResultOut,
@@ -261,11 +263,32 @@ def _frame(session: Session, dataset: DatasetOut) -> pd.DataFrame:
     return pd.read_csv(io.StringIO(eln.get_dataset_content(session, dataset.id)))
 
 
-def _calibration_type(cond: ConditionBlock) -> calc.CalibrationType:
-    """``calibration_type`` from the condition block's extra keys (default ``solvent``)."""
+_CALIBRATION_ALIASES: dict[str, str] = {
+    "": "solvent",
+    "solvent": "solvent",
+    "matrix-matched": "matrix-matched",
+    "matrix": "matrix-matched",
+    "mm": "matrix-matched",
+    "standard-addition": "standard-addition",
+}
+
+
+def _calibration_type(cond: ConditionBlock) -> tuple[calc.CalibrationType, str | None]:
+    """``calibration_type`` of the condition block → (curve to quantify with, problem).
+
+    Domain: ``solvent | matrix-matched | standard-addition`` (missing = ``solvent``).
+    ``problem`` is the declared value when Analysis cannot honour it — ``standard-addition``
+    (valid but not supported yet) or a value outside the domain. Such values are never
+    silently treated as ``solvent``; the caller flags them and skips quantification.
+    """
     raw = (cond.model_extra or {}).get("calibration_type")
     text = str(raw).strip().lower().replace("_", "-").replace(" ", "-") if raw else ""
-    return "matrix-matched" if text in {"matrix-matched", "matrix", "mm"} else "solvent"
+    value = _CALIBRATION_ALIASES.get(text)
+    if value == "matrix-matched":
+        return "matrix-matched", None
+    if value == "solvent":
+        return "solvent", None
+    return "solvent", str(raw)
 
 
 # ------------------------------------------------------------ computations
@@ -595,7 +618,7 @@ def run_experiment(session: Session, experiment_id: int, *, actor: Actor = "user
     ion_ds = latest.get("ion_ratio")
     cond = exp.condition_block
     weighting: calc.Weighting = cond.calibration_weighting or "none"
-    calibration_type = _calibration_type(cond)
+    calibration_type, unsupported_type = _calibration_type(cond)
     factor = (
         cond.extraction_volume_ml / cond.sample_mass_g
         if cond.extraction_volume_ml and cond.sample_mass_g
@@ -631,6 +654,8 @@ def run_experiment(session: Session, experiment_id: int, *, actor: Actor = "user
     cal_frame: pd.DataFrame | None = None
     cal_map: dict[str, calc.AnalyteCalibration] | None = None
     cal_params: dict[str, Any] = {"weighting": weighting, "calibration_type": calibration_type}
+    if unsupported_type is not None:
+        cal_params["calibration_type_declared"] = unsupported_type
     if cal_ds is not None:
         try:
             cal_frame, curve_used = calc.select_calibration_curve(
@@ -649,6 +674,16 @@ def run_experiment(session: Session, experiment_id: int, *, actor: Actor = "user
             cal_frame, cal_map = None, None
         else:
             cal_params["curve_used"] = curve_used
+            if unsupported_type is not None:
+                cal_flags = [
+                    *cal_flags,
+                    calibration_type_flag(
+                        unsupported_type,
+                        SUPPORTED_CALIBRATION_TYPES,
+                        len(_frame(session, rec)) if (rec := latest.get("recovery")) else 0,
+                        label,
+                    ),
+                ]
             store("calibration", [cal_ds], cal_params, cal_out, cal_flags)
             try:
                 lim_out, lim_flags = _limits_output(cal_frame, cal_map, criteria, label, factor)
@@ -659,7 +694,12 @@ def run_experiment(session: Session, experiment_id: int, *, actor: Actor = "user
 
     rec_ds = latest.get("recovery")
     if rec_ds is not None:
-        if cal_ds is None or cal_map is None or cal_frame is None:
+        if unsupported_type is not None:
+            skipped.append(
+                f"recovery: calibration_type '{unsupported_type}' is not supported by Analysis "
+                f"(supported: {', '.join(SUPPORTED_CALIBRATION_TYPES)})"
+            )
+        elif cal_ds is None or cal_map is None or cal_frame is None:
             skipped.append("recovery: experiment has no calibration dataset")
         elif cond.extraction_volume_ml is None or cond.sample_mass_g is None:
             skipped.append("recovery: condition block lacks extraction_volume_ml/sample_mass_g")

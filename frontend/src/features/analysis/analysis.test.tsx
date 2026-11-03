@@ -97,7 +97,7 @@ describe("FlagList and verdicts", () => {
     expect(screen.getByText("S-03")).toBeTruthy();
     expect(screen.getByText("tebuconazole · S-05")).toBeTruthy();
     expect(screen.getByText("project-1@v2")).toBeTruthy();
-    expect(Object.keys(FLAG_LABELS)).toHaveLength(11);
+    expect(Object.keys(FLAG_LABELS)).toHaveLength(12);
   });
 
   it("renders pass/fail badges per analyte", () => {

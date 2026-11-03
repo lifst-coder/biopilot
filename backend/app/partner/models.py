@@ -13,12 +13,20 @@ from app.core.immutability import ImmutableMixin
 
 
 class Critique(ImmutableMixin, Base):
-    """One critique run over an experiment, with the evidence snapshot it used."""
+    """One critique run (experiment or project scope) with the evidence snapshot it used.
+
+    ``context_fingerprint`` hashes the grounded inputs (evidence + decision history) so an
+    identical question can reuse the stored critique instead of re-running it.
+    """
 
     __tablename__ = "partner_critiques"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    experiment_id: Mapped[int] = mapped_column(ForeignKey("eln_experiments.id"), index=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("eln_projects.id"), index=True)
+    scope: Mapped[str] = mapped_column(String(16), default="experiment")
+    experiment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("eln_experiments.id"), index=True, nullable=True
+    )
     baseline_experiment_id: Mapped[int | None] = mapped_column(
         ForeignKey("eln_experiments.id"), nullable=True
     )
@@ -27,7 +35,11 @@ class Critique(ImmutableMixin, Base):
     fallback_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     summary: Mapped[str] = mapped_column(Text)
     findings: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+    assessments: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    decision_feedback: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     evidence: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+    reused_proposal_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
+    context_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -76,6 +88,12 @@ class Proposal(ImmutableMixin, Base):
         "changes",
         "evidence_keys",
         "origin",
+        "design",
+        "base_experiment_id",
+        "priority",
+        "priority_factors",
+        "signature",
+        "supersedes_proposal_ids",
         "created_at",
     )
 
@@ -94,6 +112,14 @@ class Proposal(ImmutableMixin, Base):
     evidence_keys: Mapped[list[str]] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(16), default="pending")
     origin: Mapped[str] = mapped_column(String(16))
+    design: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    base_experiment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("eln_experiments.id"), nullable=True
+    )
+    priority: Mapped[int] = mapped_column(Integer, default=0)
+    priority_factors: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    signature: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    supersedes_proposal_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
@@ -110,4 +136,38 @@ class Decision(ImmutableMixin, Base):
     rationale: Mapped[str] = mapped_column(Text)
     modifications: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     decided_by: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class HypothesisTransition(ImmutableMixin, Base):
+    """One audited status change of a :class:`Hypothesis` (fully immutable)."""
+
+    __tablename__ = "partner_hypothesis_transitions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    hypothesis_id: Mapped[int] = mapped_column(ForeignKey("partner_hypotheses.id"), index=True)
+    from_status: Mapped[str] = mapped_column(String(16))
+    to_status: Mapped[str] = mapped_column(String(16))
+    rationale: Mapped[str] = mapped_column(Text)
+    evidence_result_ids: Mapped[list[int]] = mapped_column(JSON, default=list)
+    decided_by: Mapped[str] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class PartnerExchange(ImmutableMixin, Base):
+    """A stored Q&A exchange: question plus the full grounded answer (fully immutable)."""
+
+    __tablename__ = "partner_exchanges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("eln_projects.id"), index=True)
+    experiment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("eln_experiments.id"), index=True, nullable=True
+    )
+    question: Mapped[str] = mapped_column(Text)
+    engine: Mapped[str] = mapped_column(String(16))
+    response: Mapped[dict[str, Any]] = mapped_column(JSON)
+    critique_id: Mapped[int | None] = mapped_column(
+        ForeignKey("partner_critiques.id"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

@@ -103,7 +103,14 @@ def test_decision_status_and_tests_proposal_are_tracked(
 ) -> None:
     pid = seeded["project"]
     service.get_knowledge_graph(session, pid)
-    proposal = next(p for p in partner.list_proposals(session, pid) if p.id == 3)
+    # Pick the proposal by content (not by id): one whose changes are all plain condition
+    # keys a follow-up experiment can apply directly (no factorial/design descriptors).
+    proposal = next(
+        p
+        for p in partner.list_proposals(session, pid)
+        if p.changes
+        and not any(c.key == "design" or c.key.startswith("factor_") for c in p.changes)
+    )
     partner.decide(
         session, proposal.id, DecisionCreate(action="accept", rationale="단일 변수 확인")
     )
@@ -115,7 +122,8 @@ def test_decision_status_and_tests_proposal_are_tracked(
     prop_node = next(n for n in g.nodes if n.id == f"proposal:{proposal.id}")
     assert prop_node.attrs["status"] == "accepted"
 
-    follow = make_child(session, proposal.experiment_id, "#027", extraction_time_min=5.0)
+    applied = {c.key: c.value for c in proposal.changes}
+    follow = make_child(session, proposal.experiment_id, "#027", **applied)
     g2 = service.get_knowledge_graph(session, pid)
     assert (f"proposal:{proposal.id}", f"experiment:{follow.id}", "tests_proposal") in _edges(g2)
     lineage = service.get_graph(session, pid, ["tests_proposal"])

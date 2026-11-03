@@ -14,6 +14,7 @@ export const FLAG_LABELS: Record<QCFlag["code"], string> = {
   uncertainty_high: "확장 불확도 초과",
   ion_ratio_out_of_range: "이온비 허용범위 이탈",
   loq_above_lowest_level: "LOQ > 최저 검량 수준",
+  calibration_type_unsupported: "검량 방식 미지원",
 };
 
 export const WEIGHTING_LABELS: Record<Weighting, string> = {

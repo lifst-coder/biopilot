@@ -31,7 +31,14 @@ FlagCode = Literal[
     "uncertainty_high",
     "ion_ratio_out_of_range",
     "loq_above_lowest_level",
+    "calibration_type_unsupported",
 ]
+#: Contract domain of the condition-block key ``calibration_type`` (shared with Partner/ELN).
+#: Analysis quantifies ``solvent`` and ``matrix-matched``; ``standard-addition`` is a valid
+#: protocol value that Analysis does **not** support yet and flags explicitly.
+CalibrationTypeValue = Literal["solvent", "matrix-matched", "standard-addition"]
+CALIBRATION_TYPE_VALUES: tuple[str, ...] = ("solvent", "matrix-matched", "standard-addition")
+SUPPORTED_CALIBRATION_TYPES: tuple[str, ...] = ("solvent", "matrix-matched")
 QCStatus = Literal["pass", "warning", "fail", "not_analyzed"]
 ReportFormat = Literal["markdown", "csv"]
 

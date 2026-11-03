@@ -188,6 +188,24 @@ def ion_ratio_flag(
     )
 
 
+def calibration_type_flag(
+    declared: str, supported: Iterable[str], unquantified: int, version: str | None = None
+) -> QCFlag:
+    """Declared ``calibration_type`` that Analysis cannot quantify with (critical).
+
+    The calibration fit is still stored, but recovery/IS results are not computed, so no
+    number is ever produced as if the declared protocol had been followed. ``value`` is
+    the number of recovery injections (rows of the stored CSV) left unquantified.
+    """
+    return QCFlag(
+        code="calibration_type_unsupported",
+        severity="critical",
+        value=float(unquantified),
+        context={"declared": declared, "supported": list(supported)},
+        criteria_version=version,
+    )
+
+
 def loq_flag(
     analyte: str, loq: float, lowest_level: float, version: str | None = None
 ) -> QCFlag | None:

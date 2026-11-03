@@ -135,6 +135,57 @@
         "title": "AcceptanceCriteria",
         "type": "object"
       },
+      "AlternativeExplanation": {
+        "description": "A competing explanation of the observation with its own pro/contra arguments.",
+        "properties": {
+          "id": {
+            "description": "Stable id, e.g. 'matrix_suppression'",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "mechanism": {
+            "title": "Mechanism",
+            "type": "string"
+          },
+          "opposing": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CriticArgument"
+            },
+            "title": "Opposing",
+            "type": "array"
+          },
+          "status": {
+            "default": "untested",
+            "enum": [
+              "plausible",
+              "weakened",
+              "untested"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supporting": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CriticArgument"
+            },
+            "title": "Supporting",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "mechanism"
+        ],
+        "title": "AlternativeExplanation",
+        "type": "object"
+      },
       "AnalysisResultOut": {
         "description": "An immutable, stored analysis result with full provenance.",
         "properties": {
@@ -675,7 +726,8 @@
                 "outlier_suspected",
                 "uncertainty_high",
                 "ion_ratio_out_of_range",
-                "loq_above_lowest_level"
+                "loq_above_lowest_level",
+                "calibration_type_unsupported"
               ],
               "type": "string"
             },
@@ -705,7 +757,8 @@
                 "outlier_suspected",
                 "uncertainty_high",
                 "ion_ratio_out_of_range",
-                "loq_above_lowest_level"
+                "loq_above_lowest_level",
+                "calibration_type_unsupported"
               ],
               "type": "string"
             },
@@ -718,6 +771,38 @@
           "status"
         ],
         "title": "AnalyteVerdict",
+        "type": "object"
+      },
+      "AnswerStatement": {
+        "description": "One sentence of an answer.\n\n``fact`` restates stored evidence, ``inference`` is a rule-based judgement over\ncited evidence, ``estimate`` (추정) has no direct supporting data. Statements\nwithout evidence keys are always downgraded to ``estimate``.",
+        "properties": {
+          "evidence_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Keys",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "fact",
+              "inference",
+              "estimate"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "kind"
+        ],
+        "title": "AnswerStatement",
         "type": "object"
       },
       "AskRequest": {
@@ -757,6 +842,17 @@
             "title": "Answer",
             "type": "string"
           },
+          "critique_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critique Id"
+          },
           "engine": {
             "enum": [
               "rules",
@@ -770,6 +866,75 @@
               "$ref": "#/components/schemas/Evidence"
             },
             "title": "Evidence",
+            "type": "array"
+          },
+          "exchange_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange Id"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "intent": {
+            "default": "facts",
+            "enum": [
+              "cause",
+              "next_experiment",
+              "decisions",
+              "facts",
+              "project"
+            ],
+            "title": "Intent",
+            "type": "string"
+          },
+          "proposal_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Proposal Ids",
+            "type": "array"
+          },
+          "sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/app__partner__schemas__SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "statements": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AnswerStatement"
+            },
+            "title": "Statements",
             "type": "array"
           },
           "topics": {
@@ -1316,7 +1481,7 @@
           "sources": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/SourceRef"
+              "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
             },
             "title": "Sources",
             "type": "array"
@@ -1449,7 +1614,7 @@
             "title": "Previous Value"
           },
           "source": {
-            "$ref": "#/components/schemas/SourceRef"
+            "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
           },
           "value": {
             "title": "Value"
@@ -1841,8 +2006,128 @@
         "title": "CriteriaVersionOut",
         "type": "object"
       },
+      "CriticArgument": {
+        "description": "One argument in a structured critique.\n\n``basis`` says what the argument rests on: ``data`` (stored evidence),\n``domain_rule`` (documented domain knowledge, not measured here) or ``decision``\n(a recorded researcher decision).",
+        "properties": {
+          "basis": {
+            "default": "data",
+            "enum": [
+              "data",
+              "domain_rule",
+              "decision"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "evidence_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Keys",
+            "type": "array"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement"
+        ],
+        "title": "CriticArgument",
+        "type": "object"
+      },
+      "CriticAssessment": {
+        "description": "Structured Research Critic output for one claim.\n\nSections map 1:1 to the critic contract: 지지 근거 / 반대 근거 / 누락 대조군 /\n대안 설명 / 현재 데이터로 확정 불가한 이유.",
+        "properties": {
+          "alternative_explanations": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AlternativeExplanation"
+            },
+            "title": "Alternative Explanations",
+            "type": "array"
+          },
+          "claim": {
+            "title": "Claim",
+            "type": "string"
+          },
+          "id": {
+            "description": "Stable id, e.g. 'recovery_cause'",
+            "title": "Id",
+            "type": "string"
+          },
+          "missing_controls": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MissingControl"
+            },
+            "title": "Missing Controls",
+            "type": "array"
+          },
+          "opposing_evidence": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CriticArgument"
+            },
+            "title": "Opposing Evidence",
+            "type": "array"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "supporting_evidence": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CriticArgument"
+            },
+            "title": "Supporting Evidence",
+            "type": "array"
+          },
+          "undetermined_reasons": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CriticArgument"
+            },
+            "title": "Undetermined Reasons",
+            "type": "array"
+          },
+          "verdict": {
+            "enum": [
+              "supported",
+              "refuted",
+              "indeterminate",
+              "no_issue"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          },
+          "verdict_reason": {
+            "title": "Verdict Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "claim",
+          "verdict",
+          "verdict_reason"
+        ],
+        "title": "CriticAssessment",
+        "type": "object"
+      },
       "CritiqueOut": {
         "properties": {
+          "assessments": {
+            "items": {
+              "$ref": "#/components/schemas/CriticAssessment"
+            },
+            "title": "Assessments",
+            "type": "array"
+          },
           "baseline_experiment_id": {
             "anyOf": [
               {
@@ -1854,10 +2139,28 @@
             ],
             "title": "Baseline Experiment Id"
           },
+          "context_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Fingerprint"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "decision_feedback": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionFeedback"
+            },
+            "title": "Decision Feedback",
+            "type": "array"
           },
           "engine": {
             "enum": [
@@ -1875,8 +2178,15 @@
             "type": "array"
           },
           "experiment_id": {
-            "title": "Experiment Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
           },
           "fallback_reason": {
             "anyOf": [
@@ -1918,12 +2228,24 @@
             ],
             "title": "Model"
           },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
           "proposal_ids": {
             "items": {
               "type": "integer"
             },
             "title": "Proposal Ids",
             "type": "array"
+          },
+          "scope": {
+            "enum": [
+              "experiment",
+              "project"
+            ],
+            "title": "Scope",
+            "type": "string"
           },
           "summary": {
             "title": "Summary",
@@ -1932,6 +2254,8 @@
         },
         "required": [
           "id",
+          "project_id",
+          "scope",
           "experiment_id",
           "baseline_experiment_id",
           "engine",
@@ -1939,9 +2263,12 @@
           "fallback_reason",
           "summary",
           "findings",
+          "assessments",
+          "decision_feedback",
           "evidence",
           "hypothesis_ids",
           "proposal_ids",
+          "context_fingerprint",
           "created_at"
         ],
         "title": "CritiqueOut",
@@ -2443,6 +2770,143 @@
         "title": "DecisionCreate",
         "type": "object"
       },
+      "DecisionFeedback": {
+        "description": "How a recorded researcher decision was reflected in a critique.",
+        "properties": {
+          "action": {
+            "enum": [
+              "accept",
+              "modify",
+              "reject"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "applied": {
+            "enum": [
+              "suppressed_repeat",
+              "alternative_proposed",
+              "noted",
+              "awaiting_result"
+            ],
+            "title": "Applied",
+            "type": "string"
+          },
+          "decision_id": {
+            "title": "Decision Id",
+            "type": "integer"
+          },
+          "evidence_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Key"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "integer"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "reason_category": {
+            "title": "Reason Category",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "proposal_id",
+          "action",
+          "rationale",
+          "reason_category",
+          "applied",
+          "note"
+        ],
+        "title": "DecisionFeedback",
+        "type": "object"
+      },
+      "DecisionHistory": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionHistoryEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "entries"
+        ],
+        "title": "DecisionHistory",
+        "type": "object"
+      },
+      "DecisionHistoryEntry": {
+        "description": "A decision with the proposal it decided and where it was fed back.",
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/DecisionOut"
+          },
+          "experiment_code": {
+            "title": "Experiment Code",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "proposal_changes": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalChange"
+            },
+            "title": "Proposal Changes",
+            "type": "array"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "integer"
+          },
+          "proposal_title": {
+            "title": "Proposal Title",
+            "type": "string"
+          },
+          "reflected_in_critique_ids": {
+            "default": [],
+            "description": "Later critiques whose decision_feedback cites this decision",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Reflected In Critique Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "decision",
+          "proposal_id",
+          "proposal_title",
+          "proposal_changes",
+          "experiment_id",
+          "experiment_code"
+        ],
+        "title": "DecisionHistoryEntry",
+        "type": "object"
+      },
       "DecisionOut": {
         "properties": {
           "action": {
@@ -2453,6 +2917,14 @@
             ],
             "title": "Action",
             "type": "string"
+          },
+          "constraints": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Constraints",
+            "type": "array"
           },
           "created_at": {
             "format": "date-time",
@@ -2481,6 +2953,11 @@
           "rationale": {
             "title": "Rationale",
             "type": "string"
+          },
+          "reason_category": {
+            "default": "other",
+            "title": "Reason Category",
+            "type": "string"
           }
         },
         "required": [
@@ -2493,6 +2970,70 @@
           "created_at"
         ],
         "title": "DecisionOut",
+        "type": "object"
+      },
+      "DesignControl": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "purpose"
+        ],
+        "title": "DesignControl",
+        "type": "object"
+      },
+      "DesignVariable": {
+        "description": "A variable of the proposed experiment (varied or held fixed).",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "levels": {
+            "default": [],
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Levels",
+            "type": "array"
+          },
+          "role": {
+            "enum": [
+              "varied",
+              "fixed"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "role"
+        ],
+        "title": "DesignVariable",
         "type": "object"
       },
       "DigestOut": {
@@ -2624,7 +3165,8 @@
             "enum": [
               "eln",
               "memory",
-              "analysis"
+              "analysis",
+              "partner"
             ],
             "title": "Source",
             "type": "string"
@@ -2689,7 +3231,7 @@
             "type": "string"
           },
           "source": {
-            "$ref": "#/components/schemas/SourceRef"
+            "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
           },
           "text": {
             "title": "Text",
@@ -2704,6 +3246,113 @@
           "source"
         ],
         "title": "EvidenceFragment",
+        "type": "object"
+      },
+      "ExchangeHistory": {
+        "properties": {
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExchangeOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "experiment_id",
+          "items"
+        ],
+        "title": "ExchangeHistory",
+        "type": "object"
+      },
+      "ExchangeOut": {
+        "description": "A stored question/answer pair (immutable).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "response": {
+            "$ref": "#/components/schemas/AskResponse"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "experiment_id",
+          "question",
+          "response",
+          "created_at"
+        ],
+        "title": "ExchangeOut",
+        "type": "object"
+      },
+      "ExpectedOutcome": {
+        "description": "If-then reading of the result: what each outcome would imply.",
+        "properties": {
+          "interpretation": {
+            "title": "Interpretation",
+            "type": "string"
+          },
+          "observation": {
+            "title": "Observation",
+            "type": "string"
+          },
+          "supports": {
+            "default": [],
+            "description": "AlternativeExplanation ids",
+            "items": {
+              "type": "string"
+            },
+            "title": "Supports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "observation",
+          "interpretation"
+        ],
+        "title": "ExpectedOutcome",
         "type": "object"
       },
       "ExperimentAddendumCreate": {
@@ -2846,6 +3495,149 @@
         "title": "ExperimentCreate",
         "type": "object"
       },
+      "ExperimentDesign": {
+        "description": "Next-experiment design: variables, controls, replicates, measurements, power.",
+        "properties": {
+          "addresses_controls": {
+            "default": [],
+            "description": "MissingControl ids",
+            "items": {
+              "type": "string"
+            },
+            "title": "Addresses Controls",
+            "type": "array"
+          },
+          "basis_experiment_ids": {
+            "default": [],
+            "description": "Experiments whose stored records justify this design",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Basis Experiment Ids",
+            "type": "array"
+          },
+          "controls": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DesignControl"
+            },
+            "title": "Controls",
+            "type": "array"
+          },
+          "discriminates": {
+            "default": [],
+            "description": "AlternativeExplanation ids",
+            "items": {
+              "type": "string"
+            },
+            "title": "Discriminates",
+            "type": "array"
+          },
+          "discriminating_power": {
+            "default": "medium",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Discriminating Power",
+            "type": "string"
+          },
+          "expected_outcomes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExpectedOutcome"
+            },
+            "title": "Expected Outcomes",
+            "type": "array"
+          },
+          "measurements": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Measurements",
+            "type": "array"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          },
+          "power_rationale": {
+            "default": "",
+            "title": "Power Rationale",
+            "type": "string"
+          },
+          "replicates": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Replicates per level — taken from stored data, never invented",
+            "title": "Replicates"
+          },
+          "replicates_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replicates Basis"
+          },
+          "replicates_evidence_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replicates Evidence Key"
+          },
+          "requires": {
+            "default": [],
+            "description": "Resources needed, e.g. 'blank_matrix' (matched to rejections)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Requires",
+            "type": "array"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rules design template id",
+            "title": "Template Id"
+          },
+          "variables": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DesignVariable"
+            },
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "objective"
+        ],
+        "title": "ExperimentDesign",
+        "type": "object"
+      },
       "ExperimentDiff": {
         "description": "Deterministic diff of two experiments: conditions, results, QC, note, datasets.\n\nEvery item carries ``sources`` (experiment id + field) so it can be traced back.\nResult values and deltas are read from Analysis via the fact port; Memory itself\nonly compares keys and sets.",
         "properties": {
@@ -2972,6 +3764,67 @@
           "draft"
         ],
         "title": "ExperimentDraft",
+        "type": "object"
+      },
+      "ExperimentDraftOut": {
+        "description": "Unsaved ``ExperimentCreate`` built from a proposal (creation happens in ELN).",
+        "properties": {
+          "applied_changes": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalChange"
+            },
+            "title": "Applied Changes",
+            "type": "array"
+          },
+          "base_experiment_code": {
+            "title": "Base Experiment Code",
+            "type": "string"
+          },
+          "base_experiment_id": {
+            "title": "Base Experiment Id",
+            "type": "integer"
+          },
+          "draft": {
+            "$ref": "#/components/schemas/ExperimentCreate"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "integer"
+          },
+          "proposal_status": {
+            "enum": [
+              "pending",
+              "accepted",
+              "modified",
+              "rejected"
+            ],
+            "title": "Proposal Status",
+            "type": "string"
+          },
+          "ready": {
+            "description": "True when the proposal was accepted or modified",
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "proposal_status",
+          "ready",
+          "base_experiment_id",
+          "base_experiment_code",
+          "applied_changes",
+          "notes",
+          "draft"
+        ],
+        "title": "ExperimentDraftOut",
         "type": "object"
       },
       "ExperimentHistory": {
@@ -3912,6 +4765,14 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "transitions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HypothesisTransitionOut"
+            },
+            "title": "Transitions",
+            "type": "array"
           }
         },
         "required": [
@@ -3927,6 +4788,111 @@
           "created_at"
         ],
         "title": "HypothesisOut",
+        "type": "object"
+      },
+      "HypothesisStatusChange": {
+        "description": "Request to move a hypothesis along proposed → open → supported/refuted.",
+        "properties": {
+          "decided_by": {
+            "default": "researcher",
+            "title": "Decided By",
+            "type": "string"
+          },
+          "evidence_result_ids": {
+            "default": [],
+            "description": "AnalysisResult ids backing the transition",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence Result Ids",
+            "type": "array"
+          },
+          "rationale": {
+            "description": "Why — required for every transition",
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "open",
+              "supported",
+              "refuted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "rationale"
+        ],
+        "title": "HypothesisStatusChange",
+        "type": "object"
+      },
+      "HypothesisTransitionOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_by": {
+            "title": "Decided By",
+            "type": "string"
+          },
+          "evidence_result_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Evidence Result Ids",
+            "type": "array"
+          },
+          "from_status": {
+            "enum": [
+              "proposed",
+              "open",
+              "supported",
+              "refuted"
+            ],
+            "title": "From Status",
+            "type": "string"
+          },
+          "hypothesis_id": {
+            "title": "Hypothesis Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "to_status": {
+            "enum": [
+              "proposed",
+              "open",
+              "supported",
+              "refuted"
+            ],
+            "title": "To Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "hypothesis_id",
+          "from_status",
+          "to_status",
+          "rationale",
+          "evidence_result_ids",
+          "decided_by",
+          "created_at"
+        ],
+        "title": "HypothesisTransitionOut",
         "type": "object"
       },
       "ISInjectionOut": {
@@ -4250,7 +5216,7 @@
           "source_ref": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SourceRef"
+                "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
               },
               {
                 "type": "null"
@@ -4890,6 +5856,60 @@
         "title": "MetricsComparison",
         "type": "object"
       },
+      "MissingControl": {
+        "description": "A control/measurement that is absent but needed to separate explanations.",
+        "properties": {
+          "decision_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How a recorded decision on this control was taken into account",
+            "title": "Decision Note"
+          },
+          "distinguishes": {
+            "default": [],
+            "description": "AlternativeExplanation ids this control separates",
+            "items": {
+              "type": "string"
+            },
+            "title": "Distinguishes",
+            "type": "array"
+          },
+          "evidence_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Keys",
+            "type": "array"
+          },
+          "id": {
+            "description": "Stable id, e.g. 'pre_post_spike'",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "purpose"
+        ],
+        "title": "MissingControl",
+        "type": "object"
+      },
       "NoteDiffLine": {
         "properties": {
           "op": {
@@ -4977,6 +5997,38 @@
           "description"
         ],
         "title": "PartnerMode",
+        "type": "object"
+      },
+      "PriorityFactor": {
+        "description": "One additive term of a proposal's deterministic priority score.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "evidence_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Keys",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "points": {
+            "title": "Points",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "points",
+          "detail"
+        ],
+        "title": "PriorityFactor",
         "type": "object"
       },
       "ProjectCreate": {
@@ -5100,6 +6152,17 @@
       },
       "ProposalOut": {
         "properties": {
+          "base_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Experiment Id"
+          },
           "changes": {
             "items": {
               "$ref": "#/components/schemas/ProposalChange"
@@ -5137,6 +6200,16 @@
             "title": "Description",
             "type": "string"
           },
+          "design": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentDesign"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "evidence_keys": {
             "items": {
               "type": "string"
@@ -5172,9 +6245,33 @@
             "title": "Origin",
             "type": "string"
           },
+          "priority": {
+            "default": 0,
+            "title": "Priority",
+            "type": "integer"
+          },
+          "priority_factors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PriorityFactor"
+            },
+            "title": "Priority Factors",
+            "type": "array"
+          },
           "project_id": {
             "title": "Project Id",
             "type": "integer"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
           },
           "status": {
             "enum": [
@@ -5185,6 +6282,14 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "supersedes_proposal_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Supersedes Proposal Ids",
+            "type": "array"
           },
           "title": {
             "title": "Title",
@@ -5444,7 +6549,7 @@
           "sources": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/SourceRef"
+              "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
             },
             "title": "Sources",
             "type": "array"
@@ -5506,7 +6611,8 @@
               "outlier_suspected",
               "uncertainty_high",
               "ion_ratio_out_of_range",
-              "loq_above_lowest_level"
+              "loq_above_lowest_level",
+              "calibration_type_unsupported"
             ],
             "title": "Code",
             "type": "string"
@@ -6118,7 +7224,7 @@
           "sources": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/SourceRef"
+              "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
             },
             "title": "Sources",
             "type": "array"
@@ -6187,7 +7293,7 @@
             "type": "string"
           },
           "source": {
-            "$ref": "#/components/schemas/SourceRef"
+            "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
           },
           "unit": {
             "anyOf": [
@@ -6313,7 +7419,7 @@
           "source": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SourceRef"
+                "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
               },
               {
                 "type": "null"
@@ -6362,43 +7468,6 @@
           "differing"
         ],
         "title": "SimilarExperiment",
-        "type": "object"
-      },
-      "SourceRef": {
-        "description": "Pointer to the stored record (and field) a fact was read from.",
-        "properties": {
-          "experiment_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Experiment Id"
-          },
-          "field": {
-            "description": "Field path inside the record, e.g. 'condition_block.ph'",
-            "title": "Field",
-            "type": "string"
-          },
-          "ref_id": {
-            "title": "Ref Id",
-            "type": "integer"
-          },
-          "ref_type": {
-            "description": "<module>.<Entity>, e.g. 'eln.Experiment'",
-            "title": "Ref Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "ref_type",
-          "ref_id",
-          "field"
-        ],
-        "title": "SourceRef",
         "type": "object"
       },
       "SystemInfo": {
@@ -6674,6 +7743,67 @@
           "sum_abs_relative_error_pct"
         ],
         "title": "WeightingComparison",
+        "type": "object"
+      },
+      "app__memory__schemas__SourceRef": {
+        "description": "Pointer to the stored record (and field) a fact was read from.",
+        "properties": {
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "field": {
+            "description": "Field path inside the record, e.g. 'condition_block.ph'",
+            "title": "Field",
+            "type": "string"
+          },
+          "ref_id": {
+            "title": "Ref Id",
+            "type": "integer"
+          },
+          "ref_type": {
+            "description": "<module>.<Entity>, e.g. 'eln.Experiment'",
+            "title": "Ref Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref_type",
+          "ref_id",
+          "field"
+        ],
+        "title": "SourceRef",
+        "type": "object"
+      },
+      "app__partner__schemas__SourceRef": {
+        "description": "A stored record an answer relies on (for 출처 display).",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ref_id": {
+            "title": "Ref Id",
+            "type": "integer"
+          },
+          "ref_type": {
+            "title": "Ref Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref_type",
+          "ref_id",
+          "label"
+        ],
+        "title": "SourceRef",
         "type": "object"
       }
     }
@@ -11516,6 +12646,74 @@
         ]
       }
     },
+    "/api/partner/ask/stream": {
+      "post": {
+        "description": "SSE: ``start`` → ``delta``* → ``replace``? → ``final`` (AskResponse JSON).",
+        "operationId": "partner_ask_stream",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "SSE events"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask Stream",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
     "/api/partner/critiques/{critique_id}": {
       "get": {
         "operationId": "partner_get_critique",
@@ -11895,6 +13093,88 @@
         ]
       }
     },
+    "/api/partner/hypotheses/{hypothesis_id}/status": {
+      "post": {
+        "operationId": "partner_change_hypothesis_status",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hypothesis_id",
+            "required": true,
+            "schema": {
+              "title": "Hypothesis Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HypothesisStatusChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HypothesisOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Hypothesis Status",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
     "/api/partner/mode": {
       "get": {
         "operationId": "partner_get_mode",
@@ -11941,6 +13221,348 @@
           }
         },
         "summary": "Get Mode",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/projects/{project_id}/critiques": {
+      "get": {
+        "operationId": "partner_list_project_critiques",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "experiment",
+                    "project"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CritiqueOut"
+                  },
+                  "title": "Response Partner List Project Critiques",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Project Critiques",
+        "tags": [
+          "partner"
+        ]
+      },
+      "post": {
+        "operationId": "partner_run_project_critique",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CritiqueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Project Critique",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/projects/{project_id}/decisions": {
+      "get": {
+        "operationId": "partner_decision_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "experiment_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decision History",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/projects/{project_id}/exchanges": {
+      "get": {
+        "operationId": "partner_list_exchanges",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "experiment_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Exchanges",
         "tags": [
           "partner"
         ]
@@ -11995,6 +13617,20 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "id",
+              "enum": [
+                "id",
+                "priority"
+              ],
+              "title": "Sort",
+              "type": "string"
             }
           }
         ],
@@ -12209,6 +13845,78 @@
           }
         },
         "summary": "Decide",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/proposals/{proposal_id}/experiment-draft": {
+      "get": {
+        "operationId": "partner_get_experiment_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentDraftOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Experiment Draft",
         "tags": [
           "partner"
         ]
