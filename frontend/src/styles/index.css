@@ -1,0 +1,32 @@
+@import "./tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans text-sm antialiased;
+  }
+}
+
+@layer components {
+  .bp-input {
+    @apply w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-ink
+      focus:outline-none focus:ring-2 focus:ring-brand/40;
+  }
+  .bp-btn {
+    @apply inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium
+      transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .bp-btn-primary {
+    @apply bp-btn bg-brand text-white hover:bg-brand-strong;
+  }
+  .bp-btn-ghost {
+    @apply bp-btn border border-border bg-surface text-ink hover:bg-subtle;
+  }
+}

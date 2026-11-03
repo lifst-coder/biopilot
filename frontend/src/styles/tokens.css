@@ -1,0 +1,36 @@
+/* BioPilot design tokens. Colors are RGB triplets consumed by Tailwind
+ * (`bg-surface`, `text-ink-muted`, ...). Change tokens here only. */
+:root {
+  --bp-canvas: 246 247 249;
+  --bp-surface: 255 255 255;
+  --bp-subtle: 241 243 246;
+  --bp-border: 224 228 234;
+
+  --bp-ink: 23 30 41;
+  --bp-ink-muted: 82 94 112;
+  --bp-ink-faint: 140 151 168;
+
+  --bp-brand: 13 116 144;
+  --bp-brand-strong: 9 86 107;
+  --bp-brand-soft: 224 242 246;
+
+  --bp-ok: 22 128 74;
+  --bp-ok-soft: 226 245 234;
+  --bp-warn: 181 110 8;
+  --bp-warn-soft: 253 243 222;
+  --bp-crit: 192 38 51;
+  --bp-crit-soft: 252 231 233;
+  --bp-ai: 107 70 193;
+  --bp-ai-soft: 239 233 252;
+
+  /* chart series (hex for Recharts) */
+  --bp-chart-1: #0d7490;
+  --bp-chart-2: #6b46c1;
+  --bp-chart-3: #b56e08;
+  --bp-chart-4: #16804a;
+  --bp-chart-5: #c02633;
+
+  --bp-radius-card: 0.75rem;
+  --bp-partner-width: 22rem;
+  --bp-header-height: 3.5rem;
+}

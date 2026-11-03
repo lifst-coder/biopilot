@@ -1,0 +1,54 @@
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceArea,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import type { AcceptanceCriteria, TrendPoint } from "@/api/types";
+import { EmptyState } from "@/components";
+import { TOKEN_HEX } from "@/lib/chartColors";
+import { formatWithUnit } from "@/lib/format";
+
+interface Props {
+  points: TrendPoint[];
+  criteria: AcceptanceCriteria | null;
+}
+
+/** Line of stored mean recoveries with the acceptance band from the criteria API. */
+export function RecoveryTrendChart({ points, criteria }: Props) {
+  const data = points.filter((p) => p.recovery_mean_pct !== null);
+  if (data.length === 0) return <EmptyState>회수율 결과가 있는 실험이 없습니다.</EmptyState>;
+  return (
+    <div className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e0e4ea" />
+          <XAxis dataKey="code" tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 11 }} domain={["auto", "auto"]} unit="%" />
+          {criteria && (
+            <ReferenceArea
+              y1={criteria.recovery_min_pct}
+              y2={criteria.recovery_max_pct}
+              fill={TOKEN_HEX.ok}
+              fillOpacity={0.06}
+              ifOverflow="extendDomain"
+            />
+          )}
+          <Tooltip formatter={(v: number) => formatWithUnit(v, "%")} />
+          <Line
+            type="linear"
+            dataKey="recovery_mean_pct"
+            name="평균 회수율"
+            stroke={TOKEN_HEX.brand}
+            strokeWidth={2}
+            dot={{ r: 4 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}

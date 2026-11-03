@@ -1,0 +1,5777 @@
+{
+  "components": {
+    "schemas": {
+      "AcceptanceCriteria": {
+        "description": "Thresholds used for QC flags. Exposed read-only via the API.",
+        "properties": {
+          "back_calc_tolerance_pct": {
+            "default": 20.0,
+            "title": "Back Calc Tolerance Pct",
+            "type": "number"
+          },
+          "is_response_max_pct": {
+            "default": 150.0,
+            "title": "Is Response Max Pct",
+            "type": "number"
+          },
+          "is_response_min_pct": {
+            "default": 50.0,
+            "title": "Is Response Min Pct",
+            "type": "number"
+          },
+          "matrix_effect_abs_max_pct": {
+            "default": 20.0,
+            "title": "Matrix Effect Abs Max Pct",
+            "type": "number"
+          },
+          "r_squared_min": {
+            "default": 0.99,
+            "title": "R Squared Min",
+            "type": "number"
+          },
+          "recovery_max_pct": {
+            "default": 120.0,
+            "title": "Recovery Max Pct",
+            "type": "number"
+          },
+          "recovery_min_pct": {
+            "default": 70.0,
+            "title": "Recovery Min Pct",
+            "type": "number"
+          },
+          "rsd_max_pct": {
+            "default": 20.0,
+            "title": "Rsd Max Pct",
+            "type": "number"
+          },
+          "source": {
+            "default": "SANTE/11312/2021",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "title": "AcceptanceCriteria",
+        "type": "object"
+      },
+      "AnalysisResultOut": {
+        "description": "An immutable, stored analysis result with full provenance.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/QCFlag"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "input_dataset_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Input Dataset Ids",
+            "type": "array"
+          },
+          "input_fingerprint": {
+            "title": "Input Fingerprint",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "calibration",
+              "recovery",
+              "is_response",
+              "matrix_effect"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "method_version": {
+            "title": "Method Version",
+            "type": "string"
+          },
+          "output": {
+            "discriminator": {
+              "mapping": {
+                "calibration": "#/components/schemas/CalibrationOutput",
+                "is_response": "#/components/schemas/ISResponseOutput",
+                "matrix_effect": "#/components/schemas/MatrixEffectOutput",
+                "recovery": "#/components/schemas/RecoveryOutput"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CalibrationOutput"
+              },
+              {
+                "$ref": "#/components/schemas/RecoveryOutput"
+              },
+              {
+                "$ref": "#/components/schemas/ISResponseOutput"
+              },
+              {
+                "$ref": "#/components/schemas/MatrixEffectOutput"
+              }
+            ],
+            "title": "Output"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "experiment_id",
+          "kind",
+          "method_version",
+          "input_dataset_ids",
+          "input_fingerprint",
+          "parameters",
+          "output",
+          "flags",
+          "created_at"
+        ],
+        "title": "AnalysisResultOut",
+        "type": "object"
+      },
+      "AnalyteCalibrationOut": {
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "back_calc": {
+            "items": {
+              "$ref": "#/components/schemas/BackCalcLevelOut"
+            },
+            "title": "Back Calc",
+            "type": "array"
+          },
+          "fit_line": {
+            "description": "Fitted response ratio at each calibration level (for plotting)",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationPoint"
+            },
+            "title": "Fit Line",
+            "type": "array"
+          },
+          "intercept": {
+            "title": "Intercept",
+            "type": "number"
+          },
+          "max_abs_back_calc_error_pct": {
+            "title": "Max Abs Back Calc Error Pct",
+            "type": "number"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "r_squared": {
+            "title": "R Squared",
+            "type": "number"
+          },
+          "slope": {
+            "title": "Slope",
+            "type": "number"
+          },
+          "weighting": {
+            "enum": [
+              "none",
+              "1/x",
+              "1/x2"
+            ],
+            "title": "Weighting",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analyte",
+          "slope",
+          "intercept",
+          "r_squared",
+          "n",
+          "weighting",
+          "max_abs_back_calc_error_pct",
+          "back_calc",
+          "points",
+          "fit_line"
+        ],
+        "title": "AnalyteCalibrationOut",
+        "type": "object"
+      },
+      "AnalyteDelta": {
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "delta_pct_points": {
+            "title": "Delta Pct Points",
+            "type": "number"
+          },
+          "mean_a_pct": {
+            "title": "Mean A Pct",
+            "type": "number"
+          },
+          "mean_b_pct": {
+            "title": "Mean B Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "analyte",
+          "mean_a_pct",
+          "mean_b_pct",
+          "delta_pct_points"
+        ],
+        "title": "AnalyteDelta",
+        "type": "object"
+      },
+      "AnalyteRecoverySummary": {
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "mean_pct": {
+            "title": "Mean Pct",
+            "type": "number"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "rsd_pct": {
+            "title": "Rsd Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "analyte",
+          "mean_pct",
+          "rsd_pct",
+          "n"
+        ],
+        "title": "AnalyteRecoverySummary",
+        "type": "object"
+      },
+      "AskRequest": {
+        "properties": {
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "question": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "question"
+        ],
+        "title": "AskRequest",
+        "type": "object"
+      },
+      "AskResponse": {
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "engine": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "topics": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "answer",
+          "engine",
+          "evidence",
+          "topics"
+        ],
+        "title": "AskResponse",
+        "type": "object"
+      },
+      "Attachment": {
+        "description": "Metadata of a non-tabular attachment (chromatogram image, PDF, ...).",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "media_type"
+        ],
+        "title": "Attachment",
+        "type": "object"
+      },
+      "AuditEventOut": {
+        "description": "Public representation of an audit event.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "integer"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          }
+        },
+        "required": [
+          "id",
+          "occurred_at",
+          "actor",
+          "action",
+          "entity_type",
+          "entity_id",
+          "project_id",
+          "payload"
+        ],
+        "title": "AuditEventOut",
+        "type": "object"
+      },
+      "BackCalcLevelOut": {
+        "properties": {
+          "accuracy_pct": {
+            "title": "Accuracy Pct",
+            "type": "number"
+          },
+          "level": {
+            "title": "Level",
+            "type": "number"
+          },
+          "mean_back_calculated": {
+            "title": "Mean Back Calculated",
+            "type": "number"
+          }
+        },
+        "required": [
+          "level",
+          "mean_back_calculated",
+          "accuracy_pct"
+        ],
+        "title": "BackCalcLevelOut",
+        "type": "object"
+      },
+      "CalibrationOutput": {
+        "properties": {
+          "analytes": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyteCalibrationOut"
+            },
+            "title": "Analytes",
+            "type": "array"
+          },
+          "kind": {
+            "const": "calibration",
+            "default": "calibration",
+            "title": "Kind",
+            "type": "string"
+          },
+          "weighting": {
+            "enum": [
+              "none",
+              "1/x",
+              "1/x2"
+            ],
+            "title": "Weighting",
+            "type": "string"
+          },
+          "weighting_comparison": {
+            "items": {
+              "$ref": "#/components/schemas/WeightingComparison"
+            },
+            "title": "Weighting Comparison",
+            "type": "array"
+          }
+        },
+        "required": [
+          "weighting",
+          "analytes",
+          "weighting_comparison"
+        ],
+        "title": "CalibrationOutput",
+        "type": "object"
+      },
+      "CalibrationPoint": {
+        "properties": {
+          "level": {
+            "title": "Level",
+            "type": "number"
+          },
+          "response_ratio": {
+            "title": "Response Ratio",
+            "type": "number"
+          }
+        },
+        "required": [
+          "level",
+          "response_ratio"
+        ],
+        "title": "CalibrationPoint",
+        "type": "object"
+      },
+      "ConditionBlock": {
+        "additionalProperties": true,
+        "description": "Structured experimental conditions. Unknown keys are preserved (``extra=allow``).",
+        "properties": {
+          "buffer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buffer"
+          },
+          "calibration_weighting": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none",
+                  "1/x",
+                  "1/x2"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Weighting"
+          },
+          "cleanup_sorbent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cleanup Sorbent"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "column_temp_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Temp C"
+          },
+          "extraction_solvent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Solvent"
+          },
+          "extraction_time_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Time Min"
+          },
+          "extraction_volume_ml": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Volume Ml"
+          },
+          "instrument": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instrument"
+          },
+          "internal_standard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Standard"
+          },
+          "matrix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matrix"
+          },
+          "ph": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ph"
+          },
+          "sample_mass_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Mass G"
+          }
+        },
+        "title": "ConditionBlock",
+        "type": "object"
+      },
+      "ConditionChange": {
+        "properties": {
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value_a": {
+            "title": "Value A"
+          },
+          "value_b": {
+            "title": "Value B"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "change"
+        ],
+        "title": "ConditionChange",
+        "type": "object"
+      },
+      "ConditionField": {
+        "description": "Display metadata for a condition-block key.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "ConditionField",
+        "type": "object"
+      },
+      "CritiqueOut": {
+        "properties": {
+          "baseline_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Experiment Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "engine": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "hypothesis_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Hypothesis Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "proposal_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Proposal Ids",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "experiment_id",
+          "baseline_experiment_id",
+          "engine",
+          "model",
+          "fallback_reason",
+          "summary",
+          "findings",
+          "evidence",
+          "hypothesis_ids",
+          "proposal_ids",
+          "created_at"
+        ],
+        "title": "CritiqueOut",
+        "type": "object"
+      },
+      "DatasetCreate": {
+        "properties": {
+          "content": {
+            "description": "Raw CSV text (UTF-8, header row first)",
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "filename": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "calibration",
+              "recovery",
+              "matrix_effect",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "filename",
+          "content"
+        ],
+        "title": "DatasetCreate",
+        "type": "object"
+      },
+      "DatasetDiff": {
+        "properties": {
+          "both": {
+            "items": {
+              "enum": [
+                "calibration",
+                "recovery",
+                "matrix_effect",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Both",
+            "type": "array"
+          },
+          "only_a": {
+            "items": {
+              "enum": [
+                "calibration",
+                "recovery",
+                "matrix_effect",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Only A",
+            "type": "array"
+          },
+          "only_b": {
+            "items": {
+              "enum": [
+                "calibration",
+                "recovery",
+                "matrix_effect",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Only B",
+            "type": "array"
+          }
+        },
+        "required": [
+          "only_a",
+          "only_b",
+          "both"
+        ],
+        "title": "DatasetDiff",
+        "type": "object"
+      },
+      "DatasetOut": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "calibration",
+              "recovery",
+              "matrix_effect",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "experiment_id",
+          "kind",
+          "filename",
+          "sha256",
+          "row_count",
+          "columns",
+          "created_at"
+        ],
+        "title": "DatasetOut",
+        "type": "object"
+      },
+      "DatasetPreview": {
+        "properties": {
+          "dataset": {
+            "$ref": "#/components/schemas/DatasetOut"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "dataset",
+          "rows",
+          "truncated"
+        ],
+        "title": "DatasetPreview",
+        "type": "object"
+      },
+      "DecisionCreate": {
+        "properties": {
+          "action": {
+            "enum": [
+              "accept",
+              "modify",
+              "reject"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "decided_by": {
+            "default": "researcher",
+            "title": "Decided By",
+            "type": "string"
+          },
+          "modifications": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ProposalChange"
+            },
+            "title": "Modifications",
+            "type": "array"
+          },
+          "rationale": {
+            "description": "Why — required for every decision",
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "rationale"
+        ],
+        "title": "DecisionCreate",
+        "type": "object"
+      },
+      "DecisionOut": {
+        "properties": {
+          "action": {
+            "enum": [
+              "accept",
+              "modify",
+              "reject"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_by": {
+            "title": "Decided By",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "modifications": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalChange"
+            },
+            "title": "Modifications",
+            "type": "array"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "integer"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "proposal_id",
+          "action",
+          "rationale",
+          "modifications",
+          "decided_by",
+          "created_at"
+        ],
+        "title": "DecisionOut",
+        "type": "object"
+      },
+      "DigestOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "engine": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "key_points": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Key Points",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "experiment_id",
+          "engine",
+          "model",
+          "summary",
+          "key_points",
+          "created_at"
+        ],
+        "title": "DigestOut",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "description": "Error envelope for every :class:`DomainError`.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "Evidence": {
+        "description": "A fact taken from a stored record. Numbers on screen come from ``value`` only.",
+        "properties": {
+          "key": {
+            "description": "Stable key cited by findings, e.g. 'E3'",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ref_id": {
+            "title": "Ref Id",
+            "type": "integer"
+          },
+          "ref_type": {
+            "description": "<module>.<Entity> of the source record",
+            "title": "Ref Type",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "eln",
+              "memory",
+              "analysis"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "source",
+          "ref_type",
+          "ref_id",
+          "label"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "ExperimentCreate": {
+        "properties": {
+          "attachments": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
+          "author": {
+            "default": "",
+            "title": "Author",
+            "type": "string"
+          },
+          "code": {
+            "examples": [
+              "#025"
+            ],
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "condition_block": {
+            "$ref": "#/components/schemas/ConditionBlock"
+          },
+          "parent_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Experiment Id"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "raw_note": {
+            "title": "Raw Note",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "performed_on",
+          "raw_note",
+          "condition_block"
+        ],
+        "title": "ExperimentCreate",
+        "type": "object"
+      },
+      "ExperimentDiff": {
+        "description": "Structural diff of two experiments' original records (no numbers computed here).",
+        "properties": {
+          "a": {
+            "$ref": "#/components/schemas/ExperimentSummary"
+          },
+          "b": {
+            "$ref": "#/components/schemas/ExperimentSummary"
+          },
+          "common_ancestor_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Common Ancestor Id"
+          },
+          "condition_changes": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionChange"
+            },
+            "title": "Condition Changes",
+            "type": "array"
+          },
+          "datasets": {
+            "$ref": "#/components/schemas/DatasetDiff"
+          },
+          "note_diff": {
+            "items": {
+              "$ref": "#/components/schemas/NoteDiffLine"
+            },
+            "title": "Note Diff",
+            "type": "array"
+          },
+          "relation": {
+            "enum": [
+              "same",
+              "a_is_ancestor",
+              "b_is_ancestor",
+              "siblings",
+              "unrelated"
+            ],
+            "title": "Relation",
+            "type": "string"
+          },
+          "unchanged_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unchanged Keys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "relation",
+          "common_ancestor_id",
+          "condition_changes",
+          "unchanged_keys",
+          "note_diff",
+          "datasets"
+        ],
+        "title": "ExperimentDiff",
+        "type": "object"
+      },
+      "ExperimentMetrics": {
+        "description": "Headline numbers for one experiment, each traceable to ``source_result_ids``.",
+        "properties": {
+          "analyzed": {
+            "title": "Analyzed",
+            "type": "boolean"
+          },
+          "calibration_weighting": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Weighting"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "flags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/QCFlag"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "is_injections_flagged": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Injections Flagged"
+          },
+          "is_injections_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Injections Total"
+          },
+          "matrix_effect_pct": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "default": {},
+            "title": "Matrix Effect Pct",
+            "type": "object"
+          },
+          "max_abs_back_calc_error_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Abs Back Calc Error Pct"
+          },
+          "min_r_squared": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min R Squared"
+          },
+          "per_analyte_recovery": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AnalyteRecoverySummary"
+            },
+            "title": "Per Analyte Recovery",
+            "type": "array"
+          },
+          "recovery_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Mean Pct"
+          },
+          "recovery_n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery N"
+          },
+          "recovery_rsd_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Rsd Pct"
+          },
+          "source_result_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Source Result Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "analyzed"
+        ],
+        "title": "ExperimentMetrics",
+        "type": "object"
+      },
+      "ExperimentOut": {
+        "description": "Full experiment record including immutable originals.",
+        "properties": {
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "title": "Attachments",
+            "type": "array"
+          },
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "condition_block": {
+            "$ref": "#/components/schemas/ConditionBlock"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_kinds": {
+            "default": [],
+            "items": {
+              "enum": [
+                "calibration",
+                "recovery",
+                "matrix_effect",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Dataset Kinds",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "parent_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Experiment Id"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "raw_note": {
+            "title": "Raw Note",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "code",
+          "title",
+          "author",
+          "performed_on",
+          "parent_experiment_id",
+          "raw_note",
+          "condition_block",
+          "attachments",
+          "created_at"
+        ],
+        "title": "ExperimentOut",
+        "type": "object"
+      },
+      "ExperimentSummary": {
+        "description": "List-view representation (no raw note body).",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "dataset_kinds": {
+            "default": [],
+            "items": {
+              "enum": [
+                "calibration",
+                "recovery",
+                "matrix_effect",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Dataset Kinds",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "parent_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Experiment Id"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "code",
+          "title",
+          "author",
+          "performed_on",
+          "parent_experiment_id"
+        ],
+        "title": "ExperimentSummary",
+        "type": "object"
+      },
+      "Finding": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "evidence_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Keys",
+            "type": "array"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "body",
+          "severity",
+          "evidence_keys"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "GraphEdge": {
+        "properties": {
+          "changed_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed Keys",
+            "type": "array"
+          },
+          "relation": {
+            "const": "derived_from",
+            "title": "Relation",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "integer"
+          },
+          "target": {
+            "title": "Target",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "relation",
+          "changed_keys"
+        ],
+        "title": "GraphEdge",
+        "type": "object"
+      },
+      "GraphNode": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "depth": {
+            "title": "Depth",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "title",
+          "performed_on",
+          "depth"
+        ],
+        "title": "GraphNode",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthOut": {
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthOut",
+        "type": "object"
+      },
+      "HypothesisCreate": {
+        "properties": {
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "rationale": {
+            "default": "",
+            "title": "Rationale",
+            "type": "string"
+          },
+          "statement": {
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "statement"
+        ],
+        "title": "HypothesisCreate",
+        "type": "object"
+      },
+      "HypothesisOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "critique_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critique Id"
+          },
+          "evidence_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Keys",
+            "type": "array"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "origin": {
+            "enum": [
+              "user",
+              "ai:rules",
+              "ai:claude"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "open",
+              "supported",
+              "refuted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "experiment_id",
+          "critique_id",
+          "statement",
+          "rationale",
+          "status",
+          "origin",
+          "evidence_keys",
+          "created_at"
+        ],
+        "title": "HypothesisOut",
+        "type": "object"
+      },
+      "ISInjectionOut": {
+        "properties": {
+          "flagged": {
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "injection_id": {
+            "title": "Injection Id",
+            "type": "string"
+          },
+          "is_area": {
+            "title": "Is Area",
+            "type": "number"
+          },
+          "response_pct": {
+            "title": "Response Pct",
+            "type": "number"
+          },
+          "sample_id": {
+            "title": "Sample Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "injection_id",
+          "sample_id",
+          "is_area",
+          "response_pct",
+          "flagged"
+        ],
+        "title": "ISInjectionOut",
+        "type": "object"
+      },
+      "ISResponseOutput": {
+        "properties": {
+          "flagged_count": {
+            "title": "Flagged Count",
+            "type": "integer"
+          },
+          "injections": {
+            "items": {
+              "$ref": "#/components/schemas/ISInjectionOut"
+            },
+            "title": "Injections",
+            "type": "array"
+          },
+          "kind": {
+            "const": "is_response",
+            "default": "is_response",
+            "title": "Kind",
+            "type": "string"
+          },
+          "reference_is_area": {
+            "title": "Reference Is Area",
+            "type": "number"
+          }
+        },
+        "required": [
+          "reference_is_area",
+          "injections",
+          "flagged_count"
+        ],
+        "title": "ISResponseOutput",
+        "type": "object"
+      },
+      "MatrixEffectOut": {
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "matrix_effect_pct": {
+            "title": "Matrix Effect Pct",
+            "type": "number"
+          },
+          "slope_matrix": {
+            "title": "Slope Matrix",
+            "type": "number"
+          },
+          "slope_solvent": {
+            "title": "Slope Solvent",
+            "type": "number"
+          }
+        },
+        "required": [
+          "analyte",
+          "slope_solvent",
+          "slope_matrix",
+          "matrix_effect_pct"
+        ],
+        "title": "MatrixEffectOut",
+        "type": "object"
+      },
+      "MatrixEffectOutput": {
+        "properties": {
+          "analytes": {
+            "items": {
+              "$ref": "#/components/schemas/MatrixEffectOut"
+            },
+            "title": "Analytes",
+            "type": "array"
+          },
+          "kind": {
+            "const": "matrix_effect",
+            "default": "matrix_effect",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analytes"
+        ],
+        "title": "MatrixEffectOutput",
+        "type": "object"
+      },
+      "MetricsComparison": {
+        "description": "Numerical comparison of two experiments (b relative to a).",
+        "properties": {
+          "experiment_a": {
+            "title": "Experiment A",
+            "type": "integer"
+          },
+          "experiment_b": {
+            "title": "Experiment B",
+            "type": "integer"
+          },
+          "metrics_a": {
+            "$ref": "#/components/schemas/ExperimentMetrics"
+          },
+          "metrics_b": {
+            "$ref": "#/components/schemas/ExperimentMetrics"
+          },
+          "per_analyte": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyteDelta"
+            },
+            "title": "Per Analyte",
+            "type": "array"
+          },
+          "recovery_delta_pct_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Delta Pct Points"
+          },
+          "recovery_t_test": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecoveryTTest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "experiment_a",
+          "experiment_b",
+          "metrics_a",
+          "metrics_b",
+          "recovery_delta_pct_points",
+          "per_analyte",
+          "recovery_t_test"
+        ],
+        "title": "MetricsComparison",
+        "type": "object"
+      },
+      "NoteDiffLine": {
+        "properties": {
+          "op": {
+            "enum": [
+              "equal",
+              "insert",
+              "delete"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "text"
+        ],
+        "title": "NoteDiffLine",
+        "type": "object"
+      },
+      "PartnerMode": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "required": [
+          "mode",
+          "model",
+          "description"
+        ],
+        "title": "PartnerMode",
+        "type": "object"
+      },
+      "ProjectCreate": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "objective": {
+            "default": "",
+            "title": "Objective",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProjectCreate",
+        "type": "object"
+      },
+      "ProjectOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "experiment_count": {
+            "default": 0,
+            "title": "Experiment Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "objective": {
+            "title": "Objective",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "objective",
+          "description",
+          "created_at"
+        ],
+        "title": "ProjectOut",
+        "type": "object"
+      },
+      "ProposalChange": {
+        "description": "A change to a condition-block key for a proposed next experiment.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "title": "ProposalChange",
+        "type": "object"
+      },
+      "ProposalOut": {
+        "properties": {
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "critique_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critique Id"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecisionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "evidence_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Keys",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "hypothesis_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hypothesis Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "origin": {
+            "enum": [
+              "user",
+              "ai:rules",
+              "ai:claude"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "accepted",
+              "modified",
+              "rejected"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "experiment_id",
+          "critique_id",
+          "hypothesis_id",
+          "title",
+          "description",
+          "changes",
+          "evidence_keys",
+          "status",
+          "origin",
+          "decision",
+          "created_at"
+        ],
+        "title": "ProposalOut",
+        "type": "object"
+      },
+      "QCFlag": {
+        "description": "Deterministic QC check outcome. ``value`` is always computed from stored data.",
+        "properties": {
+          "analyte": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyte"
+          },
+          "code": {
+            "enum": [
+              "recovery_out_of_range",
+              "recovery_rsd_high",
+              "calibration_r2_low",
+              "calibration_back_calc_error",
+              "is_suppression",
+              "is_enhancement",
+              "matrix_effect_significant"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "context": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Context",
+            "type": "object"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "threshold_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold High"
+          },
+          "threshold_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Low"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "value"
+        ],
+        "title": "QCFlag",
+        "type": "object"
+      },
+      "RecoveryGroupOut": {
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "mean_pct": {
+            "title": "Mean Pct",
+            "type": "number"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "rsd_pct": {
+            "title": "Rsd Pct",
+            "type": "number"
+          },
+          "sd_pct": {
+            "title": "Sd Pct",
+            "type": "number"
+          },
+          "spike_ng_g": {
+            "title": "Spike Ng G",
+            "type": "number"
+          }
+        },
+        "required": [
+          "analyte",
+          "spike_ng_g",
+          "n",
+          "mean_pct",
+          "sd_pct",
+          "rsd_pct"
+        ],
+        "title": "RecoveryGroupOut",
+        "type": "object"
+      },
+      "RecoveryOutput": {
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryGroupOut"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "kind": {
+            "const": "recovery",
+            "default": "recovery",
+            "title": "Kind",
+            "type": "string"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "overall_mean_pct": {
+            "title": "Overall Mean Pct",
+            "type": "number"
+          },
+          "overall_rsd_pct": {
+            "title": "Overall Rsd Pct",
+            "type": "number"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/RecoveryRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "overall_mean_pct",
+          "overall_rsd_pct",
+          "n",
+          "groups",
+          "rows"
+        ],
+        "title": "RecoveryOutput",
+        "type": "object"
+      },
+      "RecoveryRowOut": {
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "injection_id": {
+            "title": "Injection Id",
+            "type": "string"
+          },
+          "measured_ng_g": {
+            "title": "Measured Ng G",
+            "type": "number"
+          },
+          "recovery_pct": {
+            "title": "Recovery Pct",
+            "type": "number"
+          },
+          "sample_id": {
+            "title": "Sample Id",
+            "type": "string"
+          },
+          "spike_ng_g": {
+            "title": "Spike Ng G",
+            "type": "number"
+          }
+        },
+        "required": [
+          "injection_id",
+          "sample_id",
+          "analyte",
+          "spike_ng_g",
+          "measured_ng_g",
+          "recovery_pct"
+        ],
+        "title": "RecoveryRowOut",
+        "type": "object"
+      },
+      "RecoveryTTest": {
+        "properties": {
+          "n_a": {
+            "title": "N A",
+            "type": "integer"
+          },
+          "n_b": {
+            "title": "N B",
+            "type": "integer"
+          },
+          "p_value": {
+            "title": "P Value",
+            "type": "number"
+          },
+          "t_statistic": {
+            "title": "T Statistic",
+            "type": "number"
+          }
+        },
+        "required": [
+          "t_statistic",
+          "p_value",
+          "n_a",
+          "n_b"
+        ],
+        "title": "RecoveryTTest",
+        "type": "object"
+      },
+      "ResearchGraph": {
+        "properties": {
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "roots": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Roots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_id",
+          "nodes",
+          "edges",
+          "roots"
+        ],
+        "title": "ResearchGraph",
+        "type": "object"
+      },
+      "RunResponse": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AnalysisResultOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "reused": {
+            "title": "Reused",
+            "type": "integer"
+          },
+          "skipped": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skipped",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "results",
+          "created",
+          "reused",
+          "skipped"
+        ],
+        "title": "RunResponse",
+        "type": "object"
+      },
+      "SearchHit": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "field": {
+            "enum": [
+              "title",
+              "raw_note",
+              "condition_block",
+              "digest"
+            ],
+            "title": "Field",
+            "type": "string"
+          },
+          "snippet": {
+            "title": "Snippet",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "code",
+          "field",
+          "snippet"
+        ],
+        "title": "SearchHit",
+        "type": "object"
+      },
+      "SystemInfo": {
+        "properties": {
+          "ai_mode": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Ai Mode",
+            "type": "string"
+          },
+          "claude_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claude Model"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "ai_mode",
+          "claude_model"
+        ],
+        "title": "SystemInfo",
+        "type": "object"
+      },
+      "TimelineEntry": {
+        "properties": {
+          "changed_keys_vs_parent": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed Keys Vs Parent",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "dataset_kinds": {
+            "items": {
+              "enum": [
+                "calibration",
+                "recovery",
+                "matrix_effect",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Dataset Kinds",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "parent_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Experiment Id"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "code",
+          "title",
+          "performed_on",
+          "parent_experiment_id",
+          "changed_keys_vs_parent",
+          "dataset_kinds"
+        ],
+        "title": "TimelineEntry",
+        "type": "object"
+      },
+      "TrendPoint": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "flag_count": {
+            "title": "Flag Count",
+            "type": "integer"
+          },
+          "performed_on": {
+            "title": "Performed On",
+            "type": "string"
+          },
+          "recovery_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Mean Pct"
+          },
+          "recovery_rsd_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Rsd Pct"
+          },
+          "source_result_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Source Result Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "code",
+          "performed_on",
+          "recovery_mean_pct",
+          "recovery_rsd_pct",
+          "flag_count",
+          "source_result_ids"
+        ],
+        "title": "TrendPoint",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WeightingComparison": {
+        "properties": {
+          "sum_abs_relative_error_pct": {
+            "title": "Sum Abs Relative Error Pct",
+            "type": "number"
+          },
+          "weighting": {
+            "enum": [
+              "none",
+              "1/x",
+              "1/x2"
+            ],
+            "title": "Weighting",
+            "type": "string"
+          }
+        },
+        "required": [
+          "weighting",
+          "sum_abs_relative_error_pct"
+        ],
+        "title": "WeightingComparison",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "AI Research Partner — ELN · Research Memory · Scientific Analysis · Partner",
+    "title": "BioPilot API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/analysis/compare": {
+      "get": {
+        "operationId": "analysis_compare",
+        "parameters": [
+          {
+            "description": "baseline experiment id",
+            "in": "query",
+            "name": "a",
+            "required": true,
+            "schema": {
+              "description": "baseline experiment id",
+              "title": "A",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "comparison experiment id",
+            "in": "query",
+            "name": "b",
+            "required": true,
+            "schema": {
+              "description": "comparison experiment id",
+              "title": "B",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Compare",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/criteria": {
+      "get": {
+        "operationId": "analysis_get_criteria",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptanceCriteria"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Get Criteria",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/experiments/{experiment_id}/metrics": {
+      "get": {
+        "operationId": "analysis_get_metrics",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentMetrics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Metrics",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/experiments/{experiment_id}/run": {
+      "post": {
+        "operationId": "analysis_run_experiment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Experiment",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/projects/{project_id}/trend": {
+      "get": {
+        "operationId": "analysis_project_trend",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrendPoint"
+                  },
+                  "title": "Response Analysis Project Trend",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Trend",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/results": {
+      "get": {
+        "operationId": "analysis_list_results",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "experiment_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Experiment Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "calibration",
+                    "recovery",
+                    "is_response",
+                    "matrix_effect"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AnalysisResultOut"
+                  },
+                  "title": "Response Analysis List Results",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Results",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/results/{result_id}": {
+      "get": {
+        "operationId": "analysis_get_result",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "result_id",
+            "required": true,
+            "schema": {
+              "title": "Result Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Result",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/audit": {
+      "get": {
+        "operationId": "system_list_audit",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEventOut"
+                  },
+                  "title": "Response System List Audit",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Audit",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/eln/condition-fields": {
+      "get": {
+        "operationId": "eln_list_condition_fields",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConditionField"
+                  },
+                  "title": "Response Eln List Condition Fields",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "List Condition Fields",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/datasets/{dataset_id}": {
+      "get": {
+        "operationId": "eln_preview_dataset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Dataset",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/datasets/{dataset_id}/content": {
+      "get": {
+        "operationId": "eln_get_dataset_content",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {},
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Dataset Content",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/experiments/{experiment_id}": {
+      "get": {
+        "operationId": "eln_get_experiment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Experiment",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/experiments/{experiment_id}/datasets": {
+      "get": {
+        "operationId": "eln_list_datasets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetOut"
+                  },
+                  "title": "Response Eln List Datasets",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Datasets",
+        "tags": [
+          "eln"
+        ]
+      },
+      "post": {
+        "operationId": "eln_create_dataset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Dataset",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/projects": {
+      "get": {
+        "operationId": "eln_list_projects",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectOut"
+                  },
+                  "title": "Response Eln List Projects",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "List Projects",
+        "tags": [
+          "eln"
+        ]
+      },
+      "post": {
+        "operationId": "eln_create_project",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Project",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/projects/{project_id}": {
+      "get": {
+        "operationId": "eln_get_project",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Project",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/projects/{project_id}/experiments": {
+      "get": {
+        "operationId": "eln_list_experiments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExperimentSummary"
+                  },
+                  "title": "Response Eln List Experiments",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Experiments",
+        "tags": [
+          "eln"
+        ]
+      },
+      "post": {
+        "operationId": "eln_create_experiment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Experiment",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "system_health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/api/memory/diff": {
+      "get": {
+        "operationId": "memory_diff",
+        "parameters": [
+          {
+            "description": "baseline experiment id",
+            "in": "query",
+            "name": "a",
+            "required": true,
+            "schema": {
+              "description": "baseline experiment id",
+              "title": "A",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "comparison experiment id",
+            "in": "query",
+            "name": "b",
+            "required": true,
+            "schema": {
+              "description": "comparison experiment id",
+              "title": "B",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentDiff"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Diff",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/experiments/{experiment_id}/digests": {
+      "get": {
+        "operationId": "memory_list_digests",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DigestOut"
+                  },
+                  "title": "Response Memory List Digests",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Digests",
+        "tags": [
+          "memory"
+        ]
+      },
+      "post": {
+        "operationId": "memory_create_digest",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DigestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Digest",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/experiments/{experiment_id}/lineage": {
+      "get": {
+        "operationId": "memory_lineage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ExperimentSummary"
+                  },
+                  "title": "Response Memory Lineage",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lineage",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/projects/{project_id}/graph": {
+      "get": {
+        "operationId": "memory_graph",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Graph",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/projects/{project_id}/search": {
+      "get": {
+        "operationId": "memory_search",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SearchHit"
+                  },
+                  "title": "Response Memory Search",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/projects/{project_id}/timeline": {
+      "get": {
+        "operationId": "memory_timeline",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TimelineEntry"
+                  },
+                  "title": "Response Memory Timeline",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Timeline",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/partner/ask": {
+      "post": {
+        "operationId": "partner_ask",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/critiques/{critique_id}": {
+      "get": {
+        "operationId": "partner_get_critique",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "critique_id",
+            "required": true,
+            "schema": {
+              "title": "Critique Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CritiqueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Critique",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/experiments/{experiment_id}/critiques": {
+      "get": {
+        "operationId": "partner_list_critiques",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CritiqueOut"
+                  },
+                  "title": "Response Partner List Critiques",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Critiques",
+        "tags": [
+          "partner"
+        ]
+      },
+      "post": {
+        "operationId": "partner_run_critique",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CritiqueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Critique",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/hypotheses": {
+      "get": {
+        "operationId": "partner_list_hypotheses",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "experiment_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HypothesisOut"
+                  },
+                  "title": "Response Partner List Hypotheses",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Hypotheses",
+        "tags": [
+          "partner"
+        ]
+      },
+      "post": {
+        "operationId": "partner_create_hypothesis",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HypothesisCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HypothesisOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Hypothesis",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/mode": {
+      "get": {
+        "operationId": "partner_get_mode",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerMode"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Get Mode",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/proposals": {
+      "get": {
+        "operationId": "partner_list_proposals",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "experiment_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Experiment Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "modified",
+                    "rejected"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProposalOut"
+                  },
+                  "title": "Response Partner List Proposals",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Proposals",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/proposals/{proposal_id}": {
+      "get": {
+        "operationId": "partner_get_proposal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Proposal",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/proposals/{proposal_id}/decision": {
+      "post": {
+        "operationId": "partner_decide_proposal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/system/info": {
+      "get": {
+        "operationId": "system_info",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "System Info",
+        "tags": [
+          "system"
+        ]
+      }
+    }
+  }
+}

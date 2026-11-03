@@ -1,0 +1,251 @@
+{
+  "project": {
+    "name": "잔류농약 QuEChERS·LC-MS/MS 회수율 최적화",
+    "objective": "사과 매트릭스 5종 농약의 QuEChERS 전처리 회수율을 SANTE 기준(70–120%, RSD ≤20%) 내에서 유지하며 처리량을 높인다.",
+    "description": "분석 대상: azoxystrobin, carbendazim, imidacloprid, tebuconazole, thiabendazole. 내부표준 TPP."
+  },
+  "experiments": [
+    {
+      "code": "#018",
+      "title": "기준 프로토콜 회수율 확인",
+      "author": "김연구",
+      "performed_on": "2026-09-08",
+      "parent_code": null,
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 현행 QuEChERS 기준 프로토콜(AOAC 2007.01 아세테이트 완충)의 사과 매트릭스 회수율 확인.\n절차: 균질 사과 시료에 5종 농약을 두 수준으로 첨가(각 5반복), 아세토니트릴 추출 후 PSA/C18 d-SPE 정제.\n검량선은 용매 표준 6수준, 내부표준 TPP 보정.\n관찰:\n- 전 분석물 피크 형태 양호, 머무름 시간 안정\n- 정제 후 추출액 색상 연한 황색\n- 특이사항 없음, 이후 실험의 기준으로 사용",
+      "attachments": [
+        {
+          "name": "exp018_sequence.pdf",
+          "media_type": "application/pdf",
+          "description": "LC-MS/MS 시퀀스 리포트"
+        }
+      ],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp018_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp018_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#019",
+      "title": "무완충 추출 (pH 영향)",
+      "author": "김연구",
+      "performed_on": "2026-09-15",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 6.5,
+        "buffer": "없음 (무완충)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 완충염 없이 추출했을 때 pH 의존성 분석물 회수율 변화 확인.\n절차: #018과 동일하되 아세테이트 완충염 생략.\n관찰:\n- 카벤다짐, 티아벤다졸 피크 면적이 기준 대비 작아 보임\n- 나머지 분석물은 큰 차이 없어 보임\n- 추출액 pH 측정값 기록지 첨부",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp019_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp019_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#020",
+      "title": "컬럼·온도 변경 (분리능 개선)",
+      "author": "이분석",
+      "performed_on": "2026-09-22",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "Phenyl-Hexyl 2.1×100 mm, 2.7 µm",
+        "column_temp_c": 30,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 이미다클로프리드 근접 피크 분리 개선을 위해 Phenyl-Hexyl 컬럼 시험.\n절차: 시료 전처리는 #018과 동일, LC 컬럼과 온도만 변경.\n관찰:\n- 이미다클로프리드와 매트릭스 간섭 피크 분리 개선\n- 전체 머무름 시간 증가, 분석 시간 늘어남\n- 회수율은 전처리와 무관할 것으로 예상",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp020_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp020_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#021",
+      "title": "매트릭스 효과 평가 (용매 vs 매트릭스 매칭)",
+      "author": "이분석",
+      "performed_on": "2026-09-29",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 사과 추출물의 이온화 억제/증강 정도 정량.\n절차: 블랭크 사과 추출액(기준 프로토콜)과 용매로 각각 5수준 검량선 제조, 기울기 비교.\n관찰:\n- 매트릭스 매칭 표준에서 이미다클로프리드 면적이 뚜렷이 감소\n- 다른 분석물은 감소 폭이 작아 보임\n- 내부표준 미사용(절대 면적 비교)",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "matrix_effect",
+          "file": "exp021_matrix_effect.csv"
+        }
+      ]
+    },
+    {
+      "code": "#022",
+      "title": "반복성 평가 (저농도 n=6)",
+      "author": "김연구",
+      "performed_on": "2026-10-06",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 저농도 첨가 수준 반복성 확인.\n절차: 기준 프로토콜, 저농도 수준 6반복.\n관찰:\n- 반복 간 피크 면적 편차 작음\n- 장비 상태 양호",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp022_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp022_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#023",
+      "title": "검량선 검증 (넓은 범위, 1/x 가중)",
+      "author": "이분석",
+      "performed_on": "2026-10-13",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 정량 범위를 넓혔을 때 가중 방식(무가중 vs 1/x) 적합성 검증.\n절차: 용매 표준 8수준, 수준당 3반복 주입.\n관찰:\n- 최저 수준에서 무가중 역산값 편차가 커 보임\n- 1/x 가중 적용 시 저농도 역산 개선 예상\n- 고농도 수준 검출기 포화 징후 없음",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp023_calibration.csv"
+        }
+      ]
+    },
+    {
+      "code": "#024",
+      "title": "변경 프로토콜 (추출 단축 + GCB 정제)",
+      "author": "김연구",
+      "performed_on": "2026-10-20",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 5,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + GCB 7.5 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 처리량 향상을 위해 추출 시간을 줄이고, 색소 제거를 위해 GCB 정제 도입.\n절차: #018 기준에서 추출 시간 단축, d-SPE 흡착제 C18 → GCB 교체.\n관찰:\n- 정제 후 추출액이 거의 무색으로 맑아짐\n- 카벤다짐, 티아벤다졸 피크가 확연히 작음\n- 일부 시료(S-03, S-07, S-09) IS 피크 면적이 눈에 띄게 낮음\n- 원인 미확인, 재검토 필요",
+      "attachments": [
+        {
+          "name": "exp024_chromatogram.png",
+          "media_type": "image/png",
+          "description": "S-03 크로마토그램 캡처"
+        }
+      ],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp024_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp024_recovery.csv"
+        }
+      ]
+    }
+  ]
+}
