@@ -1,21 +1,31 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   useAudit,
-  useCompare,
   useCriteria,
+  useExperiments,
+  useHypotheses,
   useKnowledgeGraph,
   useProposals,
   useTimeline,
   useTrend,
 } from "@/api/queries";
-import { Badge, Card, DataTable, QueryState, StatTile } from "@/components";
-import { formatDate, formatDateTime, formatPValue, formatWithUnit } from "@/lib/format";
+import { Badge, Card, DataTable, Disclosure, PageHeader, QueryState } from "@/components";
+import { TABS } from "@/layout/tabs";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { useActiveProject } from "@/lib/selection";
+import { FocusCard, pickFocus } from "./FocusCard";
 import { GlobalSearchBar } from "./GlobalSearchBar";
 import { KnowledgeGraphView } from "./KnowledgeGraphView";
 import { RecoveryTrendChart } from "./RecoveryTrendChart";
 
-/** Project status at a glance. Every number comes from an API response. */
+const QUESTION = TABS.find((t) => t.path === "/overview")?.question ?? "";
+
+/**
+ * Project overview, ordered by "이 프로젝트에서 지금 무엇을 봐야 하나": one focus experiment
+ * (what is wrong, the open question, where to go), search, the recovery trend and the
+ * timeline; the knowledge graph and the audit log are collapsed below. Every number comes
+ * from an API response.
+ */
 export function OverviewPage() {
   const { project } = useActiveProject();
   const projectId = project?.id ?? null;
@@ -24,105 +34,114 @@ export function OverviewPage() {
   const audit = useAudit(projectId, 12);
   const { data: criteria } = useCriteria();
   const { data: proposals = [] } = useProposals(projectId);
+  const { data: hypotheses = [] } = useHypotheses(projectId);
+  const { data: experiments = [] } = useExperiments(projectId);
   const { search } = useLocation();
   const knowledge = useKnowledgeGraph(projectId);
 
-  const points = trend.data ?? [];
-  const withRecovery = points.filter((p) => p.recovery_mean_pct !== null);
-  const baseline = withRecovery[0] ?? null;
-  const latest = withRecovery[withRecovery.length - 1] ?? null;
-  const { data: cmp } = useCompare(baseline?.experiment_id ?? null, latest?.experiment_id ?? null);
+  const unresolved = new Set<number>([
+    ...proposals.filter((p) => p.status === "pending").flatMap((p) => (p.experiment_id != null ? [p.experiment_id] : [])),
+    ...hypotheses
+      .filter((h) => h.status === "proposed" || h.status === "open")
+      .flatMap((h) => (h.experiment_id != null ? [h.experiment_id] : [])),
+  ]);
+  const focus = pickFocus(trend.data ?? [], criteria ?? null, unresolved);
   const pending = proposals.filter((p) => p.status === "pending").length;
-  const inRange =
-    latest?.recovery_mean_pct != null && criteria
-      ? latest.recovery_mean_pct >= criteria.recovery_min_pct &&
-        latest.recovery_mean_pct <= criteria.recovery_max_pct
-      : null;
+  const openHypotheses = hypotheses.filter((h) => h.status === "proposed" || h.status === "open").length;
 
   if (!project) return <p className="text-xs text-ink-faint">프로젝트를 불러오는 중…</p>;
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold">{project.name}</h1>
-        <p className="mt-1 max-w-3xl text-xs text-ink-muted">{project.objective}</p>
-      </div>
+      <PageHeader title={project.name} question={QUESTION} />
+
+      {focus && (
+        <FocusCard
+          focus={focus}
+          experiments={experiments}
+          criteria={criteria ?? null}
+          proposals={proposals}
+          hypotheses={hypotheses}
+        />
+      )}
 
       <GlobalSearchBar projectId={projectId} />
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatTile label="기록된 실험" value={project.experiment_count} />
-        <StatTile
-          label={`최근 평균 회수율${latest ? ` (${latest.code})` : ""}`}
-          value={formatWithUnit(latest?.recovery_mean_pct, "%")}
-          tone={inRange === null ? "default" : inRange ? "ok" : "crit"}
-          hint={criteria && `기준 ${criteria.recovery_min_pct}–${criteria.recovery_max_pct}% (${criteria.source})`}
-        />
-        <StatTile
-          label={baseline && latest ? `${baseline.code} 대비 변화` : "기준 대비 변화"}
-          value={formatWithUnit(cmp?.recovery_delta_pct_points, "%p")}
-          hint={cmp?.recovery_t_test ? `Welch ${formatPValue(cmp.recovery_t_test.p_value)}` : undefined}
-          tone={(cmp?.recovery_delta_pct_points ?? 0) < 0 ? "warn" : "default"}
-        />
-        <StatTile label="결정 대기 제안" value={pending} hint="Research AI 탭에서 결정" />
-      </div>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-muted">
+        <span>
+          기록된 실험 <b className="text-ink">{project.experiment_count}</b>
+        </span>
+        <span>
+          결정 대기 제안 <b className={pending ? "text-warn" : "text-ink"}>{pending}</b>
+        </span>
+        <span>
+          미해결 가설 <b className={openHypotheses ? "text-warn" : "text-ink"}>{openHypotheses}</b>
+        </span>
+        {project.objective && <span className="text-ink-faint">목표: {project.objective}</span>}
+      </p>
 
-      <Card title="회수율 추이" subtitle="실험별 평균 회수율 (저장된 분석 결과)">
+      <Card title="회수율 추이" subtitle="실험별 평균 회수율 (저장된 분석 결과) · 초록 띠 = 허용 기준">
         <QueryState query={trend}>
           {(data) => <RecoveryTrendChart points={data} criteria={criteria ?? null} />}
         </QueryState>
       </Card>
 
-      <Card
-        title="연구 지식 그래프"
-        subtitle="실험 · 조건 · 분석물/시료 · 결과 · 가설 · 결정 (Memory, 감사 로그 기반 증분 갱신). 실험 노드를 누르면 열립니다."
-      >
-        <QueryState query={knowledge}>{(g) => <KnowledgeGraphView graph={g} />}</QueryState>
+      <Card title="실험 타임라인" subtitle="부모 실험 대비 변경된 조건">
+        <QueryState query={timeline}>
+          {(rows) => (
+            <DataTable
+              rows={rows}
+              rowKey={(r) => r.experiment_id}
+              rowClassName={(r) => (focus && r.experiment_id === focus.experiment_id ? "bg-warn-soft/40" : undefined)}
+              columns={[
+                {
+                  key: "code",
+                  header: "실험",
+                  render: (r) => (
+                    <Link
+                      className="font-medium text-brand hover:underline"
+                      to={{ pathname: "/notebook", search: `?exp=${r.experiment_id}` }}
+                    >
+                      {r.code}
+                    </Link>
+                  ),
+                },
+                { key: "title", header: "제목", render: (r) => r.title },
+                { key: "date", header: "일자", render: (r) => formatDate(r.performed_on) },
+                {
+                  key: "changes",
+                  header: "변경",
+                  render: (r) =>
+                    r.changed_keys_vs_parent.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {r.changed_keys_vs_parent.map((k) => (
+                          <Badge key={k} tone="warn">
+                            {k}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-ink-faint">기준</span>
+                    ),
+                },
+              ]}
+            />
+          )}
+        </QueryState>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card title="실험 타임라인" subtitle="부모 실험 대비 변경된 조건">
-          <QueryState query={timeline}>
-            {(rows) => (
-              <DataTable
-                rows={rows}
-                rowKey={(r) => r.experiment_id}
-                columns={[
-                  {
-                    key: "code",
-                    header: "실험",
-                    render: (r) => (
-                      <Link
-                        className="font-medium text-brand hover:underline"
-                        to={{ pathname: "/notebook", search: `?exp=${r.experiment_id}` }}
-                      >
-                        {r.code}
-                      </Link>
-                    ),
-                  },
-                  { key: "title", header: "제목", render: (r) => r.title },
-                  { key: "date", header: "일자", render: (r) => formatDate(r.performed_on) },
-                  {
-                    key: "changes",
-                    header: "변경",
-                    render: (r) =>
-                      r.changed_keys_vs_parent.length ? (
-                        <div className="flex flex-wrap gap-1">
-                          {r.changed_keys_vs_parent.map((k) => (
-                            <Badge key={k} tone="warn">
-                              {k}
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-ink-faint">기준</span>
-                      ),
-                  },
-                ]}
-              />
-            )}
-          </QueryState>
-        </Card>
-        <Card title="감사 로그" subtitle="모든 변경은 AuditEvent로 기록됩니다">
+      <div className="space-y-2">
+        <h2 className="px-1 pt-2 text-xs font-semibold text-ink-muted">자세히</h2>
+        <Disclosure
+          lazy
+          title="연구 지식 그래프"
+          summary={knowledge.data ? `노드 ${knowledge.data.nodes.length} · 연결 ${knowledge.data.edges.length}` : undefined}
+        >
+          <p className="mb-2 text-xs text-ink-muted">
+            실험 · 조건 · 분석물/시료 · 결과 · 가설 · 결정 (Memory, 감사 로그 기반 증분 갱신). 실험 노드를 누르면 열립니다.
+          </p>
+          <QueryState query={knowledge}>{(g) => <KnowledgeGraphView graph={g} />}</QueryState>
+        </Disclosure>
+        <Disclosure title="감사 로그" summary="모든 변경은 AuditEvent로 기록됩니다 · 최근 12건">
           <QueryState query={audit}>
             {(events) => (
               <DataTable
@@ -130,14 +149,18 @@ export function OverviewPage() {
                 rowKey={(e) => e.id}
                 columns={[
                   { key: "t", header: "시각", render: (e) => formatDateTime(e.occurred_at) },
-                  { key: "actor", header: "주체", render: (e) => <Badge tone={e.actor.startsWith("ai") ? "ai" : "neutral"}>{e.actor}</Badge> },
+                  {
+                    key: "actor",
+                    header: "주체",
+                    render: (e) => <Badge tone={e.actor.startsWith("ai") ? "ai" : "neutral"}>{e.actor}</Badge>,
+                  },
                   { key: "action", header: "행위", render: (e) => e.action },
                   { key: "entity", header: "대상", render: (e) => `${e.entity_type} #${e.entity_id}` },
                 ]}
               />
             )}
           </QueryState>
-        </Card>
+        </Disclosure>
       </div>
       <p className="text-[11px] text-ink-faint">
         <Link to={{ pathname: "/analysis", search }} className="hover:underline">
