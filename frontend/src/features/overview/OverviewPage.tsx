@@ -49,7 +49,7 @@ export function OverviewPage() {
   const pending = proposals.filter((p) => p.status === "pending").length;
   const openHypotheses = hypotheses.filter((h) => h.status === "proposed" || h.status === "open").length;
 
-  if (!project) return <p className="text-xs text-ink-faint">프로젝트를 불러오는 중…</p>;
+  if (!project) return <p className="text-sm text-ink-faint">프로젝트를 불러오는 중…</p>;
   return (
     <div className="space-y-4">
       <PageHeader title={project.name} question={QUESTION} />
@@ -66,7 +66,7 @@ export function OverviewPage() {
 
       <GlobalSearchBar projectId={projectId} />
 
-      <p className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-muted">
+      <p className="flex flex-wrap gap-x-5 gap-y-1.5 px-1 text-sm text-ink-muted">
         <span>
           기록된 실험 <b className="text-ink">{project.experiment_count}</b>
         </span>
@@ -130,13 +130,13 @@ export function OverviewPage() {
       </Card>
 
       <div className="space-y-2">
-        <h2 className="px-1 pt-2 text-xs font-semibold text-ink-muted">자세히</h2>
+        <h2 className="px-1 pt-4 text-sm font-semibold text-ink-muted">자세히</h2>
         <Disclosure
           lazy
           title="연구 지식 그래프"
           summary={knowledge.data ? `노드 ${knowledge.data.nodes.length} · 연결 ${knowledge.data.edges.length}` : undefined}
         >
-          <p className="mb-2 text-xs text-ink-muted">
+          <p className="mb-2 text-sm text-ink-muted">
             실험 · 조건 · 분석물/시료 · 결과 · 가설 · 결정 (Memory, 감사 로그 기반 증분 갱신). 실험 노드를 누르면 열립니다.
           </p>
           <QueryState query={knowledge}>{(g) => <KnowledgeGraphView graph={g} />}</QueryState>
@@ -162,7 +162,7 @@ export function OverviewPage() {
           </QueryState>
         </Disclosure>
       </div>
-      <p className="text-[11px] text-ink-faint">
+      <p className="text-sm text-ink-muted">
         <Link to={{ pathname: "/analysis", search }} className="hover:underline">
           자세한 수치는 Analysis 탭 →
         </Link>

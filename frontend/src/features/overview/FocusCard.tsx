@@ -85,7 +85,7 @@ export function FocusCard({ focus, experiments, criteria, proposals, hypotheses 
         tone === "crit" ? "border-crit/40 bg-crit-soft/50" : tone === "warn" ? "border-warn/40 bg-warn-soft/50" : "border-ok/30 bg-ok-soft/40",
       )}
     >
-      <p className="text-xs font-semibold text-ink-muted">
+      <p className="text-sm font-semibold text-ink-muted">
         지금 봐야 할 것 ·{" "}
         <span className={tone === "crit" ? "text-crit" : tone === "warn" ? "text-warn" : "text-ok"}>
           {needsReview ? "검토가 필요한 실험" : status === "pass" ? "최근 실험 합격" : "최근 실험"}
@@ -124,9 +124,9 @@ export function FocusCard({ focus, experiments, criteria, proposals, hypotheses 
 
       {assessment && (
         <div className="mt-3 rounded-md border border-border bg-surface/80 px-3 py-2 text-sm">
-          <p className="text-xs text-ink-muted">해결되지 않은 질문</p>
+          <p className="text-sm text-ink-muted">해결되지 않은 질문</p>
           <p className="font-medium">{assessment.question}</p>
-          <p className="mt-0.5 text-xs">
+          <p className="bp-prose mt-1">
             <span className="font-semibold text-warn">{VERDICT_WORD[assessment.verdict]}</span>
             {assessment.missing_controls.length > 0 && (
               <span className="text-ink-muted">
@@ -138,15 +138,15 @@ export function FocusCard({ focus, experiments, criteria, proposals, hypotheses 
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-        <Link to={{ pathname: "/analysis", search }} className="bp-btn-primary px-3 py-1 text-xs">
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <Link to={{ pathname: "/analysis", search }} className="bp-btn-primary px-3 py-1.5">
           결과를 믿을 수 있나 → Analysis
         </Link>
-        <Link to={{ pathname: "/research-ai", search, hash: "#critic" }} className="bp-btn-ghost px-3 py-1 text-xs">
+        <Link to={{ pathname: "/research-ai", search, hash: "#critic" }} className="bp-btn-ghost px-3 py-1.5">
           왜 그런가 → Critic
         </Link>
         {pending.length > 0 && (
-          <Link to={{ pathname: "/research-ai", search, hash: "#proposals" }} className="bp-btn-ghost px-3 py-1 text-xs">
+          <Link to={{ pathname: "/research-ai", search, hash: "#proposals" }} className="bp-btn-ghost px-3 py-1.5">
             결정 대기 제안 {pending.length}건
           </Link>
         )}

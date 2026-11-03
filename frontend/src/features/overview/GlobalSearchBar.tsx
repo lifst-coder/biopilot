@@ -68,7 +68,7 @@ export function GlobalSearchBar({ projectId }: { projectId: number | null }) {
         aria-autocomplete="list"
       />
       {open && (
-        <div className="mt-2 rounded-md border border-border bg-surface p-2 text-xs shadow-sm">
+        <div className="mt-2 rounded-md border border-border bg-surface p-3 text-sm shadow-sm">
           {recall.data && recall.data.terms.length > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-1" aria-label="해석된 검색어">
               {recall.data.terms.map((t) => (

@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import type { AcceptanceCriteria, TrendPoint } from "@/api/types";
 import { EmptyState } from "@/components";
-import { TOKEN_HEX } from "@/lib/chartColors";
+import { CHART_FONT_SIZE, TOKEN_HEX } from "@/lib/chartColors";
 import { formatWithUnit } from "@/lib/format";
 
 interface Props {
@@ -27,8 +27,8 @@ export function RecoveryTrendChart({ points, criteria }: Props) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e0e4ea" />
-          <XAxis dataKey="code" tick={{ fontSize: 11 }} />
-          <YAxis tick={{ fontSize: 11 }} domain={["auto", "auto"]} unit="%" />
+          <XAxis dataKey="code" tick={{ fontSize: CHART_FONT_SIZE }} />
+          <YAxis tick={{ fontSize: CHART_FONT_SIZE }} domain={["auto", "auto"]} unit="%" />
           {criteria && (
             <ReferenceArea
               y1={criteria.recovery_min_pct}

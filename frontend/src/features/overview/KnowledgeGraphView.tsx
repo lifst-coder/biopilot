@@ -93,21 +93,21 @@ export function KnowledgeGraphView({ graph }: Props) {
             aria-pressed={types.has(t)}
             onClick={() => toggle(t)}
             className={clsx(
-              "rounded-full border px-2.5 py-0.5 text-[11px]",
+              "rounded-full border px-2.5 py-0.5 text-xs",
               types.has(t) ? "border-brand bg-brand-soft text-brand-strong" : "border-border text-ink-faint",
             )}
           >
             {TYPE_LABELS[t]} {graph.counts[t]}
           </button>
         ))}
-        <span className="ml-auto text-[11px] text-ink-faint">
+        <span className="ml-auto text-xs text-ink-faint">
           갱신: {graph.refresh.mode === "incremental" ? "증분" : graph.refresh.mode === "full" ? "전체" : "캐시"} · 이벤트 #
           {graph.refresh.last_event_id}
         </span>
       </div>
 
       {visible.nodes.length === 0 ? (
-        <p className="py-6 text-center text-xs text-ink-faint">표시할 노드가 없습니다. 필터를 선택하세요.</p>
+        <p className="py-6 text-center text-sm text-ink-faint">표시할 노드가 없습니다. 필터를 선택하세요.</p>
       ) : (
         <div className="overflow-x-auto rounded-md border border-border bg-canvas">
           <svg
@@ -188,7 +188,7 @@ export function KnowledgeGraphView({ graph }: Props) {
       )}
 
       {selectedNode && (
-        <div className="rounded-md border border-border p-3 text-xs" aria-live="polite">
+        <div className="rounded-md border border-border p-3 text-sm" aria-live="polite">
           <div className="mb-1 flex items-center gap-2">
             <Badge tone="brand">{TYPE_LABELS[selectedNode.type]}</Badge>
             <span className="font-medium text-ink">{selectedNode.label}</span>
