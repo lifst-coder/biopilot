@@ -273,7 +273,9 @@ def test_declared_content_length_over_limit_is_rejected_upfront(client: TestClie
             "content-length": str(storage.MAX_ATTACHMENT_BYTES * 2),
         },
     )
-    assert response.status_code == 400 and "너무 큽니다" in response.json()["message"]
+    # 40 MB also exceeds the app-wide body cap (app/core/limits.py), which answers first
+    # with 413; within that cap ELN's own per-file limit answers 400.
+    assert response.status_code in (400, 413) and "너무 큽니다" in response.json()["message"]
 
 
 def test_duplicate_and_malformed_parts_are_400(client: TestClient) -> None:

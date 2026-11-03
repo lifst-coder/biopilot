@@ -28,6 +28,13 @@ class ImmutableRecordError(DomainError):
     code = "immutable_record"
 
 
+class ConflictError(DomainError):
+    """A concurrent change won a race the service could not resolve by retrying."""
+
+    status_code = 409
+    code = "conflict"
+
+
 class ValidationFailedError(DomainError):
     """Input is syntactically valid but semantically unusable (e.g. bad CSV)."""
 
