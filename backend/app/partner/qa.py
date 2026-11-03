@@ -141,6 +141,14 @@ def _alt_statement(alt: AlternativeExplanation) -> AnswerStatement:
 def cause_statements(critique: CritiqueOut, proposals: list[ProposalOut]) -> list[AnswerStatement]:
     """Why-question answer built from a stored critique and its proposals."""
     out: list[AnswerStatement] = []
+    feedback = [
+        AnswerStatement(
+            text=f"결정 반영: {fb.note}",
+            kind="fact",
+            evidence_keys=[fb.evidence_key] if fb.evidence_key else [],
+        )
+        for fb in critique.decision_feedback
+    ]
     for f in critique.findings:
         if f.severity == "critical" or "대비 회수율" in f.title:
             out.append(AnswerStatement(text=f.body, kind="fact", evidence_keys=f.evidence_keys))
@@ -153,6 +161,7 @@ def cause_statements(critique: CritiqueOut, proposals: list[ProposalOut]) -> lis
             for f in critique.findings
             if f.severity != "critical"
         ]
+        out += feedback
     else:
         out.append(
             AnswerStatement(
@@ -163,6 +172,7 @@ def cause_statements(critique: CritiqueOut, proposals: list[ProposalOut]) -> lis
                 ),
             )
         )
+        out += feedback
         for arg in assessment.supporting_evidence:
             kind = "fact" if arg.basis == "data" else "inference"
             prefix = "지지 근거" if arg.basis == "data" else "지지 근거(도메인 지식)"
@@ -177,7 +187,6 @@ def cause_statements(critique: CritiqueOut, proposals: list[ProposalOut]) -> lis
             )
             for arg in assessment.opposing_evidence
         ]
-        out += [_alt_statement(alt) for alt in assessment.alternative_explanations]
         for m in assessment.missing_controls:
             text = f"누락 대조군: {m.name} — {m.purpose}"
             if m.decision_note:
@@ -191,14 +200,7 @@ def cause_statements(critique: CritiqueOut, proposals: list[ProposalOut]) -> lis
             )
             for arg in assessment.undetermined_reasons
         ]
-    out += [
-        AnswerStatement(
-            text=f"결정 반영: {fb.note}",
-            kind="fact",
-            evidence_keys=[fb.evidence_key] if fb.evidence_key else [],
-        )
-        for fb in critique.decision_feedback
-    ]
+        out += [_alt_statement(alt) for alt in assessment.alternative_explanations]
     out += proposal_statements(proposals)
     return out
 
