@@ -559,6 +559,7 @@ export interface paths {
         /**
          * Update Metadata
          * @description Correct title/author only. Immutable fields in the body → 409 ``immutable_record``.
+         *     Concurrent corrections are serialised by retrying (409 ``conflict`` if that fails).
          */
         patch: operations["eln_update_experiment_metadata"];
         trace?: never;
@@ -2423,7 +2424,7 @@ export interface components {
         DatasetCreate: {
             /**
              * Content
-             * @description Raw CSV text (UTF-8, header row first)
+             * @description Raw CSV text (UTF-8, header row first, at most 5 MiB characters)
              */
             content: string;
             /** Filename */

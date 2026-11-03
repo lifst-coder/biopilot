@@ -2442,7 +2442,8 @@
       "DatasetCreate": {
         "properties": {
           "content": {
-            "description": "Raw CSV text (UTF-8, header row first)",
+            "description": "Raw CSV text (UTF-8, header row first, at most 5 MiB characters)",
+            "maxLength": 5242880,
             "minLength": 1,
             "title": "Content",
             "type": "string"
@@ -11717,7 +11718,7 @@
     },
     "/api/eln/experiments/{experiment_id}/metadata": {
       "patch": {
-        "description": "Correct title/author only. Immutable fields in the body → 409 ``immutable_record``.",
+        "description": "Correct title/author only. Immutable fields in the body → 409 ``immutable_record``.\nConcurrent corrections are serialised by retrying (409 ``conflict`` if that fails).",
         "operationId": "eln_update_experiment_metadata",
         "parameters": [
           {

@@ -487,26 +487,22 @@ def update_metadata(
     if not changes:
         raise ValidationFailedError("변경된 값이 없습니다")
     revision = _revision_count(session, experiment_id) + 1
-    try:
-        # SAVEPOINT: a concurrent PATCH that already wrote revision N+1 makes this insert
-        # hit uq_experiment_rev. Roll back only this change and answer 409 instead of a
-        # 500 from the request commit (ISSUES P1-6); the client reloads and retries.
-        with session.begin_nested():
-            for name, change in changes.items():
-                setattr(exp, name, change["after"])
-            row = ExperimentRevision(
-                experiment_id=experiment_id,
-                revision=revision,
-                changes=changes,
-                reason=data.reason,
-                actor=actor,
-            )
-            session.add(row)
-    except IntegrityError as exc:
-        raise RevisionConflictError(
-            f"{exp.code}: 다른 수정(revision {revision})이 먼저 저장되었습니다 — "
-            "새로 불러온 뒤 다시 수정하세요"
-        ) from exc
+    # No SAVEPOINT here: on pysqlite a SAVEPOINT opened before any write *is* the
+    # outermost transaction and RELEASE commits it, so a later rollback of the request
+    # would keep the correction without its audit event. A uq_experiment_rev collision
+    # (concurrent correction) surfaces as IntegrityError; the PATCH route resolves it
+    # with update_metadata_in_own_transaction().
+    for name, change in changes.items():
+        setattr(exp, name, change["after"])
+    row = ExperimentRevision(
+        experiment_id=experiment_id,
+        revision=revision,
+        changes=changes,
+        reason=data.reason,
+        actor=actor,
+    )
+    session.add(row)
+    session.flush()
     record_event(
         session,
         actor=actor,
@@ -522,6 +518,38 @@ def update_metadata(
         },
     )
     return get_experiment(session, experiment_id)
+
+
+#: Attempts of a metadata correction that keeps losing the revision-number race.
+METADATA_ATTEMPTS = 5
+
+
+def update_metadata_in_own_transaction(
+    session: Session,
+    experiment_id: int,
+    data: ExperimentMetadataUpdate,
+    *,
+    actor: Actor = "user",
+    attempts: int = METADATA_ATTEMPTS,
+) -> ExperimentOut:
+    """:func:`update_metadata` for a caller whose transaction holds nothing else (the
+    ``PATCH .../metadata`` route), resolving the revision-number race.
+
+    The next revision number is "stored revisions + 1". Two concurrent corrections can
+    both read *N* and both insert *N + 1*; the ``uq_experiment_rev`` unique constraint
+    stops the second one at flush. Instead of surfacing that ``IntegrityError`` (a 500
+    before), the transaction is rolled back and the correction is applied again from a
+    fresh read: the revision number is recomputed *and* the stored before/after values
+    are taken against the title/author the winner just committed, so the revision chain
+    stays consistent. After ``attempts`` lost races → :class:`RevisionConflictError`
+    (409 ``revision_conflict``).
+    """
+    for _ in range(attempts):
+        try:
+            return update_metadata(session, experiment_id, data, actor=actor)
+        except IntegrityError:
+            session.rollback()  # only this correction is lost; nothing else was pending
+    raise RevisionConflictError("다른 수정과 계속 충돌했습니다 — 새로 불러온 뒤 다시 수정하세요")
 
 
 def add_addendum(
@@ -954,7 +982,10 @@ def get_dataset_content(session: Session, dataset_id: int) -> str:
 def preview_dataset(session: Session, dataset_id: int, limit: int = 50) -> DatasetPreview:
     """First ``limit`` rows parsed as records."""
     row = _get_dataset_row(session, dataset_id)
-    frame = csv_ingest.parse_frame(row.content)
+    try:
+        frame = csv_ingest.parse_frame(row.content)
+    except ValueError as exc:  # e.g. a dataset stored before the row/column caps
+        raise ValidationFailedError(str(exc)) from exc
     return DatasetPreview(
         dataset=_dataset_out(session, row),
         rows=csv_ingest.records(frame, limit),
@@ -982,6 +1013,10 @@ def preview_import(
         long, analytes = converters.convert_wide(frame, layout, kind)
     except ValueError as exc:  # ConversionError is a ValueError
         raise ValidationFailedError(str(exc)) from exc
+    if len(long) > csv_ingest.MAX_CSV_ROWS:  # wide → long multiplies rows by analytes
+        raise ValidationFailedError(
+            f"변환 결과 행이 너무 많습니다 ({len(long):,}행 > 최대 {csv_ingest.MAX_CSV_ROWS:,}행)"
+        )
     converted = long.to_csv(index=False, lineterminator="\n")
     validation = validate_csv_text(
         kind,

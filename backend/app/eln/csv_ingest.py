@@ -7,16 +7,25 @@ returned as structured :class:`CsvIssue` items so the UI can point at row/column
 
 from __future__ import annotations
 
+import csv
 import io
 import math
+from collections import Counter
 from typing import Any
 
 import pandas as pd
 
+from app.eln import schemas
 from app.eln.schemas import CsvIssue, DatasetKindSpec, IssueLevel
 
-#: Maximum accepted CSV upload size in bytes.
-MAX_CSV_BYTES = 5 * 1024 * 1024
+#: Maximum accepted CSV upload size in bytes (defined with the request schema).
+MAX_CSV_BYTES = schemas.MAX_CSV_BYTES
+#: Most data rows accepted in one dataset. 5 MB of short rows is ~500k rows; a real
+#: LC-MS/MS sequence in the long contract is injections × analytes (≈ 300 × 300).
+MAX_CSV_ROWS = 200_000
+#: Most columns accepted. Wide vendor exports carry ~2 columns per analyte, so this
+#: leaves room for multi-residue methods with several hundred compounds.
+MAX_CSV_COLUMNS = 1_000
 #: At most this many row-level issues are reported per column/check.
 MAX_ROW_ISSUES = 5
 
@@ -58,16 +67,41 @@ def parse_frame(content: str, *, lenient: bool = False) -> pd.DataFrame:
     ``lenient=True`` trims header cells and skips spaces after delimiters. It is only for
     vendor exports that are converted and re-serialized to the canonical long CSV (which
     is then validated strictly) — never for content that is stored verbatim.
+
+    Size caps are checked before and during parsing so that no input makes the server
+    spend more than linear time: more than :data:`MAX_CSV_COLUMNS` header cells is
+    rejected before pandas runs, and pandas stops reading after
+    :data:`MAX_CSV_ROWS` + 1 rows.
     """
+    width = header_width(content)
+    if width > MAX_CSV_COLUMNS:
+        raise ValueError(f"열이 너무 많습니다 ({width:,}열 > 최대 {MAX_CSV_COLUMNS:,}열)")
     try:
-        frame = pd.read_csv(io.StringIO(content), skipinitialspace=lenient)
+        frame = pd.read_csv(io.StringIO(content), skipinitialspace=lenient, nrows=MAX_CSV_ROWS + 1)
     except pd.errors.EmptyDataError as exc:
         raise ValueError("빈 파일입니다 (헤더 행 없음)") from exc
     except pd.errors.ParserError as exc:
         raise ValueError(f"CSV를 해석할 수 없습니다: {exc}") from exc
+    if len(frame) > MAX_CSV_ROWS:
+        raise ValueError(f"행이 너무 많습니다 (최대 {MAX_CSV_ROWS:,}행)")
     if lenient:
         frame.columns = [str(c).strip() for c in frame.columns]
     return frame
+
+
+def header_width(content: str) -> int:
+    """Number of cells in the first non-blank row (the header pandas will use).
+
+    Returns 0 when the stdlib reader cannot read the header (e.g. a single cell over
+    ``csv.field_size_limit``); pandas then reports the problem itself.
+    """
+    try:
+        for row in csv.reader(io.StringIO(content)):
+            if row:
+                return len(row)
+    except csv.Error:
+        return 0
+    return 0
 
 
 def _clean(value: Any) -> Any:
@@ -102,7 +136,8 @@ def validate_frame(frame: pd.DataFrame, spec: DatasetKindSpec) -> list[CsvIssue]
         issues.append(
             CsvIssue(level="warning", code="unnamed_column", message="이름 없는 컬럼이 있습니다")
         )
-    duplicated = sorted({c for c in frame.columns if list(frame.columns).count(c) > 1})
+    counts = Counter(frame.columns)  # one pass: list.count per column was O(columns²)
+    duplicated = sorted(str(c) for c, n in counts.items() if n > 1)
     if duplicated:
         issues.append(
             CsvIssue(

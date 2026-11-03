@@ -20,6 +20,8 @@ HistoryKind = Literal["created", "metadata", "addendum", "dataset", "attachment"
 
 #: Longest stored file name (``String(255)`` name columns of datasets/attachments).
 MAX_FILENAME_LENGTH = 255
+#: Largest CSV accepted, as uploaded bytes or as JSON ``content`` characters.
+MAX_CSV_BYTES = 5 * 1024 * 1024
 
 
 class DatasetKindSpec(BaseModel):
@@ -379,7 +381,11 @@ class ExperimentHistory(BaseModel):
 class DatasetCreate(BaseModel):
     kind: DatasetKind
     filename: str = Field(min_length=1, max_length=MAX_FILENAME_LENGTH)
-    content: str = Field(min_length=1, description="Raw CSV text (UTF-8, header row first)")
+    content: str = Field(
+        min_length=1,
+        max_length=MAX_CSV_BYTES,
+        description="Raw CSV text (UTF-8, header row first, at most 5 MiB characters)",
+    )
     schema_version: int | None = Field(
         default=None, ge=1, description="Contract version (kind@version); latest when omitted"
     )

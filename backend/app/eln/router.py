@@ -281,8 +281,9 @@ def get_experiment(experiment_id: int, session: Session = Depends(get_session)) 
 def update_metadata(
     experiment_id: int, data: ExperimentMetadataUpdate, session: Session = Depends(get_session)
 ) -> ExperimentOut:
-    """Correct title/author only. Immutable fields in the body → 409 ``immutable_record``."""
-    return service.update_metadata(session, experiment_id, data)
+    """Correct title/author only. Immutable fields in the body → 409 ``immutable_record``.
+    Concurrent corrections are serialised by retrying (409 ``conflict`` if that fails)."""
+    return service.update_metadata_in_own_transaction(session, experiment_id, data)
 
 
 @router.post(
