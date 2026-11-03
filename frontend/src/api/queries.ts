@@ -115,6 +115,42 @@ export const useCreateDigest = () => {
   });
 };
 
+export const useKnowledgeGraph = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["memory", "knowledge-graph", projectId],
+    enabled: enabled(projectId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/memory/projects/{project_id}/knowledge-graph", {
+          params: { path: { project_id: projectId! } },
+        }),
+      ),
+  });
+
+export const useMemorySearch = (projectId: number | null, q: string, limit = 20) =>
+  useQuery({
+    queryKey: ["memory", "search", projectId, q, limit],
+    enabled: enabled(projectId) && q.trim().length > 0,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/memory/projects/{project_id}/search", {
+          params: { path: { project_id: projectId! }, query: { q: q.trim(), limit } },
+        }),
+      ),
+  });
+
+export const useRecall = (projectId: number | null, q: string) =>
+  useQuery({
+    queryKey: ["memory", "recall", projectId, q],
+    enabled: enabled(projectId) && q.trim().length > 0,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/memory/projects/{project_id}/recall", {
+          params: { path: { project_id: projectId! }, query: { q: q.trim() } },
+        }),
+      ),
+  });
+
 // -------------------------------------------------------------- analysis
 export const useCriteria = () =>
   useQuery({
