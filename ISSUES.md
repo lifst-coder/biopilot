@@ -26,8 +26,8 @@
    Grubbs `outlier_suspected`(warning)가 여전히 resolved로 나온다. memory `test_diff`는 "critical·IS 억제 플래그가
    해소되지 않음"으로 단정을 바꿨다. → **결정 필요(P1, Analysis):** Grubbs 의심·불확도 초과를 info로 내릴지.
 2. **calibration_type 미지원 플래그의 `value`.** `QCFlag.value`가 필수 숫자라 "정량하지 않은 회수율 주입 수(저장 CSV 행 수)"를 넣었다.
-3. **교차 프로젝트 회상.** 검색·회상 API는 프로젝트 단위이고 UI는 첫 프로젝트만 연다(프로젝트 전환 CR 미구현).
-   E2E는 "잔류농약 기억에서 유기산 실험(#OA02)을 회상"을 UI로, 반대 방향을 API로 확인한다. 두 프로젝트를 한 번에 검색하는 API는 없다.
+3. ~~**교차 프로젝트 회상.**~~ 해결: 헤더 프로젝트 전환(`?project=`), 교차 프로젝트 `/api/memory/search`·`/recall`,
+   Critic 위 "과거에 같은 증상이 있었다"(#OA06 → 잔류농약 PSA 사용 이력). E2E `lab: #OA06 recalls …`가 UI로 확인한다.
 
 ## P1 — 정확성·원칙에 닿는 것 (다음 스프린트)
 
@@ -48,7 +48,7 @@
 
 | # | 항목 | 담당 |
 |---|---|---|
-| 1 | 프로젝트 전환 UI(`?project=`) — lab 유기산 프로젝트를 UI로 열 수 없다 | shell |
+| 1 | ~~프로젝트 전환 UI(`?project=`)~~ — 완료 (헤더 전환, `?exp=`만 있으면 그 실험의 프로젝트) | shell |
 | 2 | CompareModal에 memory `qc_changes`·`qc_info_changes`·단어 diff·결과 출처 표시, 결과 차이 경로 통일 | eln + memory |
 | 3 | Overview가 프로젝트 활성 기준(`useCriteria(projectId)`) 표시 | shell |
 | 4 | 결정 사유를 Memory 검색에 색인(wiring pull) | memory |
@@ -63,7 +63,9 @@
 | 13 | ELN 실험 작성 폼이 Partner 제안 초안(PAR-2)을 초기값으로 받는 경로 | eln |
 | 14 | lab 프로파일 픽스처 위에서 모듈 테스트 통과(시드 모양 하드코딩 제거) | 각 모듈 |
 | 15 | 보충 기록(addenda)을 검색·정리본 입력에 포함 | memory |
-| 16 | 두 프로젝트를 가로지르는 검색/회상 API(현재는 프로젝트 단위) | memory |
+| 16 | ~~두 프로젝트를 가로지르는 검색/회상 API~~ — 완료 (`/api/memory/search`, `/recall`) | memory |
+| 18 | Records 탭의 한계: 작업자 쌍은 조건 블록 **완전 일치**·14일 이내만(부분 일치 비교 없음), 실패 = critical 플래그만(경고 반복은 아카이브에 없음), 원인 가설 메모 규칙은 키워드 부분 문자열("점검 후"도 기기 상태로 잡힘), 결정→후속 실험 연결은 결정 시각 대신 `performed_on`과 조건값 일치로 찾는다(memory `tests_proposal`이 seed 결정 시각 때문에 비어 있음 — P1-10) | analysis, partner, memory |
+| 19 | 과거 사례는 저장된 비판에 스냅샷되지 않는다(조회 시점 계산). Claude 모드 비판의 근거(Evidence)로 넣으려면 `partner/context.py`에 연결 필요 | partner |
 | 17 | 데모 모드: 미리 계산하지 않은 검색어·비교 쌍은 "시나리오에 없음"으로 표시된다(lab은 부모·루트·직전 실험 쌍만) | shell |
 
 ## P3 — 정리·품질

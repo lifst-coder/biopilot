@@ -105,6 +105,9 @@ CSV 계약(`eln/schemas.py: DATASET_COLUMNS`):
 | GET | `/api/memory/projects/{project_id}/knowledge-graph?types&focus&radius` | `KnowledgeGraph` (Experiment↔Condition↔Analyte/Sample↔Result↔Critique↔Hypothesis↔Proposal↔Decision, `refresh`=full/incremental/cached) |
 | GET | `/api/memory/projects/{project_id}/search?q&limit` | `SearchHit[]` (FTS5 trigram, `score`, `highlights`, `source`) |
 | GET | `/api/memory/projects/{project_id}/recall?q&limit` | `RecallBundle` (terms[facet], experiments, protocols, results) |
+| GET | `/api/memory/search?q&limit&project_id*` | `SearchHit[]` 교차 프로젝트(기본 전체, `project_id` 반복으로 제한) — 각 hit에 `project_id` |
+| GET | `/api/memory/recall?q&limit&project_id*` | `RecallBundle` 교차 프로젝트(점수 순 병합, `project_ids`) |
+| GET | `/api/memory/failures?project_id*` | `FailureArchive` (실패 = 저장된 QC의 critical 플래그 · 유형 · 반복 패턴[retry/same_condition] · 벗어난 실험) |
 | POST | `/api/memory/projects/{project_id}/ask` | `MemoryAnswer` (규칙: 근거 조각 / Claude: 근거 검증된 요약, `fallback_reason`) |
 | GET | `/api/memory/projects/{project_id}/conditions/{key}/history` | `ConditionHistoryEntry[]` |
 | GET | `/api/memory/compare-conditions?ids=1,2,7&varying_only` | `ConditionMatrix` |
@@ -129,6 +132,9 @@ Memory는 eln에만 의존한다. Analysis 결과·QC 플래그·Partner 레코�
 | GET | `/api/analysis/results/{result_id}` | `AnalysisResultOut` (`output`은 `kind` 판별 유니온) |
 | GET | `/api/analysis/compare?a&b` | `MetricsComparison` (Δ회수율, 분석물별 Δ, Welch t-test) |
 | GET | `/api/analysis/projects/{project_id}/trend` | `TrendPoint[]` |
+| GET | `/api/analysis/records/conditions?key&contains&project_id*` | `ConditionRecords` (조건값별 묶음: 저장 회수율 최소/중앙/최대, QC 불합격 비율, 근거 실험) |
+| GET | `/api/analysis/records/operators?window_days&project_id*` | `OperatorRecords` (작업자별 묶음 + 조건 블록 동일·기간 내 작업자 쌍의 `compare` 결과) |
+| GET | `/api/analysis/records/periods?gap_days&project_id*` | `PeriodRecords` (월별 묶음 + 실험 없는 공백) |
 
 결과 종류(`kind`): `calibration`(slope, intercept, weighted R², back_calc, points, fit_line,
 weighting_comparison) · `recovery`(groups, rows) · `is_response`(injections, flagged_count) · `matrix_effect`.
@@ -150,11 +156,17 @@ weighting_comparison) · `recovery`(groups, rows) · `is_response`(injections, f
 | GET | `/api/partner/projects/{project_id}/decisions?experiment_id` | `DecisionHistory` (결정 + 반영된 비판 id) |
 | POST | `/api/partner/hypotheses/{hypothesis_id}/status` | `HypothesisOut` (proposed→open→supported/refuted) |
 | GET | `/api/partner/proposals/{proposal_id}/experiment-draft` | `ExperimentDraftOut` (저장하지 않는 ExperimentCreate 초안) |
+| GET | `/api/partner/failure-archive?project_id*` | `FailureArchiveOut` (Memory 실패 아카이브 + 규칙 기반 원인 가설[근거 실험] + 그 뒤 결정·후속 실험) |
+| GET | `/api/partner/experiments/{experiment_id}/precedents` | `PrecedentsOut` (이 실험보다 먼저 같은 증상으로 실패한 사례[모든 프로젝트]와 그때 결론, 다른 프로젝트의 같은 조건값 사용 이력) |
 
 Partner 출력 구조: `CritiqueOut.assessments[]`(Research Critic: 지지/반대 근거, 누락 대조군, 대안 설명,
 확정 불가 이유, verdict) · `ProposalOut.design`(변수·대조군·반복 수·측정·예상 판별력·근거 실험) ·
 `priority`/`priority_factors` · `decision_feedback[]`(이전 결정이 어떻게 반영됐는지).
 결정 사유는 다음 비판의 근거(`partner.Decision` evidence)가 되고, 결정된 제안과 같은 변경(signature)은 다시 제안하지 않는다.
+
+축적 기록 질의의 역할 분담: **Memory**가 실패 목록·유형·반복 패턴(기록 구조, 숫자 계산 없음)을, **Analysis**가
+조건값·작업자·기간 묶음의 통계(개수·최소/중앙/최대·불합격 비율, 작업자 쌍은 기존 Welch `compare`)를, **Partner**가
+원인 가설(규칙)·결정 연결·과거 사례(precedents)를 맡는다. 과거 사례는 저장된 비판을 바꾸지 않고 조회 시점에 기록에서 찾는다.
 
 ## 4. 프론트엔드
 
@@ -172,8 +184,10 @@ frontend/src/
     analysis/     검량선/회수율/IS/ME 패널, QC 플래그, 수치 비교
     research-ai/  비판(근거 칩), 가설, 제안 + 결정 폼
     partner-panel/ 우측 패널: 모드, 최근 비판, 질문
+    records/      Records 탭: 기록 가로지르기(조건값·작업자·기간) · 실패 아카이브 (모든 프로젝트)
 ```
 
+- 활성 프로젝트는 URL `?project=<id>`(헤더 전환). 없으면 `?exp=`의 프로젝트, 그것도 없으면 첫 프로젝트.
 - 선택된 실험은 URL `?exp=<id>`로 탭/패널 간 공유된다.
 - 각 탭은 lazy chunk. 탭 간 import 금지(공통은 `components/`·`lib/`로).
 - 색은 `tokens.css` 변수만 사용(Tailwind `bg-surface`, `text-ink-muted`, `bg-crit-soft` …).
