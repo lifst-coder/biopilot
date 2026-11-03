@@ -1731,6 +1731,59 @@
         "title": "ConditionMatrixRow",
         "type": "object"
       },
+      "ConditionRecords": {
+        "description": "Every stored experiment grouped by the value of one condition key.",
+        "properties": {
+          "contains": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contains"
+          },
+          "groups": {
+            "description": "Largest group first",
+            "items": {
+              "$ref": "#/components/schemas/RecordGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "matched": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordGroup"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "All experiments whose value contains ``contains`` (pooled)"
+          },
+          "project_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Project Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "project_ids",
+          "groups"
+        ],
+        "title": "ConditionRecords",
+        "type": "object"
+      },
       "ConditionRule": {
         "description": "Validation rule for one condition key inside a project template.\n\n``min``/``max`` are hard limits (violations are errors → HTTP 400);\n``warn_min``/``warn_max`` describe the usual range (violations are warnings).",
         "properties": {
@@ -6302,6 +6355,119 @@
         "title": "NoteDiffSegment",
         "type": "object"
       },
+      "OperatorPair": {
+        "description": "Two experiments with identical condition blocks run by different people.\n\nNumbers are ``compare(a, b)`` (Welch t-test on all stored recovery rows, b − a).",
+        "properties": {
+          "alpha": {
+            "default": 0.05,
+            "title": "Alpha",
+            "type": "number"
+          },
+          "condition_key_count": {
+            "description": "Condition keys compared (all identical)",
+            "title": "Condition Key Count",
+            "type": "integer"
+          },
+          "days_apart": {
+            "title": "Days Apart",
+            "type": "integer"
+          },
+          "experiment_a": {
+            "$ref": "#/components/schemas/RecordExperiment"
+          },
+          "experiment_b": {
+            "$ref": "#/components/schemas/RecordExperiment"
+          },
+          "p_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P Value"
+          },
+          "recovery_delta_pct_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Delta Pct Points"
+          },
+          "significant": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Significant"
+          },
+          "significant_analytes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Significant Analytes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment_a",
+          "experiment_b",
+          "days_apart",
+          "condition_key_count"
+        ],
+        "title": "OperatorPair",
+        "type": "object"
+      },
+      "OperatorRecords": {
+        "properties": {
+          "authors": {
+            "description": "All experiments grouped by author",
+            "items": {
+              "$ref": "#/components/schemas/RecordGroup"
+            },
+            "title": "Authors",
+            "type": "array"
+          },
+          "pairs": {
+            "description": "Largest |Δ| first",
+            "items": {
+              "$ref": "#/components/schemas/OperatorPair"
+            },
+            "title": "Pairs",
+            "type": "array"
+          },
+          "project_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Project Ids",
+            "type": "array"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_ids",
+          "window_days",
+          "authors",
+          "pairs"
+        ],
+        "title": "OperatorRecords",
+        "type": "object"
+      },
       "PartnerMode": {
         "properties": {
           "description": {
@@ -6334,6 +6500,44 @@
           "description"
         ],
         "title": "PartnerMode",
+        "type": "object"
+      },
+      "PeriodRecords": {
+        "properties": {
+          "gap_days": {
+            "title": "Gap Days",
+            "type": "integer"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/RecordGap"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "months": {
+            "description": "Chronological, key = YYYY-MM",
+            "items": {
+              "$ref": "#/components/schemas/RecordGroup"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "project_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Project Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_ids",
+          "gap_days",
+          "months",
+          "gaps"
+        ],
+        "title": "PeriodRecords",
         "type": "object"
       },
       "PriorityFactor": {
@@ -7093,6 +7297,220 @@
           "reasons"
         ],
         "title": "RecallExperiment",
+        "type": "object"
+      },
+      "RecordExperiment": {
+        "description": "One experiment's stored headline numbers inside a records group.",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "qc_status": {
+            "default": "not_analyzed",
+            "enum": [
+              "pass",
+              "warning",
+              "fail",
+              "not_analyzed"
+            ],
+            "title": "Qc Status",
+            "type": "string"
+          },
+          "recovery_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Mean Pct"
+          },
+          "recovery_rsd_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Rsd Pct"
+          },
+          "source_result_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Source Result Ids",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "project_id",
+          "code",
+          "title",
+          "author",
+          "performed_on"
+        ],
+        "title": "RecordExperiment",
+        "type": "object"
+      },
+      "RecordGap": {
+        "description": "A stretch with no experiment at all in the selected projects.",
+        "properties": {
+          "after": {
+            "items": {
+              "$ref": "#/components/schemas/RecordExperiment"
+            },
+            "title": "After",
+            "type": "array"
+          },
+          "before": {
+            "items": {
+              "$ref": "#/components/schemas/RecordExperiment"
+            },
+            "title": "Before",
+            "type": "array"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "end": {
+            "description": "First experiment date after the gap",
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "description": "Last experiment date before the gap",
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "days",
+          "before",
+          "after"
+        ],
+        "title": "RecordGap",
+        "type": "object"
+      },
+      "RecordGroup": {
+        "description": "Experiments sharing one value (condition value, author or month).\n\n``recovery_*`` summarise the stored mean recovery of the members that have one;\n``fail_count`` counts members whose stored QC status is ``fail`` (any critical flag)\nand ``fail_ratio`` = fail_count / analyzed_count (members with stored results).",
+        "properties": {
+          "analyzed_count": {
+            "title": "Analyzed Count",
+            "type": "integer"
+          },
+          "experiment_count": {
+            "title": "Experiment Count",
+            "type": "integer"
+          },
+          "experiments": {
+            "items": {
+              "$ref": "#/components/schemas/RecordExperiment"
+            },
+            "title": "Experiments",
+            "type": "array"
+          },
+          "fail_count": {
+            "title": "Fail Count",
+            "type": "integer"
+          },
+          "fail_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Ratio"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "recovery_max_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Max Pct"
+          },
+          "recovery_median_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Median Pct"
+          },
+          "recovery_min_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Min Pct"
+          },
+          "recovery_n": {
+            "title": "Recovery N",
+            "type": "integer"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "experiments",
+          "experiment_count",
+          "analyzed_count",
+          "recovery_n",
+          "fail_count"
+        ],
+        "title": "RecordGroup",
         "type": "object"
       },
       "RecoveryGroupOut": {
@@ -8858,6 +9276,317 @@
           }
         },
         "summary": "Project Trend",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/records/conditions": {
+      "get": {
+        "description": "Stored outcomes of every experiment grouped by one condition value.",
+        "operationId": "analysis_records_by_condition",
+        "parameters": [
+          {
+            "description": "Condition key, e.g. cleanup_sorbent",
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "description": "Condition key, e.g. cleanup_sorbent",
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Key",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Pool values containing",
+            "in": "query",
+            "name": "contains",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Pool values containing",
+              "title": "Contains"
+            }
+          },
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConditionRecords"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Records By Condition",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/records/operators": {
+      "get": {
+        "description": "Outcomes by author and same-protocol pairs run by different authors (Welch).",
+        "operationId": "analysis_records_by_operator",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 14,
+              "maximum": 365,
+              "minimum": 0,
+              "title": "Window Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatorRecords"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Records By Operator",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/records/periods": {
+      "get": {
+        "description": "Outcomes by month and stretches without any experiment.",
+        "operationId": "analysis_records_by_period",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "gap_days",
+            "required": false,
+            "schema": {
+              "default": 21,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Gap Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeriodRecords"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Records By Period",
         "tags": [
           "analysis"
         ]

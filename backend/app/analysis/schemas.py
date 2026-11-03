@@ -9,7 +9,7 @@ stored by older method versions still validate when read back.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -555,3 +555,95 @@ class RunResponse(BaseModel):
     created: int
     reused: int
     skipped: list[str]
+
+
+# ------------------------------------------------- records across projects
+
+
+class RecordExperiment(BaseModel):
+    """One experiment's stored headline numbers inside a records group."""
+
+    experiment_id: int
+    project_id: int
+    code: str
+    title: str
+    author: str
+    performed_on: date
+    recovery_mean_pct: float | None = None
+    recovery_rsd_pct: float | None = None
+    qc_status: QCStatus = "not_analyzed"
+    source_result_ids: list[int] = []
+
+
+class RecordGroup(BaseModel):
+    """Experiments sharing one value (condition value, author or month).
+
+    ``recovery_*`` summarise the stored mean recovery of the members that have one;
+    ``fail_count`` counts members whose stored QC status is ``fail`` (any critical flag)
+    and ``fail_ratio`` = fail_count / analyzed_count (members with stored results).
+    """
+
+    key: str
+    value: Any = None
+    experiments: list[RecordExperiment]
+    experiment_count: int
+    analyzed_count: int
+    recovery_n: int
+    recovery_min_pct: float | None = None
+    recovery_median_pct: float | None = None
+    recovery_max_pct: float | None = None
+    fail_count: int
+    fail_ratio: float | None = None
+
+
+class ConditionRecords(BaseModel):
+    """Every stored experiment grouped by the value of one condition key."""
+
+    key: str
+    project_ids: list[int]
+    contains: str | None = None
+    groups: list[RecordGroup] = Field(description="Largest group first")
+    matched: RecordGroup | None = Field(
+        default=None, description="All experiments whose value contains ``contains`` (pooled)"
+    )
+
+
+class OperatorPair(BaseModel):
+    """Two experiments with identical condition blocks run by different people.
+
+    Numbers are ``compare(a, b)`` (Welch t-test on all stored recovery rows, b − a).
+    """
+
+    experiment_a: RecordExperiment
+    experiment_b: RecordExperiment
+    days_apart: int
+    condition_key_count: int = Field(description="Condition keys compared (all identical)")
+    recovery_delta_pct_points: float | None = None
+    p_value: float | None = None
+    alpha: float = 0.05
+    significant: bool | None = None
+    significant_analytes: list[str] = []
+
+
+class OperatorRecords(BaseModel):
+    project_ids: list[int]
+    window_days: int
+    authors: list[RecordGroup] = Field(description="All experiments grouped by author")
+    pairs: list[OperatorPair] = Field(description="Largest |Δ| first")
+
+
+class RecordGap(BaseModel):
+    """A stretch with no experiment at all in the selected projects."""
+
+    start: date = Field(description="Last experiment date before the gap")
+    end: date = Field(description="First experiment date after the gap")
+    days: int
+    before: list[RecordExperiment]
+    after: list[RecordExperiment]
+
+
+class PeriodRecords(BaseModel):
+    project_ids: list[int]
+    gap_days: int
+    months: list[RecordGroup] = Field(description="Chronological, key = YYYY-MM")
+    gaps: list[RecordGap]

@@ -168,6 +168,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/analysis/records/conditions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Records By Condition
+         * @description Stored outcomes of every experiment grouped by one condition value.
+         */
+        get: operations["analysis_records_by_condition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/records/operators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Records By Operator
+         * @description Outcomes by author and same-protocol pairs run by different authors (Welch).
+         */
+        get: operations["analysis_records_by_operator"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/records/periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Records By Period
+         * @description Outcomes by month and stretches without any experiment.
+         */
+        get: operations["analysis_records_by_period"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/analysis/results": {
         parameters: {
             query?: never;
@@ -2013,6 +2073,25 @@ export interface components {
             values: unknown[];
             /** Varying */
             varying: boolean;
+        };
+        /**
+         * ConditionRecords
+         * @description Every stored experiment grouped by the value of one condition key.
+         */
+        ConditionRecords: {
+            /** Contains */
+            contains?: string | null;
+            /**
+             * Groups
+             * @description Largest group first
+             */
+            groups: components["schemas"]["RecordGroup"][];
+            /** Key */
+            key: string;
+            /** @description All experiments whose value contains ``contains`` (pooled) */
+            matched?: components["schemas"]["RecordGroup"] | null;
+            /** Project Ids */
+            project_ids: number[];
         };
         /**
          * ConditionRule
@@ -3962,6 +4041,56 @@ export interface components {
             /** Text */
             text: string;
         };
+        /**
+         * OperatorPair
+         * @description Two experiments with identical condition blocks run by different people.
+         *
+         *     Numbers are ``compare(a, b)`` (Welch t-test on all stored recovery rows, b − a).
+         */
+        OperatorPair: {
+            /**
+             * Alpha
+             * @default 0.05
+             */
+            alpha: number;
+            /**
+             * Condition Key Count
+             * @description Condition keys compared (all identical)
+             */
+            condition_key_count: number;
+            /** Days Apart */
+            days_apart: number;
+            experiment_a: components["schemas"]["RecordExperiment"];
+            experiment_b: components["schemas"]["RecordExperiment"];
+            /** P Value */
+            p_value?: number | null;
+            /** Recovery Delta Pct Points */
+            recovery_delta_pct_points?: number | null;
+            /** Significant */
+            significant?: boolean | null;
+            /**
+             * Significant Analytes
+             * @default []
+             */
+            significant_analytes: string[];
+        };
+        /** OperatorRecords */
+        OperatorRecords: {
+            /**
+             * Authors
+             * @description All experiments grouped by author
+             */
+            authors: components["schemas"]["RecordGroup"][];
+            /**
+             * Pairs
+             * @description Largest |Δ| first
+             */
+            pairs: components["schemas"]["OperatorPair"][];
+            /** Project Ids */
+            project_ids: number[];
+            /** Window Days */
+            window_days: number;
+        };
         /** PartnerMode */
         PartnerMode: {
             /** Description */
@@ -3973,6 +4102,20 @@ export interface components {
             mode: "rules" | "claude";
             /** Model */
             model: string | null;
+        };
+        /** PeriodRecords */
+        PeriodRecords: {
+            /** Gap Days */
+            gap_days: number;
+            /** Gaps */
+            gaps: components["schemas"]["RecordGap"][];
+            /**
+             * Months
+             * @description Chronological, key = YYYY-MM
+             */
+            months: components["schemas"]["RecordGroup"][];
+            /** Project Ids */
+            project_ids: number[];
         };
         /**
          * PriorityFactor
@@ -4281,6 +4424,98 @@ export interface components {
             reasons: components["schemas"]["SearchHit"][];
             /** Score */
             score: number;
+        };
+        /**
+         * RecordExperiment
+         * @description One experiment's stored headline numbers inside a records group.
+         */
+        RecordExperiment: {
+            /** Author */
+            author: string;
+            /** Code */
+            code: string;
+            /** Experiment Id */
+            experiment_id: number;
+            /**
+             * Performed On
+             * Format: date
+             */
+            performed_on: string;
+            /** Project Id */
+            project_id: number;
+            /**
+             * Qc Status
+             * @default not_analyzed
+             * @enum {string}
+             */
+            qc_status: "pass" | "warning" | "fail" | "not_analyzed";
+            /** Recovery Mean Pct */
+            recovery_mean_pct?: number | null;
+            /** Recovery Rsd Pct */
+            recovery_rsd_pct?: number | null;
+            /**
+             * Source Result Ids
+             * @default []
+             */
+            source_result_ids: number[];
+            /** Title */
+            title: string;
+        };
+        /**
+         * RecordGap
+         * @description A stretch with no experiment at all in the selected projects.
+         */
+        RecordGap: {
+            /** After */
+            after: components["schemas"]["RecordExperiment"][];
+            /** Before */
+            before: components["schemas"]["RecordExperiment"][];
+            /** Days */
+            days: number;
+            /**
+             * End
+             * Format: date
+             * @description First experiment date after the gap
+             */
+            end: string;
+            /**
+             * Start
+             * Format: date
+             * @description Last experiment date before the gap
+             */
+            start: string;
+        };
+        /**
+         * RecordGroup
+         * @description Experiments sharing one value (condition value, author or month).
+         *
+         *     ``recovery_*`` summarise the stored mean recovery of the members that have one;
+         *     ``fail_count`` counts members whose stored QC status is ``fail`` (any critical flag)
+         *     and ``fail_ratio`` = fail_count / analyzed_count (members with stored results).
+         */
+        RecordGroup: {
+            /** Analyzed Count */
+            analyzed_count: number;
+            /** Experiment Count */
+            experiment_count: number;
+            /** Experiments */
+            experiments: components["schemas"]["RecordExperiment"][];
+            /** Fail Count */
+            fail_count: number;
+            /** Fail Ratio */
+            fail_ratio?: number | null;
+            /** Key */
+            key: string;
+            /** Recovery Max Pct */
+            recovery_max_pct?: number | null;
+            /** Recovery Median Pct */
+            recovery_median_pct?: number | null;
+            /** Recovery Min Pct */
+            recovery_min_pct?: number | null;
+            /** Recovery N */
+            recovery_n: number;
+            /** Value */
+            value?: unknown;
         };
         /** RecoveryGroupOut */
         RecoveryGroupOut: {
@@ -5148,6 +5383,189 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TrendPoint"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analysis_records_by_condition: {
+        parameters: {
+            query: {
+                /** @description Condition key, e.g. cleanup_sorbent */
+                key: string;
+                /** @description Pool values containing */
+                contains?: string | null;
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConditionRecords"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analysis_records_by_operator: {
+        parameters: {
+            query?: {
+                window_days?: number;
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorRecords"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analysis_records_by_period: {
+        parameters: {
+            query?: {
+                gap_days?: number;
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodRecords"];
                 };
             };
             /** @description Bad Request */

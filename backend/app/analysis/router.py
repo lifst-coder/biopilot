@@ -6,15 +6,18 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
-from app.analysis import service
+from app.analysis import records, service
 from app.analysis.schemas import (
     AcceptanceCriteria,
     AnalysisResultOut,
+    ConditionRecords,
     CriteriaCreate,
     CriteriaVersionOut,
     ExperimentMetrics,
     MethodDoc,
     MetricsComparison,
+    OperatorRecords,
+    PeriodRecords,
     ProjectCriteria,
     ReportFormat,
     ResultKind,
@@ -148,3 +151,51 @@ def compare(
 def project_trend(project_id: int, session: Session = Depends(get_session)) -> list[TrendPoint]:
     """Recovery trend across a project's experiments."""
     return service.project_trend(session, project_id)
+
+
+_PROJECTS = Query(default=None, description="Restrict to these projects (default: every project)")
+
+
+@router.get(
+    "/records/conditions",
+    response_model=ConditionRecords,
+    operation_id="analysis_records_by_condition",
+)
+def records_by_condition(
+    key: str = Query(
+        min_length=1, max_length=80, description="Condition key, e.g. cleanup_sorbent"
+    ),
+    contains: str | None = Query(default=None, max_length=80, description="Pool values containing"),
+    project_id: list[int] | None = _PROJECTS,
+    session: Session = Depends(get_session),
+) -> ConditionRecords:
+    """Stored outcomes of every experiment grouped by one condition value."""
+    return records.by_condition(session, key, project_id, contains)
+
+
+@router.get(
+    "/records/operators",
+    response_model=OperatorRecords,
+    operation_id="analysis_records_by_operator",
+)
+def records_by_operator(
+    window_days: int = Query(default=records.OPERATOR_WINDOW_DAYS, ge=0, le=365),
+    project_id: list[int] | None = _PROJECTS,
+    session: Session = Depends(get_session),
+) -> OperatorRecords:
+    """Outcomes by author and same-protocol pairs run by different authors (Welch)."""
+    return records.by_operator(session, project_id, window_days)
+
+
+@router.get(
+    "/records/periods",
+    response_model=PeriodRecords,
+    operation_id="analysis_records_by_period",
+)
+def records_by_period(
+    gap_days: int = Query(default=records.GAP_DAYS, ge=1, le=365),
+    project_id: list[int] | None = _PROJECTS,
+    session: Session = Depends(get_session),
+) -> PeriodRecords:
+    """Outcomes by month and stretches without any experiment."""
+    return records.by_period(session, project_id, gap_days)
