@@ -185,3 +185,27 @@ def test_claude_ask_fallbacks(
 
 def test_rules_gateway_reports_rules() -> None:
     assert service.get_mode(RulesOnlyGateway()).description.startswith("오프라인")
+
+
+def test_claude_restating_a_rejected_proposal_falls_back(
+    session: Session, seeded: dict[str, int], fake_gateway_factory
+) -> None:
+    """ISSUES P1-8: exact-signature matching let a respelled value slip through."""
+    pending = service.list_proposals(session, seeded["project"], experiment_id=seeded["#024"])
+    rejected = next(p for p in pending if p.design and p.design.template_id == "pre_post_spike")
+    service.decide(session, rejected.id, DecisionCreate(action="reject", rationale="블랭크 없음"))
+    restated = ProposalDraft(
+        title="전후 첨가",
+        description="d",
+        changes=[
+            ProposalChange(key=c.key.upper(), value=str(c.value).replace(" + ", "+"))
+            for c in rejected.changes
+        ],
+        evidence_keys=[],
+    )
+    crit = service.run_critique(
+        session,
+        seeded["#024"],
+        gateway=fake_gateway_factory(lambda _s, _p: _draft_with(restated)),
+    )
+    assert crit.engine == "rules" and "repeats decided proposal" in (crit.fallback_reason or "")

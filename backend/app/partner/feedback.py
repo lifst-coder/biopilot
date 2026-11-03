@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import unicodedata
 from dataclasses import dataclass, field
 
 from sqlalchemy import select
@@ -29,9 +31,43 @@ def _norm(value: object) -> str:
 
 
 def proposal_signature(changes: list[ProposalChange]) -> str:
-    """Order-independent fingerprint of a proposal's condition changes."""
+    """Order-independent fingerprint of a proposal's condition changes.
+
+    Stored on every proposal and referenced by the seed decision history, so its
+    canonical form must not change. Looser comparisons use :func:`proposal_intent`.
+    """
     canonical = sorted((c.key.strip().lower(), _norm(c.value)) for c in changes)
     return hashlib.sha256(json.dumps(canonical, ensure_ascii=False).encode()).hexdigest()
+
+
+_NUMBER_WITH_UNIT = re.compile(r"^([-+]?\d+(?:\.\d+)?)\s*([a-zµ%]+)?$")
+
+
+def _loose(value: object) -> str:
+    """Value normalised for paraphrase-resistant comparison (ISSUES P1-8).
+
+    NFKC, lower case, unicode minus/×/superscripts folded, whitespace removed;
+    a lone number with an optional unit word keeps only the number (``"5 min"`` ≡ ``5``
+    ≡ ``5.0``), so a restated value is still recognised as the same change.
+    """
+    text = unicodedata.normalize("NFKC", str(value)).lower().strip()
+    text = text.replace("−", "-").replace("×", "x")
+    match = _NUMBER_WITH_UNIT.match(text)
+    if match:
+        return f"{float(match.group(1)):g}"
+    return re.sub(r"\s+", "", text)
+
+
+def proposal_intent(changes: list[ProposalChange]) -> str:
+    """Looser, order-independent key of a change set (keys and values normalised).
+
+    Used only to detect a decided proposal restated with different spelling (Claude
+    mode); the stored :func:`proposal_signature` stays the exact fingerprint.
+    """
+    canonical = sorted(
+        (re.sub(r"[\s-]+", "_", c.key.strip().lower()), _loose(c.value)) for c in changes
+    )
+    return json.dumps(canonical, ensure_ascii=False)
 
 
 def classify_rationale(rationale: str) -> tuple[str, list[str]]:
@@ -67,6 +103,7 @@ class PriorDecision:
     reason_category: str
     constraints: list[str]
     evidence: Evidence | None = None
+    changes: list[ProposalChange] = field(default_factory=list)
 
     @property
     def rejected(self) -> bool:
@@ -81,34 +118,77 @@ class DecisionMemory:
 
     @property
     def decided_signatures(self) -> set[str]:
+        """Exact fingerprints of every decided proposal and of every modification."""
         sigs = {d.signature for d in self.decisions}
         sigs |= {proposal_signature(d.modifications) for d in self.decisions if d.modifications}
         return sigs
 
     @property
+    def decided_intents(self) -> set[str]:
+        """Normalised change sets (:func:`proposal_intent`) of decided proposals."""
+        intents = {proposal_intent(d.changes) for d in self.decisions if d.changes}
+        intents |= {proposal_intent(d.modifications) for d in self.decisions if d.modifications}
+        return intents
+
+    def repeated_by(
+        self, changes: list[ProposalChange], experiment_id: int | None
+    ) -> list[PriorDecision]:
+        """Decisions that a proposal with ``changes`` would repeat.
+
+        Matches the exact signature or a restatement (:func:`proposal_intent`) of the
+        proposal or of its modifications. Rejections count project-wide; acceptances and
+        modifications only on the experiment they were decided for (``None`` = any).
+        """
+        sig, intent = proposal_signature(changes), proposal_intent(changes)
+        out: list[PriorDecision] = []
+        for d in self.decisions:
+            if not d.rejected and experiment_id is not None and d.experiment_id != experiment_id:
+                continue
+            sigs = {d.signature} | (
+                {proposal_signature(d.modifications)} if d.modifications else set()
+            )
+            intents = {proposal_intent(c) for c in (d.changes, d.modifications) if c}
+            if sig in sigs or intent in intents:
+                out.append(d)
+        return out
+
+    @property
     def unavailable_resources(self) -> set[str]:
+        """Resources named in rejection rationales (lab-wide facts, project-wide scope)."""
         return {r for d in self.decisions if d.rejected for r in d.constraints}
 
     def for_control(self, control_id: str) -> list[PriorDecision]:
+        """Decisions on proposals that addressed ``control_id``."""
         return [d for d in self.decisions if control_id in d.addresses_controls]
 
     def for_template(self, template_id: str) -> list[PriorDecision]:
+        """Decisions on proposals instantiated from ``template_id``."""
         return [d for d in self.decisions if d.template_id == template_id]
 
-    def dismissed_controls(self) -> set[str]:
-        """Controls a researcher rejected as scientifically unnecessary or already done."""
+    def dismissed_controls(self, experiment_id: int) -> set[str]:
+        """Controls rejected as scientifically unnecessary or already done *for this experiment*.
+
+        The judgement is about one experiment's data (ISSUES P1-8): it no longer silences
+        the control for every later experiment of the project.
+        """
         return {
             c
             for d in self.decisions
-            if d.rejected and d.reason_category in ("scientific", "already_done")
+            if d.rejected
+            and d.experiment_id == experiment_id
+            and d.reason_category in ("scientific", "already_done")
             for c in d.addresses_controls
         }
 
-    def deferred_templates(self) -> set[str]:
+    def deferred_templates(self, experiment_id: int) -> set[str]:
+        """Templates postponed ("나중에", "보류") for this experiment."""
         return {
             d.template_id
             for d in self.decisions
-            if d.rejected and d.reason_category == "priority" and d.template_id
+            if d.rejected
+            and d.experiment_id == experiment_id
+            and d.reason_category == "priority"
+            and d.template_id
         }
 
 
@@ -139,6 +219,7 @@ def load_decisions(session: Session, project_id: int) -> DecisionMemory:
                 addresses_controls=list(design.get("addresses_controls", [])),
                 reason_category=category,
                 constraints=constraints,
+                changes=changes,
             )
         )
     return DecisionMemory(out)

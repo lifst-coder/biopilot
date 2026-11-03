@@ -139,8 +139,10 @@ def validate_draft(draft: CritiqueDraft, ctx: CritiqueContext | ProjectContext) 
     out_of_domain = [bad for p in draft.proposals for bad in out_of_domain_changes(p.changes)]
     if out_of_domain:
         return f"value outside contract domain: {', '.join(out_of_domain)}"
-    decided = ctx.decisions.decided_signatures
-    repeated = [p.title for p in draft.proposals if proposal_signature(p.changes) in decided]
+    experiment_id = ctx.experiment.id if isinstance(ctx, CritiqueContext) else None
+    repeated = [
+        p.title for p in draft.proposals if ctx.decisions.repeated_by(p.changes, experiment_id)
+    ]
     if repeated:
         return f"repeats decided proposal: {', '.join(repeated)}"
     experiments = (

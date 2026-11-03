@@ -414,10 +414,16 @@ def _select_for_control(
     memory = ctx.decisions
     by_signature: dict[str, list[PriorDecision]] = {}
     for d in memory.decisions:
+        # A rejection holds project-wide (the researcher declined that change set). An
+        # acceptance/modification only settles the control for the experiment it was
+        # decided on (ISSUES P1-8): a later experiment with the same symptom gets the
+        # control offered again instead of being silenced forever.
+        if not d.rejected and d.experiment_id != ctx.experiment.id:
+            continue
         by_signature.setdefault(d.signature, []).append(d)
         if d.modifications:
             by_signature.setdefault(proposal_signature(d.modifications), []).append(d)
-    deferred = memory.deferred_templates()
+    deferred = memory.deferred_templates(ctx.experiment.id)
     superseded: list[int] = []
     for tid in DESIGNS_FOR_CONTROL[control_id]:
         template = DESIGNS[tid]
@@ -466,7 +472,7 @@ def design_next_experiments(
     if assessment is None:
         return result
     sel = _Selection()
-    dismissed = ctx.decisions.dismissed_controls()
+    dismissed = ctx.decisions.dismissed_controls(ctx.experiment.id)
     covered: set[str] = set()
     for control in assessment.missing_controls:
         if control.id in dismissed or control.id in covered:

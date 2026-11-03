@@ -284,20 +284,60 @@ DESIGNS_FOR_CONTROL: dict[str, tuple[str, ...]] = {
 }
 
 #: Resource keywords recognised in rejection rationales.
+#:
+#: Phrases, not bare nouns: a bare "배치" (batch — also "placement") or "부담" matched
+#: rationales that only mention a validation batch or a cost burden and wrongly marked
+#: them as a sample-workload constraint (ISSUES P1-8). Instrument *schedule* phrases
+#: ("기기 일정", "재주입 슬롯") mark the injection constraint, so designs that need
+#: extra injections are not offered as the alternative to a rejected re-injection.
 RESOURCE_KEYWORDS: dict[str, tuple[str, ...]] = {
     "blank_matrix": ("블랭크", "blank", "공시료", "무농약", "무처리 시료"),
-    "extra_samples": ("시료 수", "시료수", "작업량", "인력", "부담", "workload", "배치"),
-    "extra_injections": ("주입 수", "장비 시간", "기기 시간", "분석 시간", "instrument"),
-    "cost": ("비용", "예산", "cost"),
+    "extra_samples": (
+        "시료 수",
+        "시료수",
+        "작업량",
+        "인력",
+        "작업 부담",
+        "시료 부담",
+        "인력 부담",
+        "workload",
+        "배치 수",
+        "추가 배치",
+    ),
+    "extra_injections": (
+        "주입 수",
+        "장비 시간",
+        "기기 시간",
+        "분석 시간",
+        "기기 일정",
+        "장비 일정",
+        "기기 예약",
+        "장비 예약",
+        "재주입 슬롯",
+        "주입 슬롯",
+        "instrument time",
+        "instrument schedule",
+    ),
+    "cost": ("비용", "예산", "cost", "budget"),
+    "reagent": ("재고", "발주", "납기", "품절", "out of stock"),
 }
 
 #: Rationale categories (first match wins, checked in this order).
 REASON_KEYWORDS: dict[str, tuple[str, ...]] = {
-    "already_done": ("이미 수행", "이미 했", "이미 확인", "기존에 수행", "already"),
+    "already_done": (
+        "이미 수행",
+        "이미 했",
+        "이미 확인",
+        "이미 시도",
+        "실패가 확인",
+        "기존에 수행",
+        "already",
+    ),
     "scientific": (
         "타당하지",
         "의미 없",
         "의미없",
+        "의미가 없",
         "불필요",
         "관련 없",
         "관련없",

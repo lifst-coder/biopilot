@@ -10,7 +10,7 @@ from app.core.errors import ValidationFailedError
 from app.core.llm import RulesOnlyGateway
 from app.partner import service
 from app.partner.context import build_context
-from app.partner.feedback import classify_rationale, proposal_signature
+from app.partner.feedback import classify_rationale, proposal_intent, proposal_signature
 from app.partner.schemas import DecisionCreate, ProposalChange, ProposalOut
 
 RULES = RulesOnlyGateway()
@@ -234,3 +234,70 @@ def test_feedback_helpers() -> None:
     assert classify_rationale("의미 없음, 비용도 큼") == ("scientific", ["cost"])
     assert classify_rationale("나중에")[0] == "priority"
     assert classify_rationale("모름") == ("other", [])
+
+
+# ------------------------------------------------- ISSUES P1-8: feedback limits
+
+
+def test_rationale_keywords_are_phrases_not_bare_nouns() -> None:
+    """A batch or a cost burden is not a sample-workload constraint; a schedule is."""
+    # "배치" (a validation batch) and "부담" alone no longer mean "too many samples"
+    assert classify_rationale("검증 배치에 이미 배정된 기기다") == ("other", [])
+    assert classify_rationale("비용 부담이 크다")[1] == ["cost"]
+    assert classify_rationale("한 배치로 돌리기에 작업량이 많다")[1] == ["extra_samples"]
+    # instrument schedule → injection constraint (the #OA09 rejection)
+    oa09 = "[기기 일정] 공용 LC-MS/MS가 검증 배치에 배정되어 재주입 슬롯이 없다"
+    assert classify_rationale(oa09) == ("resource", ["extra_injections"])
+    # "already tried and failed" is already_done; a reagent shortage is named
+    assert classify_rationale("[이미 시도해 실패] 이미 실패가 확인되었다")[0] == "already_done"
+    assert classify_rationale("메탄올 재고가 없어 보류") == ("priority", ["reagent"])
+
+
+def test_intent_matches_restated_values() -> None:
+    a = [ProposalChange(key="cleanup_sorbent", value="PSA 50 mg + GCB 7.5 mg + MgSO4 150 mg")]
+    b = [ProposalChange(key="Cleanup Sorbent", value="PSA 50mg + GCB 7.5mg + MgSO₄ 150mg")]
+    assert proposal_signature(a) != proposal_signature(b)
+    assert proposal_intent(a) == proposal_intent(b)  # spacing, case, subscript ₄ (NFKC)
+    c = [ProposalChange(key="cleanup-sorbent", value="PSA 50 mg + C18 50 mg + MgSO4 150 mg")]
+    assert proposal_intent(a) != proposal_intent(c)
+    t = [ProposalChange(key="extraction_time_min", value=5.0)]
+    assert proposal_intent(t) == proposal_intent(
+        [ProposalChange(key="extraction_time_min", value="5 min")]
+    )
+    assert proposal_intent(t) != proposal_intent(
+        [ProposalChange(key="extraction_time_min", value="15 min")]
+    )
+
+
+def test_acceptance_settles_the_control_only_for_its_experiment(
+    session: Session, seeded: dict[str, int]
+) -> None:
+    """Accepting pre/post spike for #024 does not silence it for #019 (same symptom)."""
+    pre = _by_template(session, seeded)["pre_post_spike"]
+    service.decide(session, pre.id, DecisionCreate(action="accept", rationale="바로 수행"))
+    _crit, new = _recritique(session, seeded)
+    assert "pre_post_spike" not in new  # same experiment: awaiting the result
+    other = service.run_critique(session, seeded["#019"], gateway=RULES)
+    templates = {
+        p.design.template_id
+        for p in (service.get_proposal(session, i) for i in other.proposal_ids)
+        if p.design
+    }
+    assert "pre_post_spike" in templates
+
+
+def test_scientific_dismissal_is_scoped_to_its_experiment(
+    session: Session, seeded: dict[str, int]
+) -> None:
+    pre = _by_template(session, seeded)["pre_post_spike"]
+    service.decide(session, pre.id, DecisionCreate(action="reject", rationale="이 실험엔 불필요"))
+    _crit, new = _recritique(session, seeded)
+    assert "pre_post_spike" not in new and "standard_addition" not in new
+    other = service.run_critique(session, seeded["#019"], gateway=RULES)
+    templates = {
+        p.design.template_id
+        for p in (service.get_proposal(session, i) for i in other.proposal_ids)
+        if p.design
+    }
+    # the rejected change set itself is not repeated; the control is still addressed
+    assert "pre_post_spike" not in templates and "standard_addition" in templates
