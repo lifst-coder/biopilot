@@ -1,7 +1,8 @@
 import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMemorySearch, useRecall } from "@/api/queries";
+import { useMemorySearch, useMemorySearchAll, useProjects, useRecall, useRecallAll } from "@/api/queries";
 import { Badge } from "@/components";
+import { experimentSearch, projectShortName } from "@/lib/selection";
 import { Highlighted } from "./highlight";
 
 const FIELD_LABELS: Record<string, string> = {
@@ -33,15 +34,27 @@ export function useDebounced<T>(value: T, ms = 250): T {
 }
 
 /**
- * Project-wide search over research memory (`/api/memory/.../search` + `/recall`).
- * Shows matched facets (균주·시료·조건·분석물) and ranked hits; selecting a hit opens
- * the experiment in the Notebook.
+ * Search over research memory — this project (`/api/memory/projects/{id}/search` +
+ * `/recall`) or, with "모든 프로젝트", every project (`/api/memory/search` + `/recall`).
+ * Shows matched facets (균주·시료·조건·분석물) and ranked hits; a hit from another project
+ * carries that project's name and opens there.
  */
 export function GlobalSearchBar({ projectId }: { projectId: number | null }) {
   const [text, setText] = useState("");
+  const [everywhere, setEverywhere] = useState(true);
   const q = useDebounced(text);
-  const search = useMemorySearch(projectId, q);
-  const recall = useRecall(projectId, q);
+  const local = useMemorySearch(everywhere ? null : projectId, q);
+  const localRecall = useRecall(everywhere ? null : projectId, q);
+  const all = useMemorySearchAll(everywhere ? q : "");
+  const allRecall = useRecallAll(everywhere ? q : "");
+  const search = everywhere ? all : local;
+  const recall = everywhere ? allRecall : localRecall;
+  const { data: projects = [] } = useProjects();
+  const other = (pid: number | null | undefined) => {
+    if (pid == null || pid === projectId) return null;
+    const p = projects.find((x) => x.id === pid);
+    return p ? projectShortName(p.name) : null;
+  };
   const navigate = useNavigate();
   const listId = useId();
   const hits = search.data ?? [];
@@ -67,6 +80,12 @@ export function GlobalSearchBar({ projectId }: { projectId: number | null }) {
         role="combobox"
         aria-autocomplete="list"
       />
+      {projects.length > 1 && (
+        <label className="mt-1.5 inline-flex items-center gap-1.5 px-1 text-sm text-ink-muted">
+          <input type="checkbox" checked={everywhere} onChange={(e) => setEverywhere(e.target.checked)} />
+          모든 프로젝트에서 찾기
+        </label>
+      )}
       {open && (
         <div className="mt-2 rounded-md border border-border bg-surface p-3 text-sm shadow-sm">
           {recall.data && recall.data.terms.length > 0 && (
@@ -92,9 +111,12 @@ export function GlobalSearchBar({ projectId }: { projectId: number | null }) {
                       <button
                         type="button"
                         className="flex w-full items-start gap-2 rounded px-1.5 py-1 text-left hover:bg-subtle focus:bg-subtle focus:outline-none"
-                        onClick={() => navigate({ pathname: "/notebook", search: `?exp=${x.experiment.id}` })}
+                        onClick={() =>
+                          navigate({ pathname: "/notebook", search: experimentSearch(x.experiment.id, x.experiment.project_id) })
+                        }
                       >
                         <span className="shrink-0 font-medium text-brand">{x.experiment.code}</span>
+                        {other(x.experiment.project_id) && <Badge tone="neutral">{other(x.experiment.project_id)}</Badge>}
                         <span className="min-w-0 text-ink-muted">
                           {x.experiment.title}
                           {top && (
@@ -122,9 +144,10 @@ export function GlobalSearchBar({ projectId }: { projectId: number | null }) {
                 <button
                   type="button"
                   className="flex w-full items-start gap-2 rounded px-1.5 py-1 text-left hover:bg-subtle focus:bg-subtle focus:outline-none"
-                  onClick={() => navigate({ pathname: "/notebook", search: `?exp=${h.experiment_id}` })}
+                  onClick={() => navigate({ pathname: "/notebook", search: experimentSearch(h.experiment_id, h.project_id) })}
                 >
                   <span className="shrink-0 font-medium text-brand">{h.code}</span>
+                  {other(h.project_id) && <Badge tone="neutral">{other(h.project_id)}</Badge>}
                   <span className="shrink-0 text-ink-faint">{FIELD_LABELS[h.field] ?? h.field}</span>
                   <span className="min-w-0 text-ink-muted">
                     <Highlighted text={h.snippet} spans={h.highlights} />

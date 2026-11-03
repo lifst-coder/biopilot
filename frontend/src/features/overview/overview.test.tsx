@@ -142,43 +142,54 @@ describe("KnowledgeGraphView", () => {
   });
 });
 
+const { searchData, recallData } = vi.hoisted(() => {
+  const hit = (experiment_id: number, code: string, project_id: number, snippet: string) => ({
+    experiment_id,
+    code,
+    project_id,
+    field: "raw_note",
+    snippet,
+    score: 2.5,
+    highlights: [[0, 3]],
+    source: { ref_type: "eln.Experiment", ref_id: experiment_id, field: "raw_note", experiment_id },
+  });
+  const exp = (id: number, project_id: number, code: string, title: string) => ({
+    experiment: { id, project_id, code, title, author: "", performed_on: "2026-10-20", parent_experiment_id: 1, dataset_kinds: [] },
+    score: 3,
+    reasons: [],
+  });
+  return {
+    searchData: (all: boolean) => [
+      hit(7, "#024", 1, "GCB 정제 도입"),
+      ...(all ? [hit(40, "#OA06", 2, "GCB 대신 PSA 정제")] : []),
+    ],
+    recallData: (q: string, all: boolean) => ({
+      query: q,
+      terms: [{ term: "gcb", facet: "condition", matches: [] }],
+      experiments: [exp(7, 1, "#024", "변경 프로토콜"), ...(all ? [exp(40, 2, "#OA06", "농약 SOP 정제 적용")] : [])],
+      protocols: [],
+      results: [],
+      project_ids: all ? [1, 2] : [1],
+    }),
+  };
+});
+
+const searchResult = (q: string, all: boolean) =>
+  q
+    ? { isLoading: false, isError: false, isSuccess: true, data: searchData(all) }
+    : { isLoading: false, isError: false, isSuccess: false, data: undefined };
+
 vi.mock("@/api/queries", () => ({
-  useMemorySearch: (_p: number | null, q: string) =>
-    q
-      ? {
-          isLoading: false,
-          isError: false,
-          isSuccess: true,
-          data: [
-            {
-              experiment_id: 7,
-              code: "#024",
-              field: "raw_note",
-              snippet: "GCB 정제 도입",
-              score: 2.5,
-              highlights: [[0, 3]],
-              source: { ref_type: "eln.Experiment", ref_id: 7, field: "raw_note", experiment_id: 7 },
-            },
-          ],
-        }
-      : { isLoading: false, isError: false, isSuccess: false, data: undefined },
-  useRecall: (_p: number | null, q: string) => ({
-    data: q
-      ? {
-          query: q,
-          terms: [{ term: "gcb", facet: "condition", matches: [] }],
-          experiments: [
-            {
-              experiment: { id: 7, project_id: 1, code: "#024", title: "변경 프로토콜", author: "", performed_on: "2026-10-20", parent_experiment_id: 1, dataset_kinds: [] },
-              score: 3,
-              reasons: [],
-            },
-          ],
-          protocols: [],
-          results: [],
-        }
-      : undefined,
+  useProjects: () => ({
+    data: [
+      { id: 1, name: "잔류농약 QuEChERS", experiment_count: 30 },
+      { id: 2, name: "발효식품 유기산", experiment_count: 12 },
+    ],
   }),
+  useMemorySearch: (p: number | null, q: string) => searchResult(p == null ? "" : q, false),
+  useRecall: (p: number | null, q: string) => ({ data: p != null && q ? recallData(q, false) : undefined }),
+  useMemorySearchAll: (q: string) => searchResult(q, true),
+  useRecallAll: (q: string) => ({ data: q ? recallData(q, true) : undefined }),
 }));
 
 describe("GlobalSearchBar", () => {
@@ -197,9 +208,46 @@ describe("GlobalSearchBar", () => {
     await vi.advanceTimersByTimeAsync(300);
     vi.useRealTimers();
     expect(screen.getByText("조건: gcb")).toBeTruthy();
-    expect(screen.getByText("GCB").tagName).toBe("MARK");
+    expect(screen.getAllByText("GCB")[0]!.tagName).toBe("MARK");
     expect(screen.getByRole("list", { name: "관련 실험" }).textContent).toContain("변경 프로토콜");
     fireEvent.click(screen.getByRole("button", { name: /#024 원본 메모/ }));
-    expect(screen.getByTestId("where").textContent).toBe("/notebook?exp=7");
+    expect(screen.getByTestId("where").textContent).toBe("/notebook?project=1&exp=7");
+  });
+
+  it("searches every project by default and labels hits from another project", async () => {
+    const { GlobalSearchBar } = await import("./GlobalSearchBar");
+    render(
+      <MemoryRouter initialEntries={["/overview"]}>
+        <Routes>
+          <Route path="/overview" element={<GlobalSearchBar projectId={1} />} />
+          <Route path="/notebook" element={<Where />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    vi.useFakeTimers();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "GCB" } });
+    await vi.advanceTimersByTimeAsync(300);
+    vi.useRealTimers();
+    const related = screen.getByRole("list", { name: "관련 실험" });
+    expect(related.textContent).toContain("#OA06");
+    expect(related.textContent).toContain("발효식품"); // the other project is named
+    expect(related.textContent?.match(/잔류농약/)).toBeNull(); // the current one is not
+    fireEvent.click(screen.getByRole("button", { name: /#OA06 발효식품 원본 메모/ }));
+    expect(screen.getByTestId("where").textContent).toBe("/notebook?project=2&exp=40");
+  });
+
+  it("can be narrowed to the current project", async () => {
+    const { GlobalSearchBar } = await import("./GlobalSearchBar");
+    render(
+      <MemoryRouter initialEntries={["/overview"]}>
+        <GlobalSearchBar projectId={1} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "모든 프로젝트에서 찾기" }));
+    vi.useFakeTimers();
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "GCB" } });
+    await vi.advanceTimersByTimeAsync(300);
+    vi.useRealTimers();
+    expect(screen.getByRole("list", { name: "관련 실험" }).textContent).not.toContain("#OA06");
   });
 });
