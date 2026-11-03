@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
 from sqlalchemy.orm import Session
 
+from app.analysis.schemas import CALIBRATION_TYPE_VALUES
+from app.core.errors import ValidationFailedError
 from app.core.llm import RulesOnlyGateway
 from app.partner import service
 from app.partner.context import build_context
@@ -176,6 +179,42 @@ def test_modified_proposal_is_not_reproposed(session: Session, seeded: dict[str,
     )
     _crit, new = _recritique(session, seeded)
     assert "pre_post_spike" not in new
+
+
+def test_calibration_type_proposals_stay_in_contract_domain(
+    session: Session, seeded: dict[str, int]
+) -> None:
+    """ISSUES P1-2: every proposed ``calibration_type`` is a value Analysis/ELN accept.
+
+    ``pre_post_spike`` compares the solvent and matrix-matched curves; it quantifies with
+    the matrix-matched curve and records the comparison under ``curves_compared``.
+    """
+    props = service.list_proposals(session, seeded["project"])
+    cal = [c for p in props for c in p.changes if c.key == "calibration_type"]
+    assert cal and {c.value for c in cal} <= set(CALIBRATION_TYPE_VALUES)
+    pre = _by_template(session, seeded)["pre_post_spike"]
+    changes = {c.key: c.value for c in pre.changes}
+    assert changes["calibration_type"] == "matrix-matched"
+    assert changes["curves_compared"] == "solvent + matrix-matched"
+    draft = service.experiment_draft(session, pre.id).draft.condition_block.model_dump()
+    assert draft["calibration_type"] in CALIBRATION_TYPE_VALUES
+
+
+def test_modification_outside_calibration_domain_is_rejected(
+    session: Session, seeded: dict[str, int]
+) -> None:
+    pre = _by_template(session, seeded)["pre_post_spike"]
+    with pytest.raises(ValidationFailedError, match="calibration_type=solvent"):
+        service.decide(
+            session,
+            pre.id,
+            DecisionCreate(
+                action="modify",
+                rationale="두 곡선 모두",
+                modifications=[ProposalChange(key="calibration_type", value="solvent+matrix")],
+            ),
+        )
+    assert service.get_proposal(session, pre.id).status == "pending"
 
 
 def test_rerun_reuses_pending_proposals(session: Session, seeded: dict[str, int]) -> None:

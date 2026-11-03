@@ -142,7 +142,12 @@ def _pre_post_spike(ctx: CritiqueContext, hyp: dict[str, int]) -> list[ProposalD
             ),
             changes=[
                 ProposalChange(key="spike_stage", value="pre-extraction + post-extraction"),
-                ProposalChange(key="calibration_type", value="solvent + matrix-matched"),
+                # ``calibration_type`` names the curve Analysis quantifies with and must stay
+                # in the contract domain (solvent | matrix-matched | standard-addition).
+                # The post-extraction spike *is* the matrix-matched curve; the solvent
+                # curve is the comparison for the matrix effect, recorded separately.
+                ProposalChange(key="calibration_type", value="matrix-matched"),
+                ProposalChange(key="curves_compared", value="solvent + matrix-matched"),
             ],
             evidence_keys=[
                 k

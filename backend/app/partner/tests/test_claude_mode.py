@@ -82,6 +82,31 @@ def test_claude_invalid_design_falls_back(
     assert "unknown experiment ids" in (crit.fallback_reason or "")
 
 
+def test_claude_calibration_type_outside_domain_falls_back(
+    session: Session, seeded: dict[str, int], fake_gateway_factory
+) -> None:
+    """ISSUES P1-2: ``calibration_type`` is solvent | matrix-matched | standard-addition."""
+    mixed = ProposalDraft(
+        title="두 곡선 비교",
+        description="d",
+        changes=[ProposalChange(key="calibration_type", value="solvent + matrix-matched")],
+        evidence_keys=[],
+    )
+    crit = service.run_critique(
+        session, seeded["#024"], gateway=fake_gateway_factory(lambda _s, _p: _draft_with(mixed))
+    )
+    assert crit.engine == "rules"
+    assert "outside contract domain: calibration_type=solvent + matrix-matched" in (
+        crit.fallback_reason or ""
+    )
+    for p in (service.get_proposal(session, i) for i in crit.proposal_ids):
+        assert not [c for c in p.changes if c.key == "calibration_type"] or all(
+            c.value in {"solvent", "matrix-matched", "standard-addition"}
+            for c in p.changes
+            if c.key == "calibration_type"
+        )
+
+
 def test_claude_project_critique(
     session: Session, seeded: dict[str, int], fake_gateway_factory
 ) -> None:

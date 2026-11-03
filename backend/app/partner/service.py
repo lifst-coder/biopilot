@@ -38,6 +38,7 @@ from app.partner.engines.claude import ClaudeCritiqueEngine
 from app.partner.engines.project import ProjectRulesEngine
 from app.partner.engines.rules import RulesCritiqueEngine
 from app.partner.feedback import classify_rationale, proposal_signature
+from app.partner.knowledge import out_of_domain_changes
 from app.partner.models import (
     Critique,
     Decision,
@@ -135,6 +136,9 @@ def validate_draft(draft: CritiqueDraft, ctx: CritiqueContext | ProjectContext) 
     bad = ungrounded_numbers(draft, ctx)
     if bad:
         return f"ungrounded numbers: {', '.join(sorted(set(bad))[:10])}"
+    out_of_domain = [bad for p in draft.proposals for bad in out_of_domain_changes(p.changes)]
+    if out_of_domain:
+        return f"value outside contract domain: {', '.join(out_of_domain)}"
     decided = ctx.decisions.decided_signatures
     repeated = [p.title for p in draft.proposals if proposal_signature(p.changes) in decided]
     if repeated:
@@ -638,6 +642,10 @@ def decide(session: Session, proposal_id: int, data: DecisionCreate) -> Proposal
         raise NotFoundError(f"Proposal {proposal_id} not found")
     if row.status != "pending":
         raise ValidationFailedError(f"proposal already decided ({row.status})")
+    if out_of_domain := out_of_domain_changes(data.modifications):
+        raise ValidationFailedError(
+            "modification outside contract domain: " + ", ".join(out_of_domain)
+        )
     decision = Decision(
         proposal_id=proposal_id,
         action=data.action,

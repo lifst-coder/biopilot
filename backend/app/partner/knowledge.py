@@ -8,7 +8,11 @@ so the UI and the Q&A layer can mark it as knowledge rather than data.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
+
+from app.analysis.schemas import CALIBRATION_TYPE_VALUES
+from app.partner.schemas import ProposalChange
 
 #: Condition keys that belong to sample preparation (extraction + clean-up). A matrix
 #: effect measured under different values of these keys does not transfer.
@@ -66,6 +70,24 @@ PH_SENSITIVE_ANALYTES: dict[str, str] = {
 MATRIX_MATCHED_VALUES: frozenset[str] = frozenset(
     {"matrix-matched", "matrix_matched", "standard-addition"}
 )
+
+#: Condition keys whose proposed values must stay inside a closed contract domain.
+#: ``calibration_type`` is decided by integration and owned by Analysis
+#: (``app.analysis.schemas.CALIBRATION_TYPE_VALUES``); a value outside it would make the
+#: PAR-2 experiment draft fail once ELN types the field as a Literal.
+CLOSED_DOMAIN_KEYS: dict[str, frozenset[str]] = {
+    "calibration_type": frozenset(CALIBRATION_TYPE_VALUES),
+}
+
+
+def out_of_domain_changes(changes: Iterable[ProposalChange]) -> list[str]:
+    """``"key=value"`` for every change whose value is outside its key's closed domain."""
+    bad: list[str] = []
+    for change in changes:
+        domain = CLOSED_DOMAIN_KEYS.get(change.key.strip().lower())
+        if domain is not None and str(change.value).strip().lower() not in domain:
+            bad.append(f"{change.key}={change.value}")
+    return bad
 
 
 @dataclass(frozen=True)
