@@ -46,13 +46,13 @@ def test_upgrade_head_matches_metadata(tmp_path: Path) -> None:
 
 
 def test_fts_table_is_outside_migrations(tmp_path: Path) -> None:
-    """Memory's lazily created FTS5 table must not show up as drift."""
+    """Memory's FTS5 table (created by the index sync) must not show up as drift."""
     db = _db(tmp_path)
     db.prepare_schema()
     with Session(db.engine) as session:
         pid = seed(session)
         session.commit()
-        memory.search(session, pid, "회수율")
+        memory.sync_search_index(session, [pid])
         session.commit()
     assert any(t.startswith("memory_search_fts") for t in inspect(db.engine).get_table_names())
     assert _diff(db) == []

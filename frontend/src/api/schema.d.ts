@@ -1074,6 +1074,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/memory/search-index/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Search Index
+         * @description Synchronise the derived FTS index from the audit log (searches stay read-only).
+         */
+        post: operations["memory_sync_search_index"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/partner/ask": {
         parameters: {
             query?: never;
@@ -4997,6 +5017,22 @@ export interface components {
             snippet: string;
             source?: components["schemas"]["app__memory__schemas__SourceRef"] | null;
         };
+        /**
+         * SearchIndexSync
+         * @description Result of synchronising the derived full-text index from the audit log.
+         */
+        SearchIndexSync: {
+            /**
+             * Indexed Events
+             * @description Audit events applied to the index by this call
+             */
+            indexed_events: number;
+            /**
+             * Project Ids
+             * @description Projects whose index was synchronised
+             */
+            project_ids: number[];
+        };
         /** SimilarExperiment */
         SimilarExperiment: {
             /** Differing */
@@ -8861,6 +8897,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchHit"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_sync_search_index: {
+        parameters: {
+            query?: {
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchIndexSync"];
                 };
             };
             /** @description Bad Request */

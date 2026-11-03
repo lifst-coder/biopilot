@@ -26,6 +26,7 @@ from app.memory.schemas import (
     RecallBundle,
     ResearchGraph,
     SearchHit,
+    SearchIndexSync,
     SimilarExperiment,
     TimelineEntry,
 )
@@ -100,6 +101,18 @@ def recall(
 
 
 _PROJECTS = Query(default=None, description="Restrict to these projects (default: every project)")
+
+
+@router.post(
+    "/search-index/sync",
+    response_model=SearchIndexSync,
+    operation_id="memory_sync_search_index",
+)
+def sync_search_index(
+    project_id: list[int] | None = _PROJECTS, session: Session = Depends(get_session)
+) -> SearchIndexSync:
+    """Synchronise the derived FTS index from the audit log (searches stay read-only)."""
+    return service.sync_search_index(session, project_id)
 
 
 @router.get("/search", response_model=list[SearchHit], operation_id="memory_search_all")

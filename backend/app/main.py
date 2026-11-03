@@ -18,6 +18,7 @@ from app.core.errors import DomainError
 from app.core.router import router as system_router
 from app.eln.router import router as eln_router
 from app.memory.router import router as memory_router
+from app.memory.service import sync_search_index
 from app.partner.router import router as partner_router
 from app.wiring import install as install_memory_fact_providers
 
@@ -43,6 +44,9 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             with db.session() as session:
                 seed_if_empty(session, settings.seed_profile)
                 session.commit()
+        with db.session() as session:  # derived search index: written here, never on GET
+            sync_search_index(session)
+            session.commit()
         yield
 
     app = FastAPI(

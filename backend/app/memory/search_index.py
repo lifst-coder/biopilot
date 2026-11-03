@@ -9,6 +9,13 @@ The index is derived data (never an original record). It is synchronised from th
 audit log: ``memory_index_state`` stores the last indexed event id per project in the
 same transaction as the index rows. Other databases use an in-Python scan of the same
 documents.
+
+Reads never write (ISSUES P1-7). :func:`sync` — DDL, watermark upsert, index rows — runs
+only from write paths: application start-up (after seeding) and
+``POST /api/memory/search-index/sync``. :func:`search` is read-only: it queries the FTS
+rows up to the watermark and scans the audit events *after* the watermark in Python, so
+records added since the last sync are still found and their stale index rows are
+ignored. Without an FTS table it scans everything in Python.
 """
 
 from __future__ import annotations
@@ -188,12 +195,16 @@ def _events(session: Session, project_id: int, after: int) -> list[AuditEvent]:
 # ------------------------------------------------------------------- sqlite
 
 
-def _is_sqlite(session: Session) -> bool:
+def is_sqlite(session: Session) -> bool:
+    """The FTS5 index exists only on SQLite."""
     return session.get_bind().dialect.name == "sqlite"
 
 
 def sync(session: Session, project_id: int) -> int:
-    """Index audit events newer than the stored watermark. Returns events applied."""
+    """Index audit events newer than the stored watermark. Returns events applied.
+
+    Writes (DDL, watermark, index rows): call it from a write path, never from a GET.
+    """
     exists = session.execute(
         text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:n"), {"n": FTS_TABLE}
     ).first()
@@ -260,9 +271,12 @@ def _query_sqlite(session: Session, project_id: int, terms: list[str]) -> list[t
     return out
 
 
-def _query_python(session: Session, project_id: int, terms: list[str]) -> list[tuple[Doc, float]]:
+def _scan(
+    session: Session, project_id: int, events: list[AuditEvent], terms: list[str]
+) -> list[tuple[Doc, float]]:
+    """In-Python match over the documents of ``events`` (latest event per entity)."""
     latest: dict[str, AuditEvent] = {}
-    for ev in _events(session, project_id, 0):
+    for ev in events:
         latest[f"{ev.entity_type}:{ev.entity_id}"] = ev
     out: list[tuple[Doc, float]] = []
     for ev in latest.values():
@@ -273,15 +287,46 @@ def _query_python(session: Session, project_id: int, terms: list[str]) -> list[t
     return out
 
 
+def _query_python(session: Session, project_id: int, terms: list[str]) -> list[tuple[Doc, float]]:
+    return _scan(session, project_id, _events(session, project_id, 0), terms)
+
+
+def indexed_watermark(session: Session, project_id: int) -> int | None:
+    """Last audit event id in the FTS index, ``None`` when there is no FTS table (read-only)."""
+    exists = session.execute(
+        text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:n"), {"n": FTS_TABLE}
+    ).first()
+    if not exists:
+        return None
+    state = session.get(IndexState, f"search:{project_id}")
+    return state.last_event_id if state is not None else 0
+
+
+def _query_read_only(
+    session: Session, project_id: int, terms: list[str]
+) -> list[tuple[Doc, float]]:
+    """FTS rows up to the watermark + a Python scan of newer events. Never writes."""
+    watermark = indexed_watermark(session, project_id)
+    if watermark is None:
+        return _query_python(session, project_id, terms)
+    delta = _events(session, project_id, watermark)
+    if not delta:
+        return _query_sqlite(session, project_id, terms)
+    changed = {f"{ev.entity_type}:{ev.entity_id}" for ev in delta}
+    indexed = [
+        (d, sc) for d, sc in _query_sqlite(session, project_id, terms) if d.doc_key not in changed
+    ]
+    return indexed + _scan(session, project_id, delta, terms)
+
+
 def search(session: Session, project_id: int, query: str, limit: int = 50) -> list[SearchHit]:
     """Ranked hits (highest score first) for all whitespace-separated terms of ``query``."""
     terms = terms_of(query)
     if not terms:
         return []
     codes = {e.id: e.code for e in eln.list_experiments(session, project_id)}
-    if _is_sqlite(session):
-        sync(session, project_id)
-        found = _query_sqlite(session, project_id, terms)
+    if is_sqlite(session):
+        found = _query_read_only(session, project_id, terms)
     else:  # pragma: no cover - exercised only on non-SQLite deployments
         found = _query_python(session, project_id, terms)
     hits = [_hit(d, codes.get(d.experiment_id, "?"), terms, s) for d, s in found]

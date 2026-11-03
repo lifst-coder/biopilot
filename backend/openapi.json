@@ -8723,6 +8723,30 @@
         "title": "SearchHit",
         "type": "object"
       },
+      "SearchIndexSync": {
+        "description": "Result of synchronising the derived full-text index from the audit log.",
+        "properties": {
+          "indexed_events": {
+            "description": "Audit events applied to the index by this call",
+            "title": "Indexed Events",
+            "type": "integer"
+          },
+          "project_ids": {
+            "description": "Projects whose index was synchronised",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Project Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "indexed_events",
+          "project_ids"
+        ],
+        "title": "SearchIndexSync",
+        "type": "object"
+      },
       "SimilarExperiment": {
         "properties": {
           "differing": {
@@ -14510,6 +14534,91 @@
           }
         },
         "summary": "Search All",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/search-index/sync": {
+      "post": {
+        "description": "Synchronise the derived FTS index from the audit log (searches stay read-only).",
+        "operationId": "memory_sync_search_index",
+        "parameters": [
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchIndexSync"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Search Index",
         "tags": [
           "memory"
         ]

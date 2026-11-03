@@ -270,6 +270,13 @@ SearchField = Literal[
 ]
 
 
+class SearchIndexSync(BaseModel):
+    """Result of synchronising the derived full-text index from the audit log."""
+
+    indexed_events: int = Field(description="Audit events applied to the index by this call")
+    project_ids: list[int] = Field(description="Projects whose index was synchronised")
+
+
 class SearchHit(BaseModel):
     experiment_id: int
     code: str

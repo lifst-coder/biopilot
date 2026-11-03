@@ -47,9 +47,30 @@ def test_search_fields_and_and_semantics(session: Session, seeded: dict[str, int
     assert service.search(session, pid, "100%_x") == []
 
 
+def _sqlite_changes(session: Session) -> int:
+    raw = session.connection().connection.driver_connection
+    assert raw is not None
+    return int(raw.total_changes)
+
+
+def test_search_and_recall_never_write(session: Session, seeded: dict[str, int]) -> None:
+    """ISSUES P1-7: GET search/recall run no DDL, no watermark upsert, no index rows."""
+    pid = seeded["project"]
+    before = _sqlite_changes(session)
+    assert service.search(session, pid, "gcb")  # no FTS table yet → Python scan
+    service.search_all(session, "회수율")
+    service.recall(session, pid, "carbendazim")
+    service.recall_all(session, "GCB")
+    assert _sqlite_changes(session) == before
+    assert search_index.indexed_watermark(session, pid) is None
+    assert session.get(IndexState, f"search:{pid}") is None
+    assert not session.new and not session.dirty
+
+
 def test_index_is_incremental_and_transactional(session: Session, seeded: dict[str, int]) -> None:
     pid = seeded["project"]
-    service.search(session, pid, "gcb")
+    synced = service.sync_search_index(session)
+    assert synced.indexed_events > 0 and pid in synced.project_ids
     state = session.get(IndexState, f"search:{pid}")
     assert state is not None and state.last_event_id > 0
     assert search_index.sync(session, pid) == 0
@@ -60,17 +81,31 @@ def test_index_is_incremental_and_transactional(session: Session, seeded: dict[s
             statement="흑연화 카본은 평면 분자를 흡착", linked_experiment_ids=[seeded["#024"]]
         ),
     )
+    # not yet indexed: the read-only search finds it by scanning events after the watermark
+    before = _sqlite_changes(session)
+    hit = service.search(session, pid, "흑연화")
+    assert [(h.code, h.field) for h in hit] == [("#024", "knowledge_note")]
+    assert _sqlite_changes(session) == before
     assert search_index.sync(session, pid) == 1
     hit = service.search(session, pid, "흑연화")
     assert [(h.code, h.field) for h in hit] == [("#024", "knowledge_note")]
-    # dropping the derived index forces a full rebuild on the next search
+    # dropping the derived index falls back to a full scan; the next sync rebuilds it
     session.execute(text(f"DROP TABLE {search_index.FTS_TABLE}"))
     assert service.search(session, pid, "흑연화")
+    assert search_index.sync(session, pid) > 1
+
+
+def test_sync_endpoint_and_startup_index(client) -> None:  # type: ignore[no-untyped-def]
+    """Start-up synchronises the index; POST brings it up to date again."""
+    res = client.post("/api/memory/search-index/sync")
+    assert res.status_code == 200 and res.json()["indexed_events"] == 0
+    assert res.json()["project_ids"]
+    assert client.post("/api/memory/search-index/sync?project_id=999").status_code == 404
 
 
 def test_python_fallback_matches_fts(session: Session, seeded: dict[str, int]) -> None:
     pid = seeded["project"]
-    service.search(session, pid, "gcb")
+    service.sync_search_index(session)
     fts = {(d.doc_key, d.field) for d, _ in search_index._query_sqlite(session, pid, ["gcb"])}
     py = {(d.doc_key, d.field) for d, _ in search_index._query_python(session, pid, ["gcb"])}
     assert fts == py and fts

@@ -72,6 +72,7 @@ from app.memory.schemas import (
     ResearchGraph,
     ResultFact,
     SearchHit,
+    SearchIndexSync,
     SimilarExperiment,
     SourceRef,
     TimelineEntry,
@@ -105,6 +106,7 @@ __all__ = [
     "search",
     "search_all",
     "similar_experiments",
+    "sync_search_index",
     "unregister_fact_provider",
 ]
 
@@ -448,6 +450,21 @@ def diff(session: Session, a_id: int, b_id: int) -> ExperimentDiff:
 def search(session: Session, project_id: int, query: str, limit: int = 50) -> list[SearchHit]:
     """Ranked full-text search over notes, conditions, datasets, digests, critiques, notes."""
     return search_index.search(session, project_id, query, limit)
+
+
+def sync_search_index(
+    session: Session, project_ids: Iterable[int] | None = None
+) -> SearchIndexSync:
+    """Bring the derived FTS index up to date (write path: start-up, explicit POST).
+
+    Search itself is read-only and also finds records added after the last sync, so
+    calling this only keeps searches fast; it never changes what they return.
+    """
+    pids = _project_ids(session, project_ids)
+    applied = 0
+    if search_index.is_sqlite(session):
+        applied = sum(search_index.sync(session, pid) for pid in pids)
+    return SearchIndexSync(indexed_events=applied, project_ids=pids)
 
 
 def _project_ids(session: Session, project_ids: Iterable[int] | None) -> list[int]:
