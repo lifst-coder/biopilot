@@ -3,7 +3,7 @@
 * ``render_as_batch=True`` — SQLite cannot ``ALTER COLUMN``; batch mode recreates the
   table (needed e.g. for ``partner_critiques.experiment_id`` NOT NULL → NULL).
 * The FTS5 virtual table ``memory_search_fts`` and its shadow tables live outside the
-  metadata (Memory creates them lazily on first search), so autogenerate ignores them.
+  metadata (Memory creates them when it syncs its search index), so autogenerate ignores them.
 * The connection comes from ``config.attributes["connection"]`` when the app runs the
   upgrade (:func:`app.core.migrate.upgrade`), otherwise from ``sqlalchemy.url`` /
   ``BIOPILOT_DATABASE_URL`` for the ``alembic`` CLI.
