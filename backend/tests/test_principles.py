@@ -55,9 +55,10 @@ def test_ai_records_are_separate_from_originals(session: Session, seeded: dict[s
     """Digests/critiques never alter the raw note they were derived from."""
     from app.seed.loader import load_seed_spec
 
-    spec = {e["code"]: e for e in load_seed_spec()["experiments"]}
+    (project,) = load_seed_spec("reference").projects
+    spec = {e.code: e for e in project.experiments}
     for exp in session.scalars(select(Experiment)):
-        assert exp.raw_note == spec[exp.code]["raw_note"]
+        assert exp.raw_note == spec[exp.code].raw_note
 
 
 def test_rules_mode_is_default_without_api_key() -> None:
