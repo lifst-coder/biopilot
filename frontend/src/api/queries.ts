@@ -396,6 +396,32 @@ export const useRecall = (projectId: number | null, q: string) =>
       ),
   });
 
+/** Search across every project (or `projectIds`); each hit carries `project_id`. */
+export const useMemorySearchAll = (q: string, projectIds: number[] | null = null, limit = 20) =>
+  useQuery({
+    queryKey: ["memory", "search-all", projectIds, q, limit],
+    enabled: q.trim().length > 0,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/memory/search", {
+          params: { query: { q: q.trim(), limit, ...(projectIds ? { project_id: projectIds } : {}) } },
+        }),
+      ),
+  });
+
+/** Recall across every project (or `projectIds`); experiments ranked across projects. */
+export const useRecallAll = (q: string, projectIds: number[] | null = null) =>
+  useQuery({
+    queryKey: ["memory", "recall-all", projectIds, q],
+    enabled: q.trim().length > 0,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/memory/recall", {
+          params: { query: { q: q.trim(), ...(projectIds ? { project_id: projectIds } : {}) } },
+        }),
+      ),
+  });
+
 // -------------------------------------------------------------- analysis
 /** Default criteria, or the active criteria of `projectId` when given. */
 export const useCriteria = (projectId?: number | null) =>
@@ -489,6 +515,47 @@ export const useRunAnalysis = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["analysis"] }),
   });
 };
+
+/** Stored outcomes grouped by one condition value (all projects unless `projectId`). */
+export const useConditionRecords = (key: string | null, projectId: number | null, contains = "") =>
+  useQuery({
+    queryKey: ["analysis", "records", "conditions", key, projectId, contains.trim()],
+    enabled: key != null && key !== "",
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/analysis/records/conditions", {
+          params: {
+            query: {
+              key: key!,
+              ...(contains.trim() ? { contains: contains.trim() } : {}),
+              ...(projectId != null ? { project_id: [projectId] } : {}),
+            },
+          },
+        }),
+      ),
+  });
+
+export const useOperatorRecords = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["analysis", "records", "operators", projectId],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/analysis/records/operators", {
+          params: { query: projectId != null ? { project_id: [projectId] } : {} },
+        }),
+      ),
+  });
+
+export const usePeriodRecords = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["analysis", "records", "periods", projectId],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/analysis/records/periods", {
+          params: { query: projectId != null ? { project_id: [projectId] } : {} },
+        }),
+      ),
+  });
 
 // --------------------------------------------------------------- partner
 export const usePartnerMode = () =>
@@ -742,6 +809,31 @@ export const useAskStream = () => {
   });
   return { ...mutation, stream: state };
 };
+
+/** Failure archive with rule-based causes and linked decisions (all projects unless given). */
+export const useFailureArchive = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["partner", "failure-archive", projectId],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/partner/failure-archive", {
+          params: { query: projectId != null ? { project_id: [projectId] } : {} },
+        }),
+      ),
+  });
+
+/** Earlier same-symptom failures (any project) and what was concluded then. */
+export const usePrecedents = (experimentId: number | null) =>
+  useQuery({
+    queryKey: ["partner", "precedents", experimentId],
+    enabled: enabled(experimentId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/partner/experiments/{experiment_id}/precedents", {
+          params: { path: { experiment_id: experimentId! } },
+        }),
+      ),
+  });
 
 export const useConditionFields = () =>
   useQuery({

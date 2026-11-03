@@ -67,6 +67,14 @@ SEARCH_TERMS: tuple[str, ...] = (
     "억제",
     "기기 점검",
 )
+#: Values pooled by the Records tab's "값 포함" filter (pre-computed per condition key).
+RECORD_CONTAINS: tuple[str, ...] = ("GCB", "PSA", "C18", "메탄올", "TPP")
+RECORD_CONTAINS_KEYS: tuple[str, ...] = (
+    "cleanup_sorbent",
+    "extraction_solvent",
+    "internal_standard",
+    "column",
+)
 PAGINATION = {"limit", "offset"}
 #: Projects with at most this many experiments get every ordered compare/diff pair.
 ALL_PAIRS_MAX = 12
@@ -179,6 +187,7 @@ def _record_project(rec: Recorder, project: dict[str, Any], codes_elsewhere: lis
                 rec.get(f"/api/partner/proposals/{p['id']}/experiment-draft")
         rec.get(f"/api/partner/projects/{pid}/decisions", {"experiment_id": eid})
         rec.get(f"/api/partner/projects/{pid}/exchanges", {"experiment_id": eid})
+        rec.get(f"/api/partner/experiments/{eid}/precedents")
     for a, b in _pairs(experiments):
         rec.get("/api/memory/diff", {"a": a, "b": b})
         rec.get("/api/analysis/compare", {"a": a, "b": b})
@@ -186,6 +195,29 @@ def _record_project(rec: Recorder, project: dict[str, Any], codes_elsewhere: lis
     for term in terms:
         rec.get(f"/api/memory/projects/{pid}/search", {"q": term, "limit": 20})
         rec.get(f"/api/memory/projects/{pid}/recall", {"q": term})
+
+
+def _record_cross_project(rec: Recorder, projects: list[dict[str, Any]], terms: list[str]) -> None:
+    """Cross-project search/recall, the Records tab and the failure archive (per scope)."""
+    for term in terms:
+        rec.get("/api/memory/search", {"q": term, "limit": 20})
+        rec.get("/api/memory/recall", {"q": term})
+    fields = rec.responses.get("/api/eln/condition-fields") or []
+    keys = sorted({f["key"] for f in fields})
+    for scope in [None, *(p["id"] for p in projects)]:
+        query = {"project_id": scope}
+        rec.get("/api/analysis/records/operators", query)
+        rec.get("/api/analysis/records/periods", query)
+        rec.get("/api/partner/failure-archive", query)
+        rec.get("/api/memory/failures", query)
+        for key in keys:
+            rec.get("/api/analysis/records/conditions", {**query, "key": key})
+            if key not in RECORD_CONTAINS_KEYS:
+                continue
+            for value in RECORD_CONTAINS:
+                rec.get(
+                    "/api/analysis/records/conditions", {**query, "key": key, "contains": value}
+                )
 
 
 def _ask_key(project_id: int, experiment_id: int | None, question: str) -> str:
@@ -239,6 +271,9 @@ def build(profile: SeedProfileName) -> dict[str, Any]:
             for project in projects:
                 elsewhere = [c for pid, cs in codes.items() if pid != project["id"] for c in cs]
                 _record_project(rec, project, elsewhere)
+            _record_cross_project(
+                rec, projects, [*SEARCH_TERMS, *(c for cs in codes.values() for c in cs)]
+            )
         sandbox = root / "ask.db"
         shutil.copyfile(db_path, sandbox)
         with TestClient(create_app(settings, Database(f"sqlite:///{sandbox}"))) as client:

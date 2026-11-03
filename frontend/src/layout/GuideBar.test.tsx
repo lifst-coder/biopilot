@@ -7,6 +7,7 @@ import { GuideBar, guideTargets, useGuideBar } from "./GuideBar";
 vi.mock("@/api/queries", () => ({
   useProjects: () => ({ data: [{ id: 1 }], isLoading: false }),
   useExperiments: () => ({ data: EXPERIMENTS }),
+  useExperiment: () => ({ data: undefined, isLoading: false }),
 }));
 
 afterEach(() => {

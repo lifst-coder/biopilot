@@ -15,7 +15,6 @@ import { TABS } from "./tabs";
  * content at full width, so nothing is squeezed or scrolls sideways.
  */
 export function AppShell() {
-  const { project } = useActiveProject();
   const { data: mode } = usePartnerMode();
   const { search } = useLocation();
   const guide = useGuideBar();
@@ -55,7 +54,7 @@ export function AppShell() {
               안내
             </button>
           )}
-          {project && <span className="min-w-0 truncate">{project.name}</span>}
+          <ProjectSwitch />
           {mode && <Badge tone="ai">{mode.mode === "claude" ? "Claude 모드" : "규칙 모드"}</Badge>}
           {isDemo && <DemoSwitch />}
         </div>
@@ -70,6 +69,33 @@ export function AppShell() {
         </aside>
       </div>
     </div>
+  );
+}
+
+/**
+ * Active project switcher (`?project=`). Switching clears the experiment selection; the
+ * Records tab reads every project regardless and only uses this as its default scope.
+ */
+function ProjectSwitch() {
+  const { project, projects, selectProject } = useActiveProject();
+  if (projects.length === 0) return null;
+  if (projects.length === 1) return <span className="min-w-0 truncate">{projects[0]!.name}</span>;
+  return (
+    <label className="flex min-w-0 max-w-full items-center gap-1.5">
+      <span className="shrink-0">프로젝트</span>
+      <select
+        aria-label="프로젝트 전환"
+        className="bp-input min-w-0 max-w-[18rem] truncate py-1 text-xs font-medium text-ink"
+        value={project?.id ?? ""}
+        onChange={(e) => selectProject(Number(e.target.value))}
+      >
+        {projects.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name} · 실험 {p.experiment_count}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

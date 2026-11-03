@@ -31,6 +31,24 @@ export function formatEvidenceValue(value: number, unit: string | null | undefin
   return formatWithUnit(value, unit, Math.abs(value) < 1 ? 4 : 1);
 }
 
+/** A stored ratio (0–1) as a percentage, e.g. 0.13 → "13%" (Intl formatting only). */
+export function formatRatio(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return EMPTY;
+  return value.toLocaleString("ko-KR", { style: "percent", maximumFractionDigits: 0 });
+}
+
+/** `2026-07-09` → `7/9` (short month/day for dense rows). */
+export function formatShortDate(iso: string): string {
+  const m = /^\d{4}-(\d{2})-(\d{2})/.exec(iso);
+  return m ? `${Number(m[1])}/${Number(m[2])}` : iso;
+}
+
+/** `2026-07` → `2026년 7월`. */
+export function formatMonth(key: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(key);
+  return m ? `${m[1]}년 ${Number(m[2])}월` : key;
+}
+
 /** p-values: fixed thresholds below 0.001, otherwise three decimals. */
 export function formatPValue(p: number | null | undefined): string {
   if (p === null || p === undefined) return EMPTY;
