@@ -39,28 +39,30 @@ API 변경 시 `openapi.json`/`schema.d.ts` 재생성, 새 쓰기 경로는 Audi
 
 ## Memory (`backend/app/memory/**`)
 
-- [ ] **MEM-1 계보 외 관계 엣지**
+> MEM-1–8 완료 (feature/memory, 2026-11-03). 같은 브랜치에서 지식 그래프·결과/QC diff·recall/Q&A·유사 실험 추천도 추가.
+
+- [x] **MEM-1 계보 외 관계 엣지**
   `shares_conditions`(조건 유사도 ≥ 임계), `tests_proposal`(Proposal → 후속 실험) 엣지 추가.
   완료 기준: `GraphEdge.relation` enum 확장(기존 값 유지), 유사도 계산 단위 테스트.
-- [ ] **MEM-2 조건 키별 이력**
+- [x] **MEM-2 조건 키별 이력**
   `GET /api/memory/projects/{id}/conditions/{key}/history` — 실험별 값 변화 타임라인.
   완료 기준: 시드에서 `extraction_time_min` 이력이 10→5로 나타남, 키 미존재 시 빈 배열.
-- [ ] **MEM-3 FTS5 전문 검색**
+- [x] **MEM-3 FTS5 전문 검색**
   SQLite FTS5 인덱스로 메모·정리본·비판 요약 검색, 랭킹·하이라이트.
   완료 기준: 기존 `/search` 계약 유지 + `score` 필드 추가, 한국어 부분일치 테스트.
-- [ ] **MEM-4 단어 단위 메모 diff**
+- [x] **MEM-4 단어 단위 메모 diff**
   줄 diff에 더해 변경 줄 내부 단어 diff(`NoteDiffLine.segments[]`).
   완료 기준: 숫자·단위 변경("10분"→"5분")이 segment로 잡히는 테스트.
-- [ ] **MEM-5 N-way 조건 비교 매트릭스**
+- [x] **MEM-5 N-way 조건 비교 매트릭스**
   `GET /api/memory/compare-conditions?ids=1,2,7` — 키 × 실험 행렬, 변하는 키만 필터 옵션.
   완료 기준: 시드 7개 실험 매트릭스 테스트, 프론트 사용을 위해 Frontend에 공지.
-- [ ] **MEM-6 Claude 정리본 근거 검증**
+- [x] **MEM-6 Claude 정리본 근거 검증**
   Partner의 `ungrounded_numbers`와 동일한 원칙: 정리본에 원본에 없는 숫자가 있으면 규칙 모드 대체.
   완료 기준: FakeGateway로 거짓 숫자 주입 시 rules로 대체되는 테스트, `DigestOut.fallback_reason` 추가.
-- [ ] **MEM-7 연구자 지식 노트**
+- [x] **MEM-7 연구자 지식 노트**
   프로젝트 수준 `KnowledgeNote{statement, linked_experiment_ids, author}`(불변 + 감사), 검색 대상 포함.
   완료 기준: CRUD 중 생성/조회만, 연결된 실험 존재 검증.
-- [ ] **MEM-8 정리본 최신성**
+- [x] **MEM-8 정리본 최신성**
   데이터셋 추가 등으로 정리본이 오래되면 `stale=true` 표시(입력 지문 비교).
   완료 기준: 데이터셋 추가 후 기존 정리본 stale 테스트.
 

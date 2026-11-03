@@ -101,11 +101,23 @@ CSV 계약(`eln/schemas.py: DATASET_COLUMNS`):
 | Method | Path | 응답 |
 |---|---|---|
 | GET | `/api/memory/projects/{project_id}/timeline` | `TimelineEntry[]` (부모 대비 변경 키) |
-| GET | `/api/memory/projects/{project_id}/graph` | `ResearchGraph` (nodes, derived_from edges, roots) |
-| GET | `/api/memory/projects/{project_id}/search?q` | `SearchHit[]` |
+| GET | `/api/memory/projects/{project_id}/graph?relations` | `ResearchGraph` (기본 `derived_from`만; `shares_conditions`·`tests_proposal` 선택) |
+| GET | `/api/memory/projects/{project_id}/knowledge-graph?types&focus&radius` | `KnowledgeGraph` (Experiment↔Condition↔Analyte/Sample↔Result↔Critique↔Hypothesis↔Proposal↔Decision, `refresh`=full/incremental/cached) |
+| GET | `/api/memory/projects/{project_id}/search?q&limit` | `SearchHit[]` (FTS5 trigram, `score`, `highlights`, `source`) |
+| GET | `/api/memory/projects/{project_id}/recall?q&limit` | `RecallBundle` (terms[facet], experiments, protocols, results) |
+| POST | `/api/memory/projects/{project_id}/ask` | `MemoryAnswer` (규칙: 근거 조각 / Claude: 근거 검증된 요약, `fallback_reason`) |
+| GET | `/api/memory/projects/{project_id}/conditions/{key}/history` | `ConditionHistoryEntry[]` |
+| GET | `/api/memory/compare-conditions?ids=1,2,7&varying_only` | `ConditionMatrix` |
+| GET/POST | `/api/memory/projects/{project_id}/knowledge-notes` | `KnowledgeNoteList` / `KnowledgeNoteOut` (불변 + 감사) |
 | GET | `/api/memory/experiments/{experiment_id}/lineage` | `ExperimentSummary[]` (root → self) |
-| GET | `/api/memory/diff?a&b` | `ExperimentDiff` (relation, common_ancestor_id, condition_changes, note_diff, datasets) |
-| GET/POST | `/api/memory/experiments/{experiment_id}/digests` | `DigestOut[]` / `DigestOut` |
+| GET | `/api/memory/experiments/{experiment_id}/similar?limit` | `SimilarExperiment[]` (조건 벡터 유사도) |
+| GET | `/api/memory/diff?a&b` | `ExperimentDiff` (relation, condition_changes[sources], result_changes, qc_changes, note_diff[segments], datasets) |
+| GET/POST | `/api/memory/experiments/{experiment_id}/digests` | `DigestOut[]` / `DigestOut` (`stale`, `fallback_reason`) |
+
+Memory는 eln에만 의존한다. Analysis 결과·QC 플래그·Partner 레코드는 `memory.schemas.FactProvider`
+포트로 들어오고, 구현체는 composition root `app/wiring.py`가 `create_app()`에서 등록한다
+(값·Δ·p는 Analysis가 계산한 그대로 복사). 지식 그래프와 검색 인덱스는 `core_audit_events`를
+변경 피드로 삼아 워터마크 이후 이벤트만 증분 반영한다.
 
 ### analysis
 | Method | Path | 응답 |
