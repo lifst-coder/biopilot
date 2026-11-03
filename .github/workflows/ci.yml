@@ -35,6 +35,12 @@ jobs:
         run: pytest
       - name: OpenAPI contract is committed and current
         run: python -m app.scripts.export_openapi --check
+      - name: Alembic migrations match the models
+        env:
+          BIOPILOT_DATABASE_URL: sqlite:///./ci-migrations.db
+        run: |
+          alembic upgrade head
+          alembic check
 
   frontend:
     name: frontend (contract · typecheck · test · build)

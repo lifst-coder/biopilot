@@ -36,7 +36,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        db.create_all()
+        db.prepare_schema()  # Alembic: empty → create_all + stamp, managed → upgrade head
         if settings.auto_seed:
             from app.seed.loader import seed_if_empty
 

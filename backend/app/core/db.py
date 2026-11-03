@@ -55,6 +55,12 @@ class Database:
 
         Base.metadata.create_all(self.engine)
 
+    def prepare_schema(self) -> None:
+        """Migrate to the current schema with Alembic (see :mod:`app.core.migrate`)."""
+        from app.core.migrate import prepare_schema
+
+        prepare_schema(self.engine)
+
     def session(self) -> Session:
         """Open a new session."""
         return self.session_factory()

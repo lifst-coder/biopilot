@@ -64,6 +64,10 @@ backend/app/
 - **생성 파일** `backend/openapi.json`, `frontend/src/api/schema.d.ts`는 손으로 고치지 않는다.
   머지 충돌이 나면 양쪽을 버리고 재생성한다(아래 명령).
 - API 스키마를 바꾸면 같은 커밋에서 `openapi.json`과 `schema.d.ts`를 재생성한다(CI가 검사).
+- **DB 스키마**(`models.py`)를 바꾸면 같은 커밋에 Alembic revision을 추가한다:
+  `cd backend && alembic revision --autogenerate -m "<module>: <변경>"` → 생성 파일 검토(SQLite는 batch 모드).
+  revision 디렉터리 `app/core/migrations/versions/`는 core 소유지만 revision **추가**는 각 모듈이 한다.
+  `tests/test_migrations.py`와 CI `alembic check`가 모델과 revision의 일치를 검사한다.
 - 저장된 결과의 출력 형태가 바뀌면 `analysis/service.py`의 `METHOD_VERSIONS`를 올린다(예: `calibration@2`).
 - 공유 계약(엔드포인트 경로·응답 필드)을 **삭제/이름변경**하지 않는다. 필드 추가는 자유, 제거는 CHANGES_REQUESTED.md로.
 
