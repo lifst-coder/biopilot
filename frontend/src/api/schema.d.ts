@@ -1146,6 +1146,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/partner/experiments/{experiment_id}/precedents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Precedents
+         * @description Earlier failures with the same symptom (any project) and what was concluded then.
+         */
+        get: operations["partner_precedents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/partner/failure-archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Failure Archive
+         * @description Failures by type and repeat pattern, rule-based causes and the decisions taken after.
+         */
+        get: operations["partner_failure_archive"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/partner/hypotheses": {
         parameters: {
             query?: never;
@@ -2166,6 +2206,28 @@ export interface components {
             version: number;
         };
         /**
+         * ConditionUsage
+         * @description Other projects' earlier experiments that used exactly the value this one changed to.
+         */
+        ConditionUsage: {
+            /** Analyzed Count */
+            analyzed_count: number;
+            /** Experiments */
+            experiments: components["schemas"]["FollowUpExperiment"][];
+            /** Fail Count */
+            fail_count: number;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Project Id */
+            project_id: number;
+            /** Project Name */
+            project_name: string;
+            /** Value */
+            value: string | number | null;
+        };
+        /**
          * CriteriaCreate
          * @description Request body for a new criteria version.
          */
@@ -2582,6 +2644,32 @@ export interface components {
              * @default []
              */
             reflected_in_critique_ids: number[];
+        };
+        /**
+         * DecisionLink
+         * @description A researcher decision taken on a proposal made for the failed experiment.
+         */
+        DecisionLink: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "accept" | "modify" | "reject";
+            /** Changes */
+            changes: components["schemas"]["ProposalChange"][];
+            /** Decided By */
+            decided_by: string;
+            /** Decision Id */
+            decision_id: number;
+            follow_up?: components["schemas"]["FollowUpExperiment"] | null;
+            /** Proposal Id */
+            proposal_id: number;
+            /** Proposal Title */
+            proposal_title: string;
+            /** Rationale */
+            rationale: string;
+            /** Reason Category */
+            reason_category: string;
         };
         /** DecisionOut */
         DecisionOut: {
@@ -3173,6 +3261,15 @@ export interface components {
              */
             warnings: components["schemas"]["ConditionIssue"][];
         };
+        /** ExperimentRef */
+        ExperimentRef: {
+            /** Code */
+            code: string;
+            /** Id */
+            id: number;
+            /** Project Id */
+            project_id: number;
+        };
         /**
          * ExperimentSummary
          * @description List-view representation (no raw note body).
@@ -3223,6 +3320,61 @@ export interface components {
             project_ids: number[];
             /** Types */
             types: components["schemas"]["FailureType"][];
+        };
+        /**
+         * FailureArchiveOut
+         * @description Memory's failure archive plus Partner's cause hypotheses and linked decisions.
+         */
+        FailureArchiveOut: {
+            archive: components["schemas"]["FailureArchive"];
+            /** Explanations */
+            explanations: components["schemas"]["FailureExplanation"][];
+        };
+        /**
+         * FailureCause
+         * @description A rule-based cause hypothesis for one failure, with the experiments it rests on.
+         */
+        FailureCause: {
+            /**
+             * Experiment Ids
+             * @description 근거 실험 (stored records the rule read)
+             */
+            experiment_ids: number[];
+            /**
+             * Experiments
+             * @description Same, with code/project
+             * @default []
+             */
+            experiments: components["schemas"]["ExperimentRef"][];
+            /**
+             * Note Excerpt
+             * @description Original note line quoted
+             */
+            note_excerpt?: string | null;
+            /**
+             * Rule
+             * @enum {string}
+             */
+            rule: "initial_conditions" | "outside_condition_block" | "confounded_change" | "changed_condition" | "repeated_value" | "used_elsewhere" | "operator_change" | "note_reagent" | "note_instrument";
+            /** Statement */
+            statement: string;
+        };
+        /** FailureExplanation */
+        FailureExplanation: {
+            /** Causes */
+            causes: components["schemas"]["FailureCause"][];
+            /**
+             * Decisions
+             * @default []
+             */
+            decisions: components["schemas"]["DecisionLink"][];
+            /** Experiment Id */
+            experiment_id: number;
+            /**
+             * Hypotheses
+             * @default []
+             */
+            hypotheses: components["schemas"]["StoredHypothesisRef"][];
         };
         /**
          * FailurePattern
@@ -3355,6 +3507,27 @@ export interface components {
              * @enum {string}
              */
             severity: "info" | "warning" | "critical";
+            /** Title */
+            title: string;
+        };
+        /**
+         * FollowUpExperiment
+         * @description Experiment that implemented an accepted/modified proposal (values copied).
+         */
+        FollowUpExperiment: {
+            /** Code */
+            code: string;
+            /** Experiment Id */
+            experiment_id: number;
+            /** Qc Status */
+            qc_status: string;
+            /** Recovery Mean Pct */
+            recovery_mean_pct?: number | null;
+            /**
+             * Source Result Ids
+             * @default []
+             */
+            source_result_ids: number[];
             /** Title */
             title: string;
         };
@@ -4118,6 +4291,80 @@ export interface components {
             project_ids: number[];
         };
         /**
+         * PrecedentCase
+         * @description An earlier failure with the same symptom, and what was concluded then.
+         */
+        PrecedentCase: {
+            /**
+             * Decisions
+             * @default []
+             */
+            decisions: components["schemas"]["DecisionLink"][];
+            experiment: components["schemas"]["ExperimentSummary"];
+            /** Failed Analytes */
+            failed_analytes: string[];
+            /**
+             * Hypotheses
+             * @default []
+             */
+            hypotheses: components["schemas"]["StoredHypothesisRef"][];
+            /** Matches */
+            matches: components["schemas"]["PrecedentMatch"][];
+            /** Project Name */
+            project_name: string;
+            /** Recovery Mean Pct */
+            recovery_mean_pct?: number | null;
+            /** @description First later non-failing child of the failure's pattern */
+            resolution?: components["schemas"]["FollowUpExperiment"] | null;
+            /** Score */
+            score: number;
+            /**
+             * Source Result Ids
+             * @default []
+             */
+            source_result_ids: number[];
+        };
+        /** PrecedentMatch */
+        PrecedentMatch: {
+            /**
+             * Analytes
+             * @default []
+             */
+            analytes: string[];
+            /** Key */
+            key?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "same_change" | "same_value" | "same_analytes" | "no_change";
+            /** Label */
+            label: string;
+            /** Value */
+            value?: string | number | null;
+        };
+        /** PrecedentsOut */
+        PrecedentsOut: {
+            /**
+             * Cases
+             * @description Best match first; empty → hide the area
+             */
+            cases: components["schemas"]["PrecedentCase"][];
+            /** Changed Keys */
+            changed_keys: string[];
+            /**
+             * Condition Usage
+             * @default []
+             */
+            condition_usage: components["schemas"]["ConditionUsage"][];
+            /** Experiment Id */
+            experiment_id: number;
+            /** Failed */
+            failed: boolean;
+            /** Failed Analytes */
+            failed_analytes: string[];
+        };
+        /**
          * PriorityFactor
          * @description One additive term of a proposal's deterministic priority score.
          */
@@ -4762,6 +5009,18 @@ export interface components {
             score: number;
             /** Shared Keys */
             shared_keys: string[];
+        };
+        /** StoredHypothesisRef */
+        StoredHypothesisRef: {
+            /** Id */
+            id: number;
+            /** Statement */
+            statement: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "proposed" | "open" | "supported" | "refuted";
         };
         /** SystemInfo */
         SystemInfo: {
@@ -8884,6 +9143,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CritiqueOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    partner_precedents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrecedentsOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    partner_failure_archive: {
+        parameters: {
+            query?: {
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailureArchiveOut"];
                 };
             };
             /** @description Bad Request */

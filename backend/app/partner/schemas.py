@@ -13,7 +13,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.eln.schemas import ExperimentCreate
+from app.eln.schemas import ExperimentCreate, ExperimentSummary
+from app.memory.schemas import FailureArchive
 
 Engine = Literal["rules", "claude"]
 Origin = Literal["user", "ai:rules", "ai:claude"]
@@ -469,3 +470,129 @@ class ExchangeHistory(BaseModel):
     project_id: int
     experiment_id: int | None
     items: list[ExchangeOut]
+
+
+# -------------------------------------------- failure archive / precedents
+
+CauseRule = Literal[
+    "initial_conditions",
+    "outside_condition_block",
+    "confounded_change",
+    "changed_condition",
+    "repeated_value",
+    "used_elsewhere",
+    "operator_change",
+    "note_reagent",
+    "note_instrument",
+]
+
+
+class ExperimentRef(BaseModel):
+    id: int
+    code: str
+    project_id: int
+
+
+class FailureCause(BaseModel):
+    """A rule-based cause hypothesis for one failure, with the experiments it rests on."""
+
+    rule: CauseRule
+    statement: str
+    experiment_ids: list[int] = Field(description="근거 실험 (stored records the rule read)")
+    experiments: list[ExperimentRef] = Field(default=[], description="Same, with code/project")
+    note_excerpt: str | None = Field(default=None, description="Original note line quoted")
+
+
+class FollowUpExperiment(BaseModel):
+    """Experiment that implemented an accepted/modified proposal (values copied)."""
+
+    experiment_id: int
+    code: str
+    title: str
+    qc_status: str
+    recovery_mean_pct: float | None = None
+    source_result_ids: list[int] = []
+
+
+class DecisionLink(BaseModel):
+    """A researcher decision taken on a proposal made for the failed experiment."""
+
+    decision_id: int
+    proposal_id: int
+    proposal_title: str
+    action: Literal["accept", "modify", "reject"]
+    reason_category: str
+    rationale: str
+    decided_by: str
+    changes: list[ProposalChange]
+    follow_up: FollowUpExperiment | None = None
+
+
+class StoredHypothesisRef(BaseModel):
+    id: int
+    statement: str
+    status: HypothesisStatus
+
+
+class FailureExplanation(BaseModel):
+    experiment_id: int
+    causes: list[FailureCause]
+    hypotheses: list[StoredHypothesisRef] = []
+    decisions: list[DecisionLink] = []
+
+
+class FailureArchiveOut(BaseModel):
+    """Memory's failure archive plus Partner's cause hypotheses and linked decisions."""
+
+    archive: FailureArchive
+    explanations: list[FailureExplanation]
+
+
+PrecedentMatchKind = Literal["same_change", "same_value", "same_analytes", "no_change"]
+
+
+class PrecedentMatch(BaseModel):
+    kind: PrecedentMatchKind
+    label: str
+    key: str | None = None
+    value: str | float | None = None
+    analytes: list[str] = []
+
+
+class PrecedentCase(BaseModel):
+    """An earlier failure with the same symptom, and what was concluded then."""
+
+    experiment: ExperimentSummary
+    project_name: str
+    failed_analytes: list[str]
+    recovery_mean_pct: float | None = None
+    source_result_ids: list[int] = []
+    matches: list[PrecedentMatch]
+    score: int
+    decisions: list[DecisionLink] = []
+    resolution: FollowUpExperiment | None = Field(
+        default=None, description="First later non-failing child of the failure's pattern"
+    )
+    hypotheses: list[StoredHypothesisRef] = []
+
+
+class ConditionUsage(BaseModel):
+    """Other projects' earlier experiments that used exactly the value this one changed to."""
+
+    key: str
+    label: str
+    value: str | float | None
+    project_id: int
+    project_name: str
+    experiments: list[FollowUpExperiment]
+    fail_count: int
+    analyzed_count: int
+
+
+class PrecedentsOut(BaseModel):
+    experiment_id: int
+    failed: bool
+    failed_analytes: list[str]
+    changed_keys: list[str]
+    cases: list[PrecedentCase] = Field(description="Best match first; empty → hide the area")
+    condition_usage: list[ConditionUsage] = []

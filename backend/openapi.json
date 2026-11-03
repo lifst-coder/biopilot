@@ -1983,6 +1983,68 @@
         "title": "ConditionTemplateOut",
         "type": "object"
       },
+      "ConditionUsage": {
+        "description": "Other projects' earlier experiments that used exactly the value this one changed to.",
+        "properties": {
+          "analyzed_count": {
+            "title": "Analyzed Count",
+            "type": "integer"
+          },
+          "experiments": {
+            "items": {
+              "$ref": "#/components/schemas/FollowUpExperiment"
+            },
+            "title": "Experiments",
+            "type": "array"
+          },
+          "fail_count": {
+            "title": "Fail Count",
+            "type": "integer"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value",
+          "project_id",
+          "project_name",
+          "experiments",
+          "fail_count",
+          "analyzed_count"
+        ],
+        "title": "ConditionUsage",
+        "type": "object"
+      },
       "CriteriaCreate": {
         "description": "Request body for a new criteria version.",
         "properties": {
@@ -2958,6 +3020,73 @@
           "experiment_code"
         ],
         "title": "DecisionHistoryEntry",
+        "type": "object"
+      },
+      "DecisionLink": {
+        "description": "A researcher decision taken on a proposal made for the failed experiment.",
+        "properties": {
+          "action": {
+            "enum": [
+              "accept",
+              "modify",
+              "reject"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "decided_by": {
+            "title": "Decided By",
+            "type": "string"
+          },
+          "decision_id": {
+            "title": "Decision Id",
+            "type": "integer"
+          },
+          "follow_up": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowUpExperiment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "integer"
+          },
+          "proposal_title": {
+            "title": "Proposal Title",
+            "type": "string"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "reason_category": {
+            "title": "Reason Category",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "proposal_id",
+          "proposal_title",
+          "action",
+          "reason_category",
+          "rationale",
+          "decided_by",
+          "changes"
+        ],
+        "title": "DecisionLink",
         "type": "object"
       },
       "DecisionOut": {
@@ -4289,6 +4418,29 @@
         "title": "ExperimentOut",
         "type": "object"
       },
+      "ExperimentRef": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "project_id"
+        ],
+        "title": "ExperimentRef",
+        "type": "object"
+      },
       "ExperimentSummary": {
         "description": "List-view representation (no raw note body).",
         "properties": {
@@ -4411,6 +4563,124 @@
           "failures"
         ],
         "title": "FailureArchive",
+        "type": "object"
+      },
+      "FailureArchiveOut": {
+        "description": "Memory's failure archive plus Partner's cause hypotheses and linked decisions.",
+        "properties": {
+          "archive": {
+            "$ref": "#/components/schemas/FailureArchive"
+          },
+          "explanations": {
+            "items": {
+              "$ref": "#/components/schemas/FailureExplanation"
+            },
+            "title": "Explanations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "archive",
+          "explanations"
+        ],
+        "title": "FailureArchiveOut",
+        "type": "object"
+      },
+      "FailureCause": {
+        "description": "A rule-based cause hypothesis for one failure, with the experiments it rests on.",
+        "properties": {
+          "experiment_ids": {
+            "description": "근거 실험 (stored records the rule read)",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Experiment Ids",
+            "type": "array"
+          },
+          "experiments": {
+            "default": [],
+            "description": "Same, with code/project",
+            "items": {
+              "$ref": "#/components/schemas/ExperimentRef"
+            },
+            "title": "Experiments",
+            "type": "array"
+          },
+          "note_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Original note line quoted",
+            "title": "Note Excerpt"
+          },
+          "rule": {
+            "enum": [
+              "initial_conditions",
+              "outside_condition_block",
+              "confounded_change",
+              "changed_condition",
+              "repeated_value",
+              "used_elsewhere",
+              "operator_change",
+              "note_reagent",
+              "note_instrument"
+            ],
+            "title": "Rule",
+            "type": "string"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule",
+          "statement",
+          "experiment_ids"
+        ],
+        "title": "FailureCause",
+        "type": "object"
+      },
+      "FailureExplanation": {
+        "properties": {
+          "causes": {
+            "items": {
+              "$ref": "#/components/schemas/FailureCause"
+            },
+            "title": "Causes",
+            "type": "array"
+          },
+          "decisions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DecisionLink"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "hypotheses": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/StoredHypothesisRef"
+            },
+            "title": "Hypotheses",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "causes"
+        ],
+        "title": "FailureExplanation",
         "type": "object"
       },
       "FailurePattern": {
@@ -4727,6 +4997,54 @@
           "evidence_keys"
         ],
         "title": "Finding",
+        "type": "object"
+      },
+      "FollowUpExperiment": {
+        "description": "Experiment that implemented an accepted/modified proposal (values copied).",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "qc_status": {
+            "title": "Qc Status",
+            "type": "string"
+          },
+          "recovery_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Mean Pct"
+          },
+          "source_result_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Source Result Ids",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "code",
+          "title",
+          "qc_status"
+        ],
+        "title": "FollowUpExperiment",
         "type": "object"
       },
       "GraphEdge": {
@@ -6540,6 +6858,199 @@
         "title": "PeriodRecords",
         "type": "object"
       },
+      "PrecedentCase": {
+        "description": "An earlier failure with the same symptom, and what was concluded then.",
+        "properties": {
+          "decisions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DecisionLink"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "experiment": {
+            "$ref": "#/components/schemas/ExperimentSummary"
+          },
+          "failed_analytes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Analytes",
+            "type": "array"
+          },
+          "hypotheses": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/StoredHypothesisRef"
+            },
+            "title": "Hypotheses",
+            "type": "array"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/PrecedentMatch"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "recovery_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Mean Pct"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FollowUpExperiment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First later non-failing child of the failure's pattern"
+          },
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "source_result_ids": {
+            "default": [],
+            "items": {
+              "type": "integer"
+            },
+            "title": "Source Result Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment",
+          "project_name",
+          "failed_analytes",
+          "matches",
+          "score"
+        ],
+        "title": "PrecedentCase",
+        "type": "object"
+      },
+      "PrecedentMatch": {
+        "properties": {
+          "analytes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Analytes",
+            "type": "array"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "kind": {
+            "enum": [
+              "same_change",
+              "same_value",
+              "same_analytes",
+              "no_change"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "kind",
+          "label"
+        ],
+        "title": "PrecedentMatch",
+        "type": "object"
+      },
+      "PrecedentsOut": {
+        "properties": {
+          "cases": {
+            "description": "Best match first; empty → hide the area",
+            "items": {
+              "$ref": "#/components/schemas/PrecedentCase"
+            },
+            "title": "Cases",
+            "type": "array"
+          },
+          "changed_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed Keys",
+            "type": "array"
+          },
+          "condition_usage": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ConditionUsage"
+            },
+            "title": "Condition Usage",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "boolean"
+          },
+          "failed_analytes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Analytes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "failed",
+          "failed_analytes",
+          "changed_keys",
+          "cases"
+        ],
+        "title": "PrecedentsOut",
+        "type": "object"
+      },
       "PriorityFactor": {
         "description": "One additive term of a proposal's deterministic priority score.",
         "properties": {
@@ -8244,6 +8755,35 @@
           "differing"
         ],
         "title": "SimilarExperiment",
+        "type": "object"
+      },
+      "StoredHypothesisRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "open",
+              "supported",
+              "refuted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "status"
+        ],
+        "title": "StoredHypothesisRef",
         "type": "object"
       },
       "SystemInfo": {
@@ -14319,6 +14859,164 @@
           }
         },
         "summary": "Run Critique",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/experiments/{experiment_id}/precedents": {
+      "get": {
+        "description": "Earlier failures with the same symptom (any project) and what was concluded then.",
+        "operationId": "partner_precedents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrecedentsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Precedents",
+        "tags": [
+          "partner"
+        ]
+      }
+    },
+    "/api/partner/failure-archive": {
+      "get": {
+        "description": "Failures by type and repeat pattern, rule-based causes and the decisions taken after.",
+        "operationId": "partner_failure_archive",
+        "parameters": [
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FailureArchiveOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Failure Archive",
         "tags": [
           "partner"
         ]

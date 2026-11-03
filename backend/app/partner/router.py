@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import Database
 from app.deps import get_session
-from app.partner import service
+from app.partner import failures, service
 from app.partner.schemas import (
     AskRequest,
     AskResponse,
@@ -20,10 +20,12 @@ from app.partner.schemas import (
     DecisionHistory,
     ExchangeHistory,
     ExperimentDraftOut,
+    FailureArchiveOut,
     HypothesisCreate,
     HypothesisOut,
     HypothesisStatusChange,
     PartnerMode,
+    PrecedentsOut,
     ProposalOut,
 )
 
@@ -219,3 +221,26 @@ def list_exchanges(
     session: Session = Depends(get_session),
 ) -> ExchangeHistory:
     return service.list_exchanges(session, project_id, experiment_id)
+
+
+@router.get(
+    "/failure-archive", response_model=FailureArchiveOut, operation_id="partner_failure_archive"
+)
+def failure_archive(
+    project_id: list[int] | None = Query(
+        default=None, description="Restrict to these projects (default: every project)"
+    ),
+    session: Session = Depends(get_session),
+) -> FailureArchiveOut:
+    """Failures by type and repeat pattern, rule-based causes and the decisions taken after."""
+    return failures.failure_archive(session, project_id)
+
+
+@router.get(
+    "/experiments/{experiment_id}/precedents",
+    response_model=PrecedentsOut,
+    operation_id="partner_precedents",
+)
+def precedents(experiment_id: int, session: Session = Depends(get_session)) -> PrecedentsOut:
+    """Earlier failures with the same symptom (any project) and what was concluded then."""
+    return failures.precedents(session, experiment_id)
