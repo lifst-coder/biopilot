@@ -77,6 +77,13 @@ def test_row_level_issues_point_at_rows() -> None:
     assert ("warning", "duplicate_row", 4) in issues
 
 
+def test_infinite_numbers_are_rejected() -> None:
+    """ISSUES P1-3: "inf" parses as a float but must not reach Analysis."""
+    issues = _issues(HEADER + "C1,1,x,10,100\nC2,2,x,inf,100\nC3,3,x,30,-Infinity\n")
+    assert ("error", "not_finite", 2) in issues
+    assert ("error", "not_finite", 3) in issues
+
+
 def test_many_non_numeric_values_are_summarised() -> None:
     rows = "".join(f"C{i},bad,x,1,1\n" for i in range(8))
     issues = _issues(HEADER + rows)

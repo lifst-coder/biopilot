@@ -443,6 +443,30 @@ def test_metadata_patch_rules(client: TestClient) -> None:
     assert client.get(f"/api/eln/experiments/{exp['id']}").json()["raw_note"] == exp["raw_note"]
 
 
+def test_concurrent_metadata_patch_is_409_not_500(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ISSUES P1-6: two PATCHes that compute the same revision number → 409, not 500.
+
+    The race is reproduced by making the second request read the revision count the
+    first one saw (a stale ``count``), so its insert collides on ``uq_experiment_rev``.
+    """
+    from app.eln import service as eln_service
+
+    exp = _new_experiment(client)
+    url = f"/api/eln/experiments/{exp['id']}/metadata"
+    assert client.patch(url, json={"title": "먼저 저장"}).status_code == 200
+    monkeypatch.setattr(eln_service, "_revision_count", lambda _s, _id: 1)  # stale
+    late = client.patch(url, json={"title": "늦은 저장"})
+    assert late.status_code == 409 and late.json()["code"] == "revision_conflict"
+    monkeypatch.undo()
+    current = client.get(f"/api/eln/experiments/{exp['id']}").json()
+    assert current["title"] == "먼저 저장"
+    events = [e for e in _audit(client, exp["id"]) if e["action"] == "update_metadata"]
+    assert len(events) == 1
+    assert client.patch(url, json={"title": "다시 저장"}).status_code == 200
+
+
 def test_history_reconstructs_versions(client: TestClient) -> None:
     exp = _new_experiment(client)
     url = f"/api/eln/experiments/{exp['id']}/metadata"

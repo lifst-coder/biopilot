@@ -164,6 +164,18 @@ def validate_frame(frame: pd.DataFrame, spec: DatasetKindSpec) -> list[CsvIssue]
                     column=col,
                 )
             )
+        infinite = frame.index[numeric.isin([float("inf"), float("-inf")])]
+        for i in infinite[:MAX_ROW_ISSUES]:
+            # pandas reads "inf"/"Infinity" as a float; Analysis would turn it into NaN.
+            issues.append(
+                _row_issue(
+                    "error",
+                    "not_finite",
+                    f"{col} 유한한 숫자가 아님: '{_cell(frame, i, col)}'",
+                    int(i) + 1,
+                    col,
+                )
+            )
         negative = frame.index[numeric < 0]
         for i in negative[:MAX_ROW_ISSUES]:
             issues.append(

@@ -14,10 +14,16 @@ from datetime import UTC, date, datetime
 from typing import Any, cast
 
 from sqlalchemy import and_, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.audit import Actor, AuditEvent, AuditEventOut, record_event
-from app.core.errors import ImmutableRecordError, NotFoundError, ValidationFailedError
+from app.core.errors import (
+    DomainError,
+    ImmutableRecordError,
+    NotFoundError,
+    ValidationFailedError,
+)
 from app.eln import conditions, converters, csv_ingest, storage
 from app.eln.models import (
     AttachmentFile,
@@ -69,6 +75,13 @@ from app.eln.schemas import (
 
 #: Experiment fields that may be corrected through :func:`update_metadata`.
 MUTABLE_EXPERIMENT_FIELDS: tuple[str, ...] = ("title", "author")
+
+
+class RevisionConflictError(DomainError):
+    """A metadata correction raced another one for the same revision number (409)."""
+
+    status_code = 409
+    code = "revision_conflict"
 
 
 def list_condition_fields() -> list[ConditionField]:
@@ -474,17 +487,26 @@ def update_metadata(
     if not changes:
         raise ValidationFailedError("변경된 값이 없습니다")
     revision = _revision_count(session, experiment_id) + 1
-    for name, change in changes.items():
-        setattr(exp, name, change["after"])
-    row = ExperimentRevision(
-        experiment_id=experiment_id,
-        revision=revision,
-        changes=changes,
-        reason=data.reason,
-        actor=actor,
-    )
-    session.add(row)
-    session.flush()
+    try:
+        # SAVEPOINT: a concurrent PATCH that already wrote revision N+1 makes this insert
+        # hit uq_experiment_rev. Roll back only this change and answer 409 instead of a
+        # 500 from the request commit (ISSUES P1-6); the client reloads and retries.
+        with session.begin_nested():
+            for name, change in changes.items():
+                setattr(exp, name, change["after"])
+            row = ExperimentRevision(
+                experiment_id=experiment_id,
+                revision=revision,
+                changes=changes,
+                reason=data.reason,
+                actor=actor,
+            )
+            session.add(row)
+    except IntegrityError as exc:
+        raise RevisionConflictError(
+            f"{exp.code}: 다른 수정(revision {revision})이 먼저 저장되었습니다 — "
+            "새로 불러온 뒤 다시 수정하세요"
+        ) from exc
     record_event(
         session,
         actor=actor,
