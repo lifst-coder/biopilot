@@ -17,6 +17,10 @@ const ResearchAIPage = lazy(() =>
   import("@/features/research-ai/ResearchAIPage").then((m) => ({ default: m.ResearchAIPage })),
 );
 
+const RecordsPage = lazy(() =>
+  import("@/features/records/RecordsPage").then((m) => ({ default: m.RecordsPage })),
+);
+
 export function App() {
   return (
     <Suspense fallback={<LoadingState />}>
@@ -27,6 +31,7 @@ export function App() {
           <Route path="/notebook" element={<NotebookPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />
           <Route path="/research-ai" element={<ResearchAIPage />} />
+          <Route path="/records" element={<RecordsPage />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />
         </Route>
       </Routes>
