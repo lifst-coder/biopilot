@@ -5,8 +5,10 @@ Checks, in order:
 1. shape — 2 projects, 42 experiments;
 2. every number on screen is computed from the committed CSVs (independent re-fit);
 3. the research graph of each project is one connected lineage tree;
-4. the decision history is linked to the right proposals, follow-ups implement it and
-   rejected changes are never applied afterwards;
+4. the decision history: each decision is recorded right after its critique on the
+   proposal named by the Partner's stable ids (template id + signature), later
+   critiques never re-offer a decided proposal, follow-ups implement the decisions and
+   rejected condition values are never used afterwards;
 5. the scenario (protocol history, maintenance stop, failed reproduction, operator
    habits, cross-project links) is visible in the computed numbers — as ranges
    (CLAUDE.md §6), never as exact values.
@@ -18,7 +20,7 @@ import hashlib
 import io
 import math
 import statistics
-from datetime import date
+from datetime import date, datetime
 
 import networkx as nx
 import numpy as np
@@ -44,8 +46,8 @@ from app.memory import service as memory
 from app.memory.models import ExperimentDigest
 from app.partner import service as partner
 from app.partner.models import Critique, Decision, Hypothesis, Proposal
-from app.partner.schemas import ProposalChange, ProposalOut
-from app.seed.loader import SeedResult
+from app.partner.schemas import ExperimentDesign, ProposalChange, ProposalOut
+from app.seed.loader import SeedError, SeedResult, find_decided_proposal
 from app.seed.spec import REJECT_REASON_LABELS, DecisionSpec, SeedSpec
 
 STATUS = {"accept": "accepted", "modify": "modified", "reject": "rejected"}
@@ -219,19 +221,35 @@ def test_lineage_restarts_nowhere(lab_session: Session, lab: SeedResult) -> None
 # --------------------------------------------------------------- 4. decisions
 
 
+def _audit_id(s: Session, entity_type: str, entity_id: int) -> int:
+    """Id of the creation audit event of a record (audit ids are the global write order)."""
+    return min(
+        s.scalars(
+            select(AuditEvent.id).where(
+                AuditEvent.entity_type == entity_type, AuditEvent.entity_id == entity_id
+            )
+        )
+    )
+
+
 def test_decisions_are_linked_to_the_right_proposals(
     lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
 ) -> None:
     decisions = lab_spec.history.decisions
-    assert len(decisions) == len(lab.decided_proposal_ids) == 12
+    assert len(decisions) == len(lab.decided_proposal_ids) == 14
     for d in decisions:
         p = _proposal(lab_session, lab, d)
         exp_id = lab.experiment_ids[(d.project, d.experiment)]
-        critique = partner.get_critique(lab_session, lab.critique_ids[(d.project, d.experiment)])
+        critique = partner.get_critique(lab_session, lab.critique_ids[d.critique])
         assert p.project_id == lab.project_ids[d.project]
         assert p.experiment_id == exp_id == critique.experiment_id
-        assert p.critique_id == critique.id and p.id in critique.proposal_ids
-        assert {c.key for c in p.changes} == set(d.proposal_change_keys)
+        assert p.id in critique.proposal_ids  # offered by the critique the spec names
+        # matched by the Partner's stable ids; the readable copy in the spec agrees
+        assert p.design is not None and p.design.template_id == d.proposal.template_id
+        assert p.signature == d.proposal.signature
+        assert [c.key for c in p.changes] == [c.key for c in d.proposal.changes]
+        for got, want in zip(p.changes, d.proposal.changes, strict=True):
+            assert _same_value(got.value, want.value), (d.id, got.key)
         assert p.status == STATUS[d.action]
         assert p.decision is not None
         assert p.decision.action == d.action
@@ -248,15 +266,71 @@ def test_decisions_are_linked_to_the_right_proposals(
             )
         ).one()
         assert event.payload["proposal_id"] == p.id
-    for project_id in lab.project_ids.values():  # history is complete: nothing left open
-        assert partner.list_proposals(lab_session, project_id, status="pending") == []
+    # Only the scenario's decisions exist; whatever else the Partner proposed stays
+    # pending (the seed does not depend on the full set of engine proposals).
+    decided = {
+        p.id
+        for project_id in lab.project_ids.values()
+        for p in partner.list_proposals(lab_session, project_id)
+        if p.status != "pending"
+    }
+    assert decided == set(lab.decided_proposal_ids.values())
 
 
-def test_five_rejections_with_distinct_reasons(
+def test_decisions_are_recorded_right_after_their_critique(
+    lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
+) -> None:
+    """Each decision lies between its critique and the project's next critique."""
+    history = lab_spec.history
+    for d in history.decisions:
+        p = _proposal(lab_session, lab, d)
+        assert p.decision is not None
+        decided_at = _audit_id(lab_session, "partner.Decision", p.decision.id)
+        own = _audit_id(lab_session, "partner.Critique", lab.critique_ids[d.critique])
+        assert own < decided_at, d.id
+        order = [c.id for c in history.critiques if c.project == d.project]
+        later = order[order.index(d.critique) + 1 :]
+        for c in later:
+            assert decided_at < _audit_id(lab_session, "partner.Critique", lab.critique_ids[c])
+
+
+def test_later_critiques_never_reoffer_a_decided_proposal(
+    lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
+) -> None:
+    """The stored history itself honours the decisions taken before each critique."""
+    history = lab_spec.history
+    for d in history.decisions:
+        decided = _proposal(lab_session, lab, d)
+        order = [c.id for c in history.critiques if c.project == d.project]
+        for c in order[order.index(d.critique) + 1 :]:
+            critique = partner.get_critique(lab_session, lab.critique_ids[c])
+            offered = [partner.get_proposal(lab_session, pid) for pid in critique.proposal_ids]
+            assert all(o.signature != decided.signature for o in offered), (d.id, c)
+
+
+def test_recritiques_offer_what_the_first_critique_did_not(
+    lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
+) -> None:
+    """A second critique of an experiment exists because the decisions changed its offer."""
+    history = lab_spec.history
+    seen: dict[tuple[str, str], list[str]] = {}
+    for c in history.critiques:
+        seen.setdefault((c.project, c.experiment), []).append(c.id)
+    recritiques = {key: ids for key, ids in seen.items() if len(ids) > 1}
+    assert set(recritiques) == {("residue", "#009"), ("organic_acids", "#OA06")}
+    for first, *again in recritiques.values():
+        before = partner.get_critique(lab_session, lab.critique_ids[first]).proposal_ids
+        assert history.decisions_after(first), "a re-critique follows a decision"
+        for critique_id in again:
+            for d in history.decisions_after(critique_id):
+                assert lab.decided_proposal_ids[d.id] not in before, d.id
+
+
+def test_rejections_carry_their_reason(
     lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
 ) -> None:
     rejects = [d for d in lab_spec.history.decisions if d.action == "reject"]
-    assert len(rejects) == 5
+    assert len(rejects) == 7
     assert {d.reason for d in rejects} == set(REJECT_REASON_LABELS)
     for d in rejects:
         p = _proposal(lab_session, lab, d)
@@ -288,56 +362,102 @@ def test_follow_up_experiments_implement_the_decision(
             assert _same_value(conditions.get(change.key), change.value), (d.id, change.key)
 
 
-def test_rejected_changes_are_never_applied_later(
+def _project_condition_keys(s: Session, project_id: int) -> set[str]:
+    return {
+        key
+        for e in eln.list_experiments_full(s, project_id)
+        for key in e.condition_block.model_dump(exclude_none=True)
+    }
+
+
+def test_rejected_condition_values_are_never_used_later(
     lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
 ) -> None:
-    for d in (d for d in lab_spec.history.decisions if d.action == "reject"):
+    """A rejected condition value (e.g. methanol) never shows up in a later experiment.
+
+    Only changes to keys the project actually records in its condition blocks are
+    checked, and each value must be the one recorded on the decided experiment — so
+    the check compares real condition values, not proposal placeholders such as
+    ``researcher-defined``. Rejections of a whole design (2×2, re-analysis) reject the
+    work, not a value; the no-repeat tests cover those.
+    """
+    rejects = [d for d in lab_spec.history.decisions if d.action == "reject"]
+    single = {d.id for d in rejects if d.proposal.template_id == "single_variable"}
+    checked: set[str] = set()
+    for d in rejects:
         p = _proposal(lab_session, lab, d)
+        project_id = lab.project_ids[d.project]
+        keys = _project_condition_keys(lab_session, project_id)
+        concrete = [c for c in p.changes if c.key in keys]
+        if not concrete:
+            continue
+        checked.add(d.id)
         decided = _exp(lab_session, lab, d.project, d.experiment)
+        recorded = decided.condition_block.model_dump()
         later = [
             e
-            for e in eln.list_experiments_full(lab_session, lab.project_ids[d.project])
+            for e in eln.list_experiments_full(lab_session, project_id)
             if e.performed_on > decided.performed_on
         ]
         assert later
-        for e in later:
-            conditions = e.condition_block.model_dump()
-            for change in p.changes:
-                assert not _same_value(conditions.get(change.key), change.value), (d.id, e.code)
+        for change in concrete:
+            assert _same_value(recorded.get(change.key), change.value), (d.id, change.key)
+            for e in later:
+                used = e.condition_block.model_dump().get(change.key)
+                assert not _same_value(used, change.value), (d.id, e.code, change.key)
+    assert checked == single and len(checked) == 3
+
+
+def _varied(p: ProposalOut) -> dict[str, list[object]]:
+    assert p.design is not None
+    return {v.key: list(v.levels) for v in p.design.variables if v.role == "varied"}
 
 
 def test_repeat_probes_still_meet_the_rejected_proposals_trigger(
     lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
 ) -> None:
-    """Each probe would make a naive critic re-propose what was rejected."""
+    """Each probe still shows the data situation that prompted the rejected proposal.
+
+    The trigger is read from the stored data, not from the engine: an IS re-analysis
+    needs flagged IS injections; a design that varies condition keys needs a
+    confounded change of exactly those keys (to one of the design's levels) and a drop
+    in recovery against the parent experiment.
+    """
     by_id = {d.id: d for d in lab_spec.history.decisions}
-    assert {by_id[p.decision].action for p in lab_spec.history.repeat_probes} == {"reject"}
-    for probe in lab_spec.history.repeat_probes:
+    probes = lab_spec.history.repeat_probes
+    assert {p.decision for p in probes} == {d.id for d in by_id.values() if d.action == "reject"}
+    for probe in probes:
         rejected = _proposal(lab_session, lab, by_id[probe.decision])
         exp = _exp(lab_session, lab, probe.project, probe.experiment)
-        if {c.key for c in rejected.changes} == IS_PROPOSAL_KEYS:
+        keys = _project_condition_keys(lab_session, lab.project_ids[probe.project])
+        varied = {k: levels for k, levels in _varied(rejected).items() if k in keys}
+        if not varied:  # IS re-analysis (injection dilution is not a recorded condition)
+            assert {c.key for c in rejected.changes} & IS_PROPOSAL_KEYS, probe
             assert (analysis.get_metrics(lab_session, exp.id).is_injections_flagged or 0) > 0
             continue
         assert exp.parent_experiment_id is not None
         diff = memory.diff(lab_session, exp.parent_experiment_id, exp.id)
         changed = {c.key: c.value_b for c in diff.condition_changes}
-        assert len(changed) > 1  # confounded design → single-variable proposals
-        for change in rejected.changes:
-            assert _same_value(changed.get(change.key), change.value)
+        assert len(changed) > 1  # confounded design → 2×2 / single-variable proposals
+        for key, levels in varied.items():
+            assert key in changed, (probe, key)
+            assert any(_same_value(changed[key], level) for level in levels), (probe, key)
         delta = analysis.compare(lab_session, exp.parent_experiment_id, exp.id)
         assert delta.recovery_delta_pct_points is not None
         assert delta.recovery_delta_pct_points < 0
 
 
 def _signature(p: ProposalOut) -> frozenset[tuple[str, str]]:
-    return frozenset((c.key, str(c.value)) for c in p.changes)
+    """Engine-independent content fingerprint (numbers normalised: 10 == 10.0)."""
+
+    def norm(v: object) -> str:
+        if isinstance(v, float) and v.is_integer():
+            v = int(v)
+        return str(v)
+
+    return frozenset((c.key, norm(c.value)) for c in p.changes)
 
 
-@pytest.mark.xfail(
-    reason="Partner가 결정 이력을 아직 보지 않는다 — CHANGES_REQUESTED.md "
-    "'partner — 기각된 제안 반복 금지' 처리 후 xfail 제거",
-    strict=False,
-)
 def test_critic_does_not_repeat_rejected_proposals(
     lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
 ) -> None:
@@ -351,6 +471,40 @@ def test_critic_does_not_repeat_rejected_proposals(
         )
         new = [partner.get_proposal(lab_session, pid) for pid in crit.proposal_ids]
         assert all(_signature(p) != _signature(rejected) for p in new), probe
+        assert all(p.signature != rejected.signature for p in new), probe
+
+
+def _offered(template_id: str, signature: str, pid: int = 1) -> ProposalOut:
+    return ProposalOut(
+        id=pid,
+        project_id=1,
+        experiment_id=1,
+        critique_id=1,
+        hypothesis_id=None,
+        title="t",
+        description="d",
+        changes=[ProposalChange(key="ph", value=5)],
+        evidence_keys=[],
+        status="pending",
+        origin="ai:rules",
+        decision=None,
+        design=ExperimentDesign(template_id=template_id, objective="o"),
+        signature=signature,
+        created_at=datetime(2026, 1, 1),
+    )
+
+
+def test_decided_proposal_is_never_guessed(lab_spec: SeedSpec) -> None:
+    """Missing template/signature → SeedError that lists what the critique offered."""
+    d = lab_spec.history.decisions[0]
+    ref = d.proposal
+    hit = _offered(ref.template_id, ref.signature, pid=7)
+    assert find_decided_proposal([_offered("other", ref.signature), hit], d) is hit
+    same_keys_other_signature = _offered(ref.template_id, "0" * 64)
+    with pytest.raises(SeedError, match=r"offered 0 proposals[\s\S]*P1 template="):
+        find_decided_proposal([same_keys_other_signature], d)
+    with pytest.raises(SeedError, match="no proposals"):
+        find_decided_proposal([], d)
 
 
 # ----------------------------------------------------------- 5. the scenario

@@ -13,7 +13,20 @@ Profiles
     seed so existing tests keep their meaning.
 ``lab``
     The full "six months of lab work": residue project #001–#030, organic-acid
-    project #OA01–#OA12, critiques and researcher decisions (incl. five rejections).
+    project #OA01–#OA12, critiques and researcher decisions (incl. seven rejections).
+
+Decision history
+----------------
+``history.json`` is an ordered log: each critique is run in order and the decisions
+that name it are recorded *right after it*, before the next critique of the project.
+The Partner reads a project's decisions before every critique (it never re-proposes
+a decided proposal and avoids designs needing a resource a rejection ruled out), so
+the stored critiques are the ones a researcher clicking through would have got.
+
+A decision names its proposal by the Partner's stable identifiers — the design
+template id and the proposal signature (``ProposalOut.design.template_id`` /
+``ProposalOut.signature``) — never by guessing from the changed keys. ``changes``
+repeats the proposal's content for readers; the tests check it against the record.
 """
 
 from __future__ import annotations
@@ -23,7 +36,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.eln.schemas import DatasetKind, ProjectCreate
 from app.partner.schemas import DecisionAction, ProposalChange
@@ -42,6 +55,7 @@ RejectReason = Literal[
     "budget",
     "already_tried",
     "instrument_schedule",
+    "workload",
 ]
 #: Korean label prefixed to the stored rationale of a rejection, e.g. ``[예산] …``.
 REJECT_REASON_LABELS: dict[RejectReason, str] = {
@@ -50,6 +64,7 @@ REJECT_REASON_LABELS: dict[RejectReason, str] = {
     "budget": "예산",
     "already_tried": "이미 시도해 실패",
     "instrument_schedule": "기기 일정",
+    "workload": "작업량 과다",
 }
 
 
@@ -114,23 +129,34 @@ class ProjectSpec(_Strict):
 
 
 class CritiqueSpec(_Strict):
-    """A rules-mode critique that was run on an experiment during the project."""
+    """A rules-mode critique run on an experiment (an experiment may be critiqued again)."""
 
+    id: str = Field(description="Stable history id, e.g. 'C03'")
     project: str
     experiment: str
+
+
+class ProposalRef(_Strict):
+    """Which proposal of a critique a decision is about — by the Partner's stable ids.
+
+    ``template_id`` and ``signature`` are what the Partner stores on the proposal
+    (``ProposalOut.design.template_id``, ``ProposalOut.signature``); the loader matches
+    on both. ``changes`` is the proposal's content, kept readable for scenario authors.
+    """
+
+    template_id: str
+    signature: str = Field(pattern=r"^[0-9a-f]{64}$")
+    changes: list[ProposalChange] = Field(min_length=1)
 
 
 class DecisionSpec(_Strict):
-    """A researcher decision on one AI proposal.
-
-    The proposal is identified by the experiment whose critique produced it and the
-    set of condition keys it changes (unique within that critique).
-    """
+    """A researcher decision on one AI proposal, recorded right after ``critique``."""
 
     id: str
+    critique: str = Field(description="Id of the CritiqueSpec that offered the proposal")
     project: str
     experiment: str
-    proposal_change_keys: list[str]
+    proposal: ProposalRef
     action: DecisionAction
     reason: RejectReason | None = None
     rationale: str
@@ -156,10 +182,10 @@ class DecisionSpec(_Strict):
 
 
 class RepeatProbe(_Strict):
-    """An experiment whose critique, if run again, re-proposes a rejected proposal.
+    """An experiment whose critique, run again, would meet a rejected proposal's trigger.
 
     Used to check that the Partner does not repeat proposals the researcher already
-    rejected (see CHANGES_REQUESTED.md, partner).
+    rejected in the same project.
     """
 
     decision: str
@@ -168,11 +194,48 @@ class RepeatProbe(_Strict):
 
 
 class HistorySpec(_Strict):
-    """Critiques run during the project and the decisions taken on their proposals."""
+    """Critiques in the order they were run and the decisions taken after each."""
 
     critiques: list[CritiqueSpec] = []
     decisions: list[DecisionSpec] = []
     repeat_probes: list[RepeatProbe] = []
+
+    @field_validator("critiques", "decisions")
+    @classmethod
+    def _unique_ids(cls, items: list[Any]) -> list[Any]:
+        ids = [i.id for i in items]
+        if len(ids) != len(set(ids)):
+            raise ValueError(f"duplicate history ids: {sorted(ids)}")
+        return items
+
+    @model_validator(mode="after")
+    def _references_resolve(self) -> HistorySpec:
+        critiques = {c.id: c for c in self.critiques}
+        for d in self.decisions:
+            c = critiques.get(d.critique)
+            if c is None:
+                raise ValueError(f"{d.id}: unknown critique {d.critique}")
+            if (c.project, c.experiment) != (d.project, d.experiment):
+                raise ValueError(f"{d.id}: critique {c.id} is on {c.project} {c.experiment}")
+        decisions = {d.id: d for d in self.decisions}
+        for probe in self.repeat_probes:
+            target = decisions.get(probe.decision)
+            if target is None or target.action != "reject":
+                raise ValueError(f"repeat probe {probe}: not a rejection")
+            if target.project != probe.project:
+                raise ValueError(f"repeat probe {probe}: rejection is in another project")
+        return self
+
+    def critique(self, critique_id: str) -> CritiqueSpec:
+        """Critique by history id; raises ``KeyError``."""
+        for c in self.critiques:
+            if c.id == critique_id:
+                return c
+        raise KeyError(critique_id)
+
+    def decisions_after(self, critique_id: str) -> list[DecisionSpec]:
+        """Decisions recorded right after ``critique_id``, in file order."""
+        return [d for d in self.decisions if d.critique == critique_id]
 
 
 class SeedSpec(_Strict):
@@ -187,6 +250,21 @@ class SeedSpec(_Strict):
         for p in self.projects:
             if p.key == key:
                 return p
+        raise KeyError(key)
+
+    def __getitem__(self, key: str) -> Any:
+        """Legacy ``seed.json`` view: ``spec["project"]`` and ``spec["experiments"]``.
+
+        Before the profiles existed ``load_seed_spec()`` returned the parsed
+        ``seed.json`` dict; tests on other branches still read it that way. The view
+        is rebuilt from the typed spec as plain JSON values: ``"project"`` is the first
+        (residue) project, ``"experiments"`` every experiment of the profile, in
+        project order. For ``reference`` it equals the original ``seed.json``.
+        """
+        if key == "project":
+            return self.projects[0].project.model_dump(mode="json")
+        if key == "experiments":
+            return [e.model_dump(mode="json") for p in self.projects for e in p.experiments]
         raise KeyError(key)
 
 
@@ -214,7 +292,9 @@ def load_seed_spec(profile: SeedProfile = "reference") -> SeedSpec:
         return SeedSpec(
             profile=profile,
             projects=[_reference_slice(residue)],
-            history=HistorySpec(critiques=[CritiqueSpec(project="residue", experiment="#024")]),
+            history=HistorySpec(
+                critiques=[CritiqueSpec(id="C-REF", project="residue", experiment="#024")]
+            ),
         )
     acids = ProjectSpec.model_validate(_read_json("organic_acids.json"))
     return SeedSpec(profile=profile, projects=[residue, acids], history=history)

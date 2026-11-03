@@ -5,6 +5,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import json
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -12,7 +14,15 @@ from pydantic import ValidationError
 from app.seed import generate as gen
 from app.seed.generate import DATA_DIR, generate
 from app.seed.loader import PROFILE_ENV, resolve_profile
-from app.seed.spec import REFERENCE_CODES, DecisionSpec, SeedSpec, load_seed_spec
+from app.seed.spec import (
+    REFERENCE_CODES,
+    CritiqueSpec,
+    DecisionSpec,
+    HistorySpec,
+    RepeatProbe,
+    SeedSpec,
+    load_seed_spec,
+)
 
 #: sha256 of the 12 original seed CSVs (before the lab expansion). The reference
 #: profile — and every module test built on it — depends on these exact bytes.
@@ -30,6 +40,10 @@ ORIGINAL_SHA256 = {
     "exp024_calibration.csv": "e58785191e3e40330d978eb811e317ef0c6d7bc6c933eada0ccbbeb40aed8cd7",
     "exp024_recovery.csv": "16a69c59678855bc5977c01ef268c70261f0b086ea1923abd468beb3b8c4ecd4",
 }
+
+#: sha256 of the original ``seed.json`` (canonical JSON). ``load_seed_spec()`` used to
+#: return that dict; ``SeedSpec["project"|"experiments"]`` must still reproduce it.
+LEGACY_SEED_JSON_SHA256 = "2d2bba1e93e5a3c27e747f51643921387837bf4133b60a49d9e49e4eb70baccc"
 
 
 def _spec_files(spec: SeedSpec) -> set[str]:
@@ -119,28 +133,92 @@ def test_csvs_contain_designed_defects() -> None:
         assert all(all(v != "" for v in r.values()) for r in rows(name)), name
 
 
+_SIGNATURE = "a" * 64
+
+
+def _decision(**overrides: Any) -> DecisionSpec:
+    fields: dict[str, Any] = {
+        "id": "Y",
+        "critique": "C1",
+        "project": "residue",
+        "experiment": "#009",
+        "proposal": {
+            "template_id": "single_variable",
+            "signature": _SIGNATURE,
+            "changes": [{"key": "ph", "value": 6.5}],
+        },
+        "action": "reject",
+        "reason": "budget",
+        "rationale": "예산 부족",
+        "decided_by": "김연구",
+    }
+    return DecisionSpec.model_validate({**fields, **overrides})
+
+
 def test_decision_spec_validation() -> None:
+    with pytest.raises(ValidationError):  # a rejection needs a reason
+        _decision(reason=None, rationale="사유 없음")
+    with pytest.raises(ValidationError):  # a rejection has no follow-up
+        _decision(followed_by="#010")
+    with pytest.raises(ValidationError):  # the proposal is named by its stable ids
+        _decision(proposal={"template_id": "single_variable", "changes": [{"key": "ph"}]})
     with pytest.raises(ValidationError):
-        DecisionSpec(
-            id="X",
-            project="residue",
-            experiment="#009",
-            proposal_change_keys=["ph"],
-            action="reject",
-            rationale="사유 없음",
-            decided_by="김연구",
-        )
-    ok = DecisionSpec(
-        id="Y",
-        project="residue",
-        experiment="#009",
-        proposal_change_keys=["ph"],
-        action="reject",
-        reason="budget",
-        rationale="예산 부족",
-        decided_by="김연구",
-    )
+        _decision(proposal={"template_id": "x", "signature": "not-a-sha", "changes": []})
+    ok = _decision()
     assert ok.stored_rationale() == "[예산] 예산 부족"
+    assert ok.proposal.signature == _SIGNATURE
+
+
+def test_history_references_must_resolve() -> None:
+    crit = CritiqueSpec(id="C1", project="residue", experiment="#009")
+    HistorySpec(critiques=[crit], decisions=[_decision()])
+    with pytest.raises(ValidationError, match="unknown critique"):
+        HistorySpec(critiques=[crit], decisions=[_decision(critique="C2")])
+    with pytest.raises(ValidationError, match="is on residue #009"):
+        HistorySpec(critiques=[crit], decisions=[_decision(experiment="#010")])
+    with pytest.raises(ValidationError, match="duplicate"):
+        HistorySpec(critiques=[crit, crit])
+    accepted = _decision(action="accept", reason=None)
+    probe = RepeatProbe(decision="Y", project="residue", experiment="#009")
+    with pytest.raises(ValidationError, match="not a rejection"):
+        HistorySpec(critiques=[crit], decisions=[accepted], repeat_probes=[probe])
+
+
+def test_lab_history_is_an_ordered_log() -> None:
+    history = load_seed_spec("lab").history
+    assert len(history.critiques) == 9 and len(history.decisions) == 14
+    # every critique but the re-critiques is followed by at least one decision, and the
+    # decisions appear in the order of the critiques they follow
+    order = [c.id for c in history.critiques]
+    assert [order.index(d.critique) for d in history.decisions] == sorted(
+        order.index(d.critique) for d in history.decisions
+    )
+    assert all(history.decisions_after(c) for c in order)
+    for d in history.decisions:
+        c = history.critique(d.critique)
+        assert (c.project, c.experiment) == (d.project, d.experiment)
+    for project in ("residue", "organic_acids"):  # critiques follow the lab calendar
+        spec = load_seed_spec("lab").project(project)
+        dates = [
+            spec.experiment(c.experiment).performed_on
+            for c in history.critiques
+            if c.project == project
+        ]
+        assert dates == sorted(dates)
+
+
+def test_legacy_dict_access_reproduces_seed_json() -> None:
+    """``load_seed_spec()["experiments"]`` (pre-profile API) still works, byte for byte."""
+    spec = load_seed_spec()
+    legacy = {"project": spec["project"], "experiments": spec["experiments"]}
+    canonical = json.dumps(legacy, ensure_ascii=False, sort_keys=True).encode()
+    assert hashlib.sha256(canonical).hexdigest() == LEGACY_SEED_JSON_SHA256
+    assert [e["code"] for e in spec["experiments"]] == list(REFERENCE_CODES)
+    lab = load_seed_spec("lab")
+    assert len(lab["experiments"]) == 42
+    assert lab["project"]["name"] == spec["project"]["name"]
+    with pytest.raises(KeyError):
+        spec["history"]
 
 
 def test_profile_resolution(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,8 +2,15 @@
 
 Seeding goes through the same service interfaces a user would hit, so every original
 record is audited with actor ``seed``. The loader then runs the deterministic analyses
-and rules-mode digests for every experiment, replays the critiques listed in the
-scenario history (rules mode) and records the researchers' decisions on their proposals.
+and rules-mode digests for every experiment and replays the scenario history: each
+critique (rules mode) is run in order and the researchers' decisions on it are recorded
+immediately afterwards, so the next critique of the project sees them exactly as it
+would in the app (the Partner never re-proposes a decided proposal).
+
+A decision names its proposal by the Partner's stable identifiers (design template id
++ proposal signature, see :class:`app.seed.spec.ProposalRef`). If a critique does not
+offer that proposal the loader raises :class:`SeedError` listing what it did offer —
+it never guesses.
 
 Profiles (see :mod:`app.seed.spec`): ``reference`` (default, 7 experiments) and ``lab``
 (two projects, 42 experiments, decision history). The auto-seed profile can be chosen
@@ -42,7 +49,9 @@ from app.seed.spec import (
 __all__ = [
     "DATA_DIR",
     "PROFILE_ENV",
+    "SeedError",
     "SeedResult",
+    "find_decided_proposal",
     "load_seed_spec",
     "resolve_profile",
     "seed",
@@ -66,8 +75,8 @@ class SeedResult:
     project_ids: dict[str, int] = field(default_factory=dict)
     #: ``(project_key, code)`` → experiment id
     experiment_ids: dict[tuple[str, str], int] = field(default_factory=dict)
-    #: ``(project_key, code)`` → critique id
-    critique_ids: dict[tuple[str, str], int] = field(default_factory=dict)
+    #: history critique id (``C01`` …) → critique id
+    critique_ids: dict[str, int] = field(default_factory=dict)
     #: decision spec id (``D01`` …) → proposal id
     decided_proposal_ids: dict[str, int] = field(default_factory=dict)
 
@@ -121,46 +130,59 @@ def _load_project(session: Session, spec: ProjectSpec, result: SeedResult) -> No
             )
 
 
-def find_decided_proposal(
-    proposals: list[ProposalOut], critique_id: int, decision: DecisionSpec
-) -> ProposalOut:
-    """The unique proposal of ``critique_id`` whose change keys match the decision spec."""
-    wanted = set(decision.proposal_change_keys)
+def _describe(p: ProposalOut) -> str:
+    """One line per offered proposal for :class:`SeedError` messages."""
+    template = p.design.template_id if p.design else None
+    changes = ", ".join(f"{c.key}={c.value!r}" for c in p.changes)
+    return f"P{p.id} template={template} signature={p.signature} [{changes}]"
+
+
+def find_decided_proposal(offered: list[ProposalOut], decision: DecisionSpec) -> ProposalOut:
+    """The proposal of ``offered`` with the decision's template id and signature.
+
+    ``offered`` is what one critique returned (``CritiqueOut.proposal_ids``). Raises
+    :class:`SeedError` — listing the offered proposals — unless exactly one matches.
+    """
+    ref = decision.proposal
     matches = [
         p
-        for p in proposals
-        if p.critique_id == critique_id and {c.key for c in p.changes} == wanted
+        for p in offered
+        if p.signature == ref.signature
+        and p.design is not None
+        and p.design.template_id == ref.template_id
     ]
     if len(matches) != 1:
+        listing = "\n  ".join(_describe(p) for p in offered) or "(no proposals)"
         raise SeedError(
-            f"{decision.id}: expected one proposal changing {sorted(wanted)} in critique "
-            f"{critique_id}, found {len(matches)}"
+            f"{decision.id}: critique {decision.critique} ({decision.project} "
+            f"{decision.experiment}) offered {len(matches)} proposals with template "
+            f"{ref.template_id!r} and signature {ref.signature}; offered:\n  {listing}"
         )
     return matches[0]
 
 
-def _apply_decisions(session: Session, spec: SeedSpec, result: SeedResult) -> None:
-    for d in spec.history.decisions:
-        critique_id = result.critique_ids.get((d.project, d.experiment))
-        if critique_id is None:
-            raise SeedError(f"{d.id}: no critique was run on {d.project} {d.experiment}")
-        proposals = partner.list_proposals(
-            session,
-            result.project_ids[d.project],
-            experiment_id=result.experiment_ids[(d.project, d.experiment)],
+def _replay_history(session: Session, spec: SeedSpec, result: SeedResult) -> None:
+    """Run each critique, then record the decisions taken on it, in history order."""
+    rules = RulesOnlyGateway()
+    for c in spec.history.critiques:
+        critique = partner.run_critique(
+            session, result.experiment_ids[(c.project, c.experiment)], gateway=rules
         )
-        proposal = find_decided_proposal(proposals, critique_id, d)
-        partner.decide(
-            session,
-            proposal.id,
-            DecisionCreate(
-                action=d.action,
-                rationale=d.stored_rationale(),
-                modifications=d.modifications,
-                decided_by=d.decided_by,
-            ),
-        )
-        result.decided_proposal_ids[d.id] = proposal.id
+        result.critique_ids[c.id] = critique.id
+        offered = [partner.get_proposal(session, pid) for pid in critique.proposal_ids]
+        for d in spec.history.decisions_after(c.id):
+            proposal = find_decided_proposal(offered, d)
+            partner.decide(
+                session,
+                proposal.id,
+                DecisionCreate(
+                    action=d.action,
+                    rationale=d.stored_rationale(),
+                    modifications=d.modifications,
+                    decided_by=d.decided_by,
+                ),
+            )
+            result.decided_proposal_ids[d.id] = proposal.id
 
 
 def seed_profile(session: Session, profile: SeedProfile = "reference") -> SeedResult:
@@ -173,12 +195,7 @@ def seed_profile(session: Session, profile: SeedProfile = "reference") -> SeedRe
     for exp_id in result.experiment_ids.values():
         analysis.run_experiment(session, exp_id, actor="seed")
         memory.create_digest(session, exp_id, gateway=rules)
-    for c in spec.history.critiques:
-        exp_id = result.experiment_ids[(c.project, c.experiment)]
-        result.critique_ids[(c.project, c.experiment)] = partner.run_critique(
-            session, exp_id, gateway=rules
-        ).id
-    _apply_decisions(session, spec, result)
+    _replay_history(session, spec, result)
     return result
 
 

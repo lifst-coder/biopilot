@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 from app.core.db import Database
+from app.eln import service as eln
 from app.main import create_app
 from app.seed.__main__ import main as seed_cli
 from app.seed.loader import PROFILE_ENV
@@ -29,7 +30,7 @@ def test_app_auto_seeds_lab_profile_from_env(monkeypatch: pytest.MonkeyPatch) ->
         rejected = c.get(
             "/api/partner/proposals", params={"project_id": acids, "status": "rejected"}
         )
-        assert len(rejected.json()) == 3
+        assert len(rejected.json()) == 5
         assert all(p["decision"]["rationale"].startswith("[") for p in rejected.json())
 
 
@@ -48,3 +49,16 @@ def test_cli_seeds_an_empty_database_once(
     assert "seeded profile 'lab'" in capsys.readouterr().out
     assert seed_cli(["--profile", "lab", "--database-url", url]) == 0
     assert "nothing seeded" in capsys.readouterr().out
+
+
+def test_cli_default_profile_matches_the_app(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without ``--profile`` the CLI seeds what the app would: ``reference``."""
+    monkeypatch.delenv(PROFILE_ENV, raising=False)
+    url = f"sqlite:///{tmp_path / 'default.db'}"
+    assert seed_cli(["--database-url", url]) == 0
+    assert "seeded profile 'reference'" in capsys.readouterr().out
+    db = Database(url)
+    with db.session() as s:
+        assert [p.experiment_count for p in eln.list_projects(s)] == [7]
