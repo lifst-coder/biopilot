@@ -13,372 +13,262 @@
 - 완료 기준:
 ```
 
+> **2026-11-03 병합 정리(integration).** feature/{analysis, eln, memory, partner, seed-expansion}을 main에 병합하면서
+> 각 브랜치의 CR을 `feature/review:docs/REVIEW.md` ⑤ "중복·상충 정리" 표대로 합쳤다.
+> 중복은 1건으로 묶고 원래 요청자를 모두 적었다. 이미 완료된 항목은 `[DONE]`으로 남기고 근거 커밋/테스트를 적었다.
+> 우선순위는 [ISSUES.md](ISSUES.md)에 있다.
+
 ---
 
-## [OPEN] core — Alembic 마이그레이션 도입
-- 요청자: skeleton · 날짜: 2026-11-03
-- 필요 이유: 현재 `Base.metadata.create_all()`로 스키마를 만든다. 여러 모듈이 병렬로 컬럼을 추가하면
-  기존 DB가 깨진다.
-- 제안: `backend/migrations/` (Alembic), 모듈별 revision 파일명 접두사(`eln_`, `analysis_` …)로 충돌 감소.
-  `create_app` 시작 시 `alembic upgrade head`.
-- 완료 기준: 빈 DB/기존 DB 모두 `upgrade head` 성공, CI에서 `alembic check` 통과.
+## 열린 요청 (OPEN)
+
+### 공유 파일 · core
 
 ## [OPEN] core — 인증/사용자 식별
 - 요청자: skeleton · 날짜: 2026-11-03
 - 필요 이유: `Decision.decided_by`, `AuditEvent.actor`가 현재 고정 문자열("researcher", "user").
-- 제안: `app/core/auth.py`에 `get_current_user` 의존성, AuditEvent에 `user_id` 컬럼 추가.
+- 제안: `app/core/auth.py`에 `get_current_user` 의존성, AuditEvent에 `user_id` 컬럼 추가(Alembic revision 필요).
 - 완료 기준: 모든 쓰기 엔드포인트가 사용자 id를 감사 이벤트에 남김.
-
-## [OPEN] eln — `calibration_type` 조건 키 + 검량 CSV 선택 컬럼 `curve` (ANA-2)
-- 요청자: analysis · 날짜: 2026-11-03
-- 필요 이유: Analysis는 조건 블록의 `calibration_type`(`solvent` | `matrix-matched`)에 따라 검량 곡선을
-  고른다. 현재는 `ConditionBlock(extra="allow")`의 extra 키로 읽고 있어 타입·라벨이 없다.
-- 제안하는 계약:
-  - `ConditionBlock.calibration_type: Literal["solvent", "matrix-matched"] | None = None`
-  - `CONDITION_FIELD_LABELS["calibration_type"] = "검량 방식"`
-  - `calibration` CSV에 **선택** 컬럼 `curve`(`solvent`|`matrix`) 허용을 계약 문서(`DATASET_COLUMNS` 주석)에 명시.
-    컬럼이 없으면 데이터셋 전체를 선언된 방식의 곡선으로 본다(현재 Analysis 동작).
-- 완료 기준: 필드 추가 후 Analysis 테스트(`test_matrix_matched_calibration_selects_matrix_curve`) 그대로 통과.
-
-## [OPEN] eln — ELN-7 `ion_ratio` 데이터셋 계약 (ANA-8 소비 측 공지)
-- 요청자: analysis · 날짜: 2026-11-03
-- 필요 이유: Analysis `ion_ratio@1`은 구현 완료. 현재는 kind `ion_ratio` **또는** 아래 컬럼을 모두 가진
-  `other` 데이터셋을 소비한다(ELN-7 전까지의 임시 경로).
-- 제안하는 계약: `DATASET_COLUMNS["ion_ratio"] = ("injection_id", "sample_type", "analyte",
-  "quantifier_area", "qualifier_area")`, `sample_type ∈ {standard, sample}`,
-  `DATASET_NUMERIC_COLUMNS`에 `quantifier_area`, `qualifier_area` 추가, `DatasetKind`에 `"ion_ratio"` 추가.
-- 완료 기준: kind `ion_ratio` 업로드 시 `POST /api/analysis/experiments/{id}/run`이 `ion_ratio` 결과 생성
-  (Analysis 쪽은 추가 변경 불필요).
-
-## [DONE] partner — 프로젝트별 기준·신규 지표 사용
-- 요청자: analysis · 날짜: 2026-11-03
-- 필요 이유: 기준이 프로젝트별 버전(ANA-6)이 되었다. `partner/context.py`는 아직 `analysis.get_criteria()`
-  (기본값)를 쓰므로 프로젝트 기준을 바꾸면 비판 문구의 기준과 플래그 기준이 어긋날 수 있다.
-- 제안: `analysis.get_project_criteria(session, project_id).active.criteria` 사용.
-  새로 쓸 수 있는 근거 값: `ExperimentMetrics.qc_verdicts / limits / expanded_uncertainty_pct / outlier_count`,
-  `MetricsComparison.per_analyte[].p_holm / hedges_g / ci_low / ci_high`, `significant_analytes`.
-- 완료 기준: 기준 v1 생성 후 비판의 기준 Evidence가 v1 값을 인용.
-- **완료(integration, 2026-11-03):** `partner/context.py` 두 곳(`build_context`, `build_project_context`)과
-  `partner/service.py:_pool_index`가 `get_project_criteria(...).active.criteria`를 쓴다.
-  테스트 `app/partner/tests/test_project_criteria.py`. 신규 지표 활용은 남은 작업(ISSUES.md).
-
-## [OPEN] docs — ARCHITECTURE.md Analysis 계약 갱신
-- 요청자: analysis · 날짜: 2026-11-03
-- 내용: §3 analysis 표에 `GET /api/analysis/methods`, `GET/POST /api/analysis/projects/{project_id}/criteria`,
-  `GET /api/analysis/experiments/{experiment_id}/report?format=markdown|csv`, `GET /api/analysis/criteria?project_id`
-  추가. 결과 종류에 `limits`, `ion_ratio` 추가. §2 analysis 테이블에 `analysis_criteria_versions` 추가.
-- 참고: Overview의 `TrendPoint.flag_count`에는 새 플래그(정보 수준 `loq_above_lowest_level` 포함)가 합산된다.
-
-## [OPEN] frontend/shell — Overview가 프로젝트 활성 QC 기준을 쓰도록 `useCriteria(projectId)` 호출
-- 요청자: integration(병합 세션) · 날짜: 2026-11-03
-- 기록: analysis 병합으로 공유 훅 `useCriteria`의 시그니처가 `useCriteria(projectId?: number | null)`로
-  바뀌었다(queryKey `["analysis","criteria",projectId??null]`, `staleTime: Infinity` 제거).
-  인자 없는 호출은 그대로 기본 기준을 돌려주므로 하위 호환이다.
-  `features/overview/OverviewPage.tsx`는 여전히 인자 없이 호출해 **기본 기준**만 표시한다.
-- 제안: Overview가 선택된 프로젝트 id를 넘겨 활성 기준을 표시한다(Frontend Shell 담당).
-- 완료 기준: 프로젝트 기준 v1 생성 후 Overview의 기준 표시가 v1 값을 따른다.
-
-## [OPEN] core / pyproject — `python-multipart` 의존성 추가 (ELN 업로드를 `UploadFile`로 전환)
-- 요청자: eln · 날짜: 2026-11-03
-- 필요 이유: ELN-1/4/9 multipart 엔드포인트(`/datasets/upload`, `/datasets/import`, `/datasets/validate-upload`,
-  `/import/preview`, `/attachment-files`)는 FastAPI `UploadFile`/`Form`에 필요한 `python-multipart`가 없어
-  `app/eln/multipart.py`(표준 `email` 파서)로 직접 파싱한다. 크기 제한·스트리밍은 직접 처리 중.
-- 제안: `pyproject.toml` dependencies에 `python-multipart>=0.0.9`. 추가되면 ELN이 라우터를 `UploadFile`로 바꾸고
-  `multipart.py`를 제거한다(요청 형식은 동일한 multipart/form-data라 계약 변경 없음).
-- 완료 기준: 의존성 추가 후 ELN 업로드 테스트 그대로 통과.
-
-## [OPEN] ci / pyproject — ELN 커버리지 측정(pytest-cov)
-- 요청자: eln · 날짜: 2026-11-03
-- 필요 이유: ELN 완료 기준이 "eln 테스트 커버리지 90% 이상". 현재 로컬에서 `pytest-cov`를 따로 설치해 측정
-  (`pytest app/eln --cov=app/eln` → 소스 1220문 중 17문 미실행, 98.6%).
-- 제안: dev 의존성에 `pytest-cov`, CI에 `pytest app/eln --cov=app/eln --cov-fail-under=90` 단계. `.gitignore`에 `.coverage`.
-- 완료 기준: CI에서 ELN 커버리지 게이트 동작.
+- 비고: README "의도적으로 구현하지 않은 것"(로그인·권한). 데모 범위 밖.
 
 ## [OPEN] tests/test_contract.py — `file_id` 경로 파라미터 + 시드 첨부 파일
 - 요청자: eln · 날짜: 2026-11-03
 - 필요 이유: `test_every_get_endpoint_returns_real_data`가 모든 GET 경로를 고정 파라미터로 호출하므로
   첨부 다운로드 `GET /api/eln/attachment-files/{file_id}/content`는 `include_in_schema=False`로 계약에서 빠져 있다
   (UI는 `AttachmentFileOut.download_url`을 사용).
-- 제안: `PATH_PARAMS`에 `"file_id": "1"` 추가 + 시드에 첨부 바이너리 1개(예: #024 크로마토그램) 저장.
-  그 뒤 ELN이 엔드포인트를 스키마에 포함시키고 계약을 재생성한다.
+- 제안: `PATH_PARAMS`에 `"file_id": "1"` 추가 + 시드에 첨부 바이너리 1개(예: #024 크로마토그램). 그 뒤 ELN이
+  엔드포인트를 스키마에 포함시키고 계약을 재생성한다. 시드 첨부는 아래 "시드 데이터 추가" 1건에 묶었다.
 - 완료 기준: 다운로드 엔드포인트가 openapi.json/schema.d.ts에 포함되고 계약 테스트 통과.
 
-## [OPEN] seed — 시드 프로젝트 조건 템플릿·프로토콜 템플릿 명시 저장
+## [OPEN] ci / pyproject — ELN 커버리지 측정(pytest-cov)
 - 요청자: eln · 날짜: 2026-11-03
-- 필요 이유: ELN-5 "시드 프로젝트 템플릿 포함"은 현재 내장 기본 템플릿(`app/eln/conditions.py: DEFAULT_RULES`,
-  version 0, `source="default"`)으로 충족된다. 프로토콜 템플릿 목록은 시드에서 비어 있다.
-- 제안: `seed()` 끝에 `eln.create_condition_template(...)`(기본 규칙과 동일, actor=seed)와
-  `eln.create_protocol_template(name="AOAC 2007.01 기준 프로토콜", source_experiment_id=#018, actor="seed")`.
-  주의: 감사 이벤트가 추가되므로 `test_principles`의 기대 엔티티에 `eln.ConditionTemplate`/`eln.ProtocolTemplate` 추가 가능.
-- 완료 기준: 새 DB에서 Notebook "프로토콜 템플릿으로 채우기"에 1개 이상 표시.
+- 필요 이유: ELN 완료 기준 "eln 테스트 커버리지 90% 이상". 로컬 측정 98.6%(`pytest app/eln --cov=app/eln`).
+- 제안: dev 의존성 `pytest-cov`, CI `pytest app/eln --cov=app/eln --cov-fail-under=90`, `.gitignore`에 `.coverage`.
+- 완료 기준: CI에서 ELN 커버리지 게이트 동작. (TASKS에 근거가 없는 선택 항목 — REVIEW §ELN-5)
 
-## [OPEN] analysis — ELN-7 데이터셋 계약 공지: `ion_ratio@1` 및 버전 레지스트리 (ANA-8 선행 조건 충족)
-- 요청자: eln · 날짜: 2026-11-03
-- 내용: `app.eln.schemas.DATASET_KIND_REGISTRY`(`kind@version`), `kind_spec()`, `latest_kind_spec()` 공개.
-  `DATASET_COLUMNS`는 최신 버전 기준으로 그대로 유지(하위호환). 신규 kind `ion_ratio@1`:
-  필수 `injection_id, sample_type(standard|sample), analyte, quantifier_area, qualifier_area`,
-  선택 `sample_id, level_ng_ml`. `DatasetOut`에 `schema_version`, `schema_ref`, `source_encoding`,
-  `supersedes_dataset_id`, `superseded_by_dataset_id`, `source_attachment_id` 필드 추가(제거 없음).
-- 재업로드 의미: 같은 kind의 새 데이터셋이 이전 것을 대체(`supersedes_dataset_id`), 이전 것은 보관.
-  Analysis의 "kind별 최신 데이터셋 사용" 규칙과 일치 — 변경 불필요.
-- 완료 기준: Analysis가 ANA-8에서 `ion_ratio` 소비.
+### 계약 문서
 
-## [OPEN] analysis (frontend hook) — `useRunAnalysis` 훅
-- 요청자: frontend/notebook · 날짜: 2026-11-03
-- 필요 이유: Notebook에서 새로 만든 실험은 분석 결과가 없어서 "과거 실험과 비교" 모달의 결과 차이 표가
-  비어 있다. 분석 실행 엔드포인트(`POST /api/analysis/experiments/{id}/run`)용 훅이 queries.ts analysis 섹션에 없다.
-- 제안: analysis 섹션에 `useRunAnalysis()` 추가(성공 시 `["analysis"]` 무효화). Notebook이 업로드 후 "분석 실행" 버튼으로 사용.
-- 완료 기준: 훅 추가 후 Notebook에서 업로드 → 분석 실행 → 비교 모달 결과 표시.
+## [OPEN] docs — ARCHITECTURE.md 갱신 (3건 → 1건)
+- 요청자: analysis, eln, seed (+ memory·partner가 직접 수정한 부분의 정합성 확인) · 날짜: 2026-11-03
+- 반영할 내용:
+  - **analysis**: §3 표에 `GET /api/analysis/methods`, `GET/POST /api/analysis/projects/{project_id}/criteria`,
+    `GET /api/analysis/experiments/{experiment_id}/report?format=markdown|csv`, `GET /api/analysis/criteria?project_id`.
+    결과 종류 `limits`, `ion_ratio`. §2 테이블 `analysis_criteria_versions`. 플래그 `calibration_type_unsupported`.
+  - **eln**: `GET /dataset-kinds`, `GET /import-formats`, 목록 필터·`X-Total-Count`, `experiment-draft`,
+    `condition-template`·`condition-check`, `protocol-templates`, `PATCH /experiments/{id}/metadata`(409),
+    `addenda`, `history`, `audit`, multipart `datasets/upload|import`, `datasets/validate(-upload)`,
+    `import/preview`, `attachment-files`. 소유 테이블 5개 추가, 불변 필드 `cloned_from_experiment_id`·
+    `protocol_template_id`, 설정 `BIOPILOT_ELN_STORAGE_DIR`(기본 `./eln_storage`).
+  - **seed**: §5에 `reference`/`lab` 프로파일 표, `backend/app/seed/SCENARIO.md` 링크, 원본 위치 `data/residue.json` 등.
+  - **integration 결정**: `app/wiring.py`(core 소유 composition root), Alembic(`app/core/migrations`, baseline 0001),
+    `Settings.seed_profile`, `calibration_type` 도메인, memory diff `qc_info_changes`, `ClaudeGateway.stream_text`.
+  - memory·partner가 직접 추가한 API 표·원칙 문단은 위 내용과 대조해 표현을 통일한다.
+- 완료 기준: §2·§3·§5가 `backend/openapi.json`의 경로 목록과 일치.
 
-## [OPEN] frontend shell — `api/types.ts` 별칭 추가
-- 요청자: frontend/notebook · 날짜: 2026-11-03
-- 내용: 현재 Notebook은 `features/notebook/types.ts`에서 `Schemas[...]`로 직접 별칭을 만든다. 공용으로 쓰일 만한
-  `DatasetValidation`, `CsvIssue`, `ConditionIssue`, `HistoryEntry`, `ExperimentAddendumOut`, `AttachmentFileOut`,
-  `ProtocolTemplateOut`, `ImportPreview`를 `api/types.ts`에 추가해 주면 Notebook 쪽 별칭을 제거한다.
+### ELN
 
-## [OPEN] docs — ARCHITECTURE.md ELN 계약 표 갱신
-- 요청자: eln · 날짜: 2026-11-03
-- 추가된 ELN 엔드포인트: `GET /dataset-kinds`, `GET /import-formats`, `GET /projects/{id}/experiments`
-  (`limit/offset/performed_from/performed_to/author/dataset_kind`, `X-Total-Count`),
-  `GET /projects/{id}/experiment-draft?source_experiment_id|protocol_template_id`,
-  `GET/POST /projects/{id}/condition-template`, `POST /projects/{id}/condition-check`,
-  `GET/POST /projects/{id}/protocol-templates`, `PATCH /experiments/{id}/metadata`(409 on immutable),
-  `POST /experiments/{id}/addenda`, `GET /experiments/{id}/history`, `GET /experiments/{id}/audit`,
-  `POST /experiments/{id}/datasets/upload|import` (multipart), `POST /datasets/validate`,
-  `POST /datasets/validate-upload`, `POST /import/preview`, `POST /experiments/{id}/attachment-files`,
-  `GET /attachment-files/{file_id}/content`(스키마 제외, 위 항목 참조).
-- 소유 테이블 추가: `eln_experiment_revisions`, `eln_experiment_addenda`, `eln_attachment_files`,
-  `eln_condition_templates`, `eln_protocol_templates`. 불변성 표: Experiment에 `cloned_from_experiment_id`,
-  `protocol_template_id` 불변 필드 추가, 위 신규 엔티티는 전체 불변.
-- 설정: `BIOPILOT_ELN_STORAGE_DIR`(첨부 저장소, 기본 `./eln_storage`, 자동 `.gitignore`).
+## [OPEN] eln — ConditionBlock 정식 필드 + 조건 키 라벨 (도메인 결정 반영, 4건 → 1건)
+- 요청자: analysis(`calibration_type` 2값), partner(`calibration_type` 3값 + `spike_stage` + `is_addition_stage`),
+  seed(라벨), integration(도메인 결정) · 날짜: 2026-11-03
+- **도메인 결정(integration):** `calibration_type ∈ {solvent, matrix-matched, standard-addition}`, 미기록 = `solvent`.
+  계약 상수 `app.analysis.schemas.CalibrationTypeValue` / `CALIBRATION_TYPE_VALUES`.
+  - Analysis(완료): `solvent`·`matrix-matched`만 정량. `standard-addition`·도메인 밖 값은 조용히 `solvent`로
+    처리하지 않고 critical 플래그 `calibration_type_unsupported`(context: declared, supported)를 붙이며 회수율·IS 결과를
+    만들지 않는다(`skipped`에 사유). `calibration@4`, `recovery@3`. 테스트
+    `test_unsupported_calibration_type_is_flagged_not_silently_solvent`.
+  - Partner: `knowledge.MATRIX_MATCHED_VALUES`는 standard-addition을 매트릭스 보정으로 본다(화학적으로 맞다).
+    Analysis가 정량하지 못하므로 그 실험에는 회수율 근거가 없다.
+- 요청(ELN):
+  - `ConditionBlock.calibration_type: Literal["solvent","matrix-matched","standard-addition"] | None`
+  - `spike_stage: str | None`, `is_addition_stage: Literal["pre-extraction","post-extraction"] | None`
+  - `CONDITION_FIELD_LABELS`: `calibration_type: 검량 방식`, `spike_stage: 첨가 시점`, `is_addition_stage: IS 첨가 시점`,
+    `mobile_phase: 이동상`, `injection_volume_ul: 주입량 (µL)`, `injection_dilution: 주입 희석`
+  - `calibration` CSV 선택 컬럼 `curve`(`solvent`|`matrix`)를 `DATASET_COLUMNS` 주석에 명시(현재 Analysis 동작).
+  - 기존 extra 값 하위호환(대소문자·`_`/공백 별칭은 Analysis가 이미 정규화한다).
+- **남은 상충(Partner):** 설계기 `pre_post_spike`가 `calibration_type = "solvent + matrix-matched"`(두 곡선 모두)를 낸다.
+  도메인 밖 값이라 필드가 Literal이 되면 PAR-2 초안 생성이 400이 된다. 제안 값 변경은 제안 서명과 seed lab 결정
+  이력에 영향을 주므로 병합 중에는 바꾸지 않았다. ELN 필드 도입 전에 Partner가 값을 도메인 안 값 + 별도 키
+  (예: `curves_compared`)로 바꾸고 seed가 이력 서명을 갱신해야 한다(ISSUES.md).
+- 완료 기준: `/api/eln/condition-fields`에 6개 키 포함, `test_matrix_matched_calibration_selects_matrix_curve` 통과,
+  Partner 초안이 400 없이 생성.
 
-## [OPEN] core — (Alembic 항목 보충) ELN 스키마 변경으로 기존 로컬 DB 재생성 필요
-- 요청자: eln · 날짜: 2026-11-03
-- 내용: `eln_experiments`, `eln_datasets`에 컬럼이 추가되었다. `create_all()`은 기존 테이블에 컬럼을 추가하지
-  않으므로, Alembic 도입 전까지 기존 `backend/biopilot.db`는 삭제 후 재시드해야 한다. 마이그레이션 도입 시
-  `eln_0001_authoring` revision으로 옮길 예정.
+## [OPEN] frontend/notebook (ELN) — CompareModal에 Memory 결과·QC 차이와 단어 diff 표시 (ExperimentDiffView에서 재지정)
+- 요청자: memory · 날짜: 2026-11-03
+- **재지정(integration):** 원래 대상 `features/notebook/ExperimentDiffView.tsx`는 ELN이 삭제하고 `CompareModal.tsx`로
+  대체했다(Memory와 협의 기록 없음 — CLAUDE.md §3, REVIEW §7-5). 결과 차이를 그리는 경로가 둘이다:
+  memory `ExperimentDiff.result_changes`(출처 포함)와 analysis `compare`. CompareModal은 analysis `compare`를 쓰고,
+  병합 중 "분석 실행" 버튼(`useRunAnalysis`)과 info 플래그 제외 QC 개수만 추가했다.
+- 요청: Notebook·Memory 담당이 경로 하나로 통일할지 정하고, CompareModal에 memory `qc_changes`
+  (appeared/resolved/persisting), `qc_info_changes`(info 등급, 별도 표기), `note_diff[].segments` 단어 강조,
+  `result_changes[].sources`(분석 결과 id)를 표시한다.
+- 완료 기준: #018 vs #024에서 회수율 Δ와 출처, 새로 생긴 QC 플래그, "10"→"5" 단어 강조가 화면에 보임.
+
+### Memory
+
+## [OPEN] memory — 연구자 결정 사유를 Research Memory 검색에 반영 (wiring pull로 통일)
+- 요청자: partner(push 안: `create_knowledge_note(source_ref)`), memory(wiring pull) · 날짜: 2026-11-03
+- **결정(integration): wiring pull로 통일한다.** partner가 memory를 호출하는 push 안은 채택하지 않는다(아래 REJECTED).
+  근거: `app/wiring.py PartnerFactProvider`가 이미 결정(`action: rationale`)을 지식 그래프 노드로 읽어 온다
+  (`describe`, `texts={"rationale": ...}`). Partner `decide()`에 Memory 쓰기를 추가하면 같은 사실이 두 경로로 생긴다.
+- 요청(memory): FTS 검색 인덱스(`search_index.py`)가 fact port의 결정 텍스트(`rationale`)도 색인한다.
+  `memory.schemas.FactProvider`에 필요한 메서드가 있으면 추가하고 `app/wiring.py`의 구현을 함께 고친다.
+- 완료 기준: 기각 사유 텍스트가 `/api/memory/projects/{id}/search` 결과에 나타나고 출처가 `partner.Decision:<id>`.
+
+## [OPEN] memory + partner — 제안 → 후속 실험(`tests_proposal`) 매칭 계약
+- 요청자: integration(REVIEW §7-3), seed(정답 데이터 공지) · 날짜: 2026-11-03
+- 필요 이유: `memory/conditions.py proposal_tests`는 제안 `changes`의 모든 키가 자식 실험 조건 블록에 같은 값으로
+  있어야 연결한다. Partner 설계형 제안(`design: factorial 2x2`, `factor_<key>: a | b`, `"solvent + matrix-matched"`)은
+  조건 블록에 존재할 수 없어 MEM-1 엣지가 거의 생기지 않는다.
+- 제안: `ProposalOut.implementing_changes`(조건 블록 단위 변경 목록, 추가 필드)를 Partner가 채우고 Memory가 그것으로 매칭.
+- 정답 데이터(seed): `load_seed_spec("lab").history.decisions[*].followed_by` — 수락/수정 결정 7건의 후속 실험
+  (#007 #017 #025 #026 #028 #OA07 #OA11). 결정은 `decision.proposal.template_id/signature`로 제안을 지정한다.
+- 완료 기준: lab 시드에서 7개 `tests_proposal` 엣지 확인.
 
 ## [OPEN] memory — 보충 기록(addenda)을 검색·정리본 입력에 포함 검토
 - 요청자: eln · 날짜: 2026-11-03
-- 내용: `ExperimentOut.addenda[]`(불변, 원본 메모와 분리)가 추가되었다. Memory `search`와 정리본 프롬프트가
-  보충 기록도 참조하면 "나중에 알게 된 사실"이 기억에 반영된다(원본 `raw_note`는 그대로).
+- 내용: `ExperimentOut.addenda[]`(불변, 원본 메모와 분리). Memory `search`와 정리본 프롬프트가 보충 기록도 참조하면
+  "나중에 알게 된 사실"이 기억에 반영된다(원본 `raw_note`는 그대로).
 
-## [DONE] core/composition — `app/wiring.py` 검토·소유권 확정
-- 요청자: memory (feature/memory) · 날짜: 2026-11-03
-- 필요 이유: Memory는 eln에만 의존해야 하지만 diff(결과·QC 차이)·recall·지식 그래프는 Analysis 결과와
-  Partner 레코드를 보여줘야 한다. Memory는 `memory.schemas.FactProvider` 포트만 정의하고, 구현체
-  (`AnalysisFactProvider`, `PartnerFactProvider`)는 기능 모듈 밖 composition root `app/wiring.py`에 두었다.
-  `app/main.py`에는 import 한 줄과 등록 한 줄(`install_memory_fact_providers()`)만 추가했다.
-- 제안하는 계약: `memory.service.register_fact_provider(provider)`. 제공자는 각 모듈 service만 읽고 새 숫자를 만들지 않는다.
-- 완료 기준: core 담당이 위치(`app/wiring.py`)와 `create_app` 등록 방식을 승인하거나 대안을 제시. Analysis/Partner
-  담당은 자기 서비스 시그니처를 바꿀 때 `app/wiring.py`도 함께 고친다.
-- **결정(integration, 2026-11-03): 승인.** `app/wiring.py`는 core 소유 composition root다(CLAUDE.md §2·§3 공유 파일 목록에
-  추가). `main.py`의 import 1줄 + `install_memory_fact_providers()` 1줄을 승인한다. `tests/test_architecture.py`에
-  `test_wiring_imports_only_service_and_schemas`(wiring은 `app.<module>.service/schemas`·`app.core`만 import)와
-  `test_feature_modules_do_not_import_wiring`을 추가했다.
+### Analysis
 
-## [OPEN] core — 마이그레이션 대상 추가 (Alembic 요청에 병합)
-- 요청자: memory · 날짜: 2026-11-03
-- 필요 이유: `memory_digests`에 `fallback_reason`, `input_fingerprint` 컬럼 추가. 새 테이블 `memory_knowledge_notes`,
-  `memory_index_state`. FTS5 가상 테이블 `memory_search_fts`(검색 시 `CREATE ... IF NOT EXISTS`). Alembic 도입 전까지
-  기존 `backend/biopilot.db`는 삭제 후 재시드해야 한다.
-- 완료 기준: memory revision 파일로 위 스키마가 생성됨.
-
-## [OPEN] frontend/notebook (ELN) — ~~ExperimentDiffView~~ → **CompareModal**에 결과·QC 차이와 단어 diff 표시
-- 요청자: memory · 날짜: 2026-11-03
-- **재지정(integration, 2026-11-03):** 대상 파일 `features/notebook/ExperimentDiffView.tsx`는 ELN이 삭제하고
-  `CompareModal.tsx`로 대체했다. 이 요청은 CompareModal 대상으로 옮긴다. CompareModal은 지금 결과 차이를
-  `analysis.compare`로 그리므로, memory `result_changes`(출처 포함)·`qc_changes`·`qc_info_changes`(info 등급 분리)·
-  `note_diff[].segments`를 추가 표시할지, 결과 차이 경로를 하나로 통일할지 Notebook·Memory 담당이 협의한다.
-- 필요 이유: `ExperimentDiff`에 필드를 추가했다(제거 없음): `results_available`, `result_changes[]`(value_a/b, delta,
-  p_value, sources), `qc_changes[]`(appeared/resolved/persisting, sources), `condition_changes[].sources`,
-  `note_diff[].segments[]`.
-- 완료 기준: #018 vs #024에서 회수율 Δ와 출처(분석 결과 id), 새로 생긴 QC 플래그, "10"→"5" 단어 강조가 화면에 보임.
-
-## [OPEN] frontend/shell — 전역 검색 바를 헤더로 이동
-- 요청자: memory · 날짜: 2026-11-03
-- 필요 이유: `features/overview/GlobalSearchBar.tsx`(+ `highlight.tsx`)는 지금 Overview 상단에만 있다. 탭 간 import
-  금지 규칙 때문에 헤더(AppShell)에 두려면 `components/`로 옮겨야 한다.
-- 제안: 두 파일을 `components/`로 옮겨 AppShell 헤더에 장착하고 Overview에서는 제거.
-- 완료 기준: 모든 탭에서 검색 가능, 결과 클릭 시 `/notebook?exp=`.
-
-## [OPEN] frontend/api — `types.ts` 별칭 추가
-- 요청자: memory · 날짜: 2026-11-03
-- 제안: `KnowledgeGraph`, `KGNode`, `KGEdge`, `SearchHit`, `RecallBundle`, `MemoryAnswer`, `SimilarExperiment`,
-  `ConditionMatrix`, `ConditionHistoryEntry`, `KnowledgeNoteOut`. (지금 overview는 `Schemas[...]`를 직접 사용)
-
-## [OPEN] frontend — 새 Memory 계약 공지 (MEM-5 등)
-- 요청자: memory · 날짜: 2026-11-03
-- 내용: `GET /api/memory/compare-conditions?ids=1,2,7&varying_only=true`(키×실험 행렬),
-  `/conditions/{key}/history`, `/experiments/{id}/similar`, `/projects/{id}/recall`, `POST /projects/{id}/ask`,
-  `/projects/{id}/knowledge-notes`. `/graph` 기본 응답은 그대로(derived_from 6엣지)이고 `relations=`로 MEM-1 엣지를 고른다.
-  `queries.ts` memory 섹션에는 `useKnowledgeGraph`/`useMemorySearch`/`useRecall`만 추가했다.
-
-## [OPEN] partner — Memory recall/근거 조각 활용 검토
-- 요청자: memory · 날짜: 2026-11-03
-- 내용: `memory.service.recall()` / `ask()`가 출처가 붙은 근거 조각(`EvidenceFragment`)을 반환한다. Partner `/ask`
-  컨텍스트 보강에 쓸 수 있다. `ExperimentDiff.result_changes`는 Analysis `compare` 값을 그대로 담는다.
-
-## [OPEN] seed — 지식 노트 예시 1건
-- 요청자: memory · 날짜: 2026-11-03
-- 내용: `memory.service.create_knowledge_note(..., actor="seed")`로 #024에 연결된 예시 노트 1건을 넣으면 Overview
-  그래프에 note 노드가 기본으로 보인다. 선택 사항.
-
-## [DONE] tests — `tests/test_contract.py` 파라미터 표 추가 (공지)
-- 요청자: memory · 날짜: 2026-11-03
-- 내용: 새 GET 엔드포인트용 `PATH_PARAMS["key"]`와 `QUERY_PARAMS`(recall, compare-conditions) 항목만 추가했다.
-  검사 로직은 바꾸지 않았다.
-
-## [DONE] core — LLM 게이트웨이 텍스트 스트리밍 (`stream_text`)
-- 요청자: partner · 날짜: 2026-11-03
-- 필요 이유: PAR-9 `/api/partner/ask/stream`은 게이트웨이가 `stream_text`를 제공할 때만 Claude 토큰을
-  임시(provisional) delta로 흘린다. 현재 `ClaudeGateway`에는 없어서 Claude 모드에서도 검증 후 한 번에 전달된다.
-- 제안하는 계약: `LLMGateway`에 선택 메서드 `stream_text(*, system: str, prompt: str) -> Iterator[str]`
-  (Messages API streaming, 실패 시 예외). Partner는 `app.partner.service.StreamingGateway`
-  (runtime_checkable Protocol)로 감지하므로 추가만 하면 된다. `RulesOnlyGateway`는 구현하지 않는다.
-- 완료 기준: FakeGateway 대역으로 delta 순서 테스트, 네트워크 없는 테스트 유지.
-- **완료(integration, 2026-11-03):** `core/llm.py`에 `StreamingLLMGateway`(runtime_checkable)·`LLMStreamError`·
-  `ClaudeGateway.stream_text`(`client.beta.messages.stream` + `text_stream`, effort, server-side fallback,
-  refusal/API 오류 시 예외) 추가. 테스트 `tests/test_llm_stream.py`(스텁 클라이언트, 거절·연결 오류,
-  스트리밍 미지원 게이트웨이의 비스트리밍 경로, partner `StreamingGateway` 감지).
-
-## [OPEN] memory — 연구자 결정(Decision) 피드백을 Research Memory에 반영
-- 요청자: partner · 날짜: 2026-11-03
-- 필요 이유: 기각·수정 사유는 지금 `partner_decisions`에 저장되고 Partner가 이후 비판·제안에 반영한다
-  (`GET /api/partner/projects/{id}/decisions`). Memory는 Partner를 import할 수 없으므로(의존 방향),
-  Memory 검색·타임라인에서 결정 사유가 보이려면 Partner가 Memory로 밀어 넣는 API가 필요하다.
-- 제안하는 계약: MEM-7 `KnowledgeNote`에 출처 필드 추가 후
-  `memory.service.create_knowledge_note(session, project_id, *, statement, linked_experiment_ids,
-  author, source_ref: str | None = None) -> KnowledgeNoteOut` (불변 + 감사). Partner `decide()`가
-  `source_ref="partner.Decision:<id>"`로 호출한다(Partner 쪽 한 줄 추가는 MEM-7 완료 후 진행).
-- 완료 기준: 기각 사유 텍스트가 `/api/memory/projects/{id}/search` 결과에 나타남.
+## [OPEN] analysis (+ eln) — 숫자 칸 결측(NaN) 처리
+- 요청자: seed · 날짜: 2026-11-03
+- 필요 이유: ELN `_validate_csv`는 빈 숫자 칸을 통과시키고 `calibrate`/`fit_line`이 NaN을 받아 slope=NaN 결과를
+  **저장**한다(재현: 검량선 CSV 한 행의 analyte_area를 비우고 run).
+- 제안: Analysis가 NaN 행을 제외하고 `excluded_rows`를 기록(+ 플래그 `missing_values`, `METHOD_VERSIONS` 올림),
+  또는 ELN이 빈 숫자 칸을 400으로 거부 — 둘 중 하나는 필요.
+- 완료 기준: 빈 칸 CSV로 NaN이 저장되지 않는 테스트.
 
 ## [OPEN] analysis — 전·후 첨가 비교(`spike_recovery`) 결과 종류
 - 요청자: partner · 날짜: 2026-11-03
-- 필요 이유: Designer의 최우선 제안(추출 전·후 첨가 비교)은 RE = pre/post, ME = post/용매, PE = pre/용매
-  계산이 필요하다. Partner는 숫자를 계산하지 않으므로 Analysis 결과로 받아야 Critic이 판정을
-  `indeterminate` → `supported/refuted`로 바꿀 수 있다.
-- 제안하는 계약: ELN dataset kind(예: `spike_recovery`: injection_id, analyte, spike_stage(pre|post|solvent),
-  level_ng_ml, analyte_area, is_area) + result kind `spike_recovery`(분석물별 RE·ME·PE, QC 플래그).
-  조건 블록 `spike_stage`를 쓰면 Partner의 `post_spike_recorded`가 이미 이를 인식한다.
-- 완료 기준: 결과가 생기면 `ExperimentMetrics`에 분석물별 RE/ME 필드(추가만).
+- 필요 이유: Designer 최우선 제안(추출 전·후 첨가)의 RE = pre/post, ME = post/용매, PE = pre/용매 계산이 필요하다.
+  Partner는 숫자를 계산하지 않는다.
+- 제안: ELN dataset kind `spike_recovery`(injection_id, analyte, spike_stage(pre|post|solvent), level_ng_ml,
+  analyte_area, is_area) + result kind `spike_recovery`(분석물별 RE·ME·PE, QC 플래그).
+- 완료 기준: `ExperimentMetrics`에 분석물별 RE/ME 필드(추가만).
 
 ## [OPEN] analysis — IS 이탈 주입별 회수율 층화 + 요인 실험 분산분석
 - 요청자: partner · 날짜: 2026-11-03
-- 필요 이유: (1) Critic의 "IS 보정 왜곡" 대안 설명을 판정하려면 IS 이탈 주입과 정상 주입의 회수율 비교가
-  필요하다(현재는 "Analysis 결과 없음"을 확정 불가 이유로 표시). (2) Designer의 2×2 요인 실험 결과 판독에
-  주효과·교호작용 검정이 필요하다.
-- 제안하는 계약: `RecoveryOutput.by_is_flag: {flagged: group, normal: group, welch_p}`(추가 필드),
-  result kind `factorial`(조건 블록 `design = factorial 2x2`, `factor_<key>` 값 사용).
+- 제안: `RecoveryOutput.by_is_flag: {flagged, normal, welch_p}`(추가 필드), result kind `factorial`
+  (조건 블록 `design = factorial 2x2`, `factor_<key>`).
 - 완료 기준: 시드 #024에서 by_is_flag 생성, 요인 실험 단위 테스트.
 
-## [OPEN] eln — 조건 블록 키 `calibration_type`·`spike_stage`·`is_addition_stage` 정식 필드화
-- 요청자: partner · 날짜: 2026-11-03
-- 필요 이유: Critic이 매트릭스 매칭 검량선 사용 여부·전/후 첨가 기록·IS 첨가 시점을 이 키로 판단한다.
-  지금은 `ConditionBlock` extra 키라서 라벨·검증이 없다. 시드 실험에는 기록이 없어 "미기록"으로 판정된다.
-- 제안하는 계약: `ConditionBlock`에 `calibration_type: Literal["solvent","matrix-matched","standard-addition"] | None`,
-  `spike_stage: str | None`, `is_addition_stage: Literal["pre-extraction","post-extraction"] | None` +
-  `CONDITION_FIELD_LABELS` 라벨. ELN-8 실험 생성 폼은 `GET /api/partner/proposals/{id}/experiment-draft`의
-  `draft`(ExperimentCreate)를 초기값으로 쓸 수 있다.
-- 완료 기준: 기존 extra 값 하위호환, 라벨 노출.
-
-## [OPEN] frontend shell — Partner 신규 스키마 별칭을 `api/types.ts`에
-- 요청자: partner · 날짜: 2026-11-03
-- 필요 이유: `CriticAssessment`, `ExperimentDesign`, `DecisionHistoryEntry`, `AnswerStatement` 등을 지금은
-  `features/research-ai/types.ts`·`partner-panel/AnswerView.tsx`에서 `Schemas[...]`로 로컬 선언한다.
-- 완료 기준: 공용 별칭 추가 후 Partner 화면은 로컬 별칭을 제거(Partner 담당이 후속 처리).
-
-## [OPEN] eln — `calibration_type` 정식 필드: 도메인 확정 `solvent | matrix-matched | standard-addition`
-- 요청자: integration(병합 세션) · 날짜: 2026-11-03
-- 결정: 세 모듈의 값 도메인을 `solvent | matrix-matched | standard-addition`으로 확정한다(미기록 = `solvent`).
-  계약 상수는 `app.analysis.schemas.CalibrationTypeValue` / `CALIBRATION_TYPE_VALUES`.
-  - Analysis(완료): `solvent`·`matrix-matched`만 정량한다. `standard-addition`과 도메인 밖 값은 더 이상 조용히
-    `solvent`로 처리하지 않고, 검량 결과에 critical 플래그 `calibration_type_unsupported`(context: declared,
-    supported)를 붙이고 회수율·IS 결과를 만들지 않는다(`skipped`에 사유). `calibration@4`, `recovery@3`.
-  - Partner: `knowledge.MATRIX_MATCHED_VALUES`는 standard-addition을 매트릭스 보정으로 본다(화학적으로 맞음).
-    단 Analysis가 아직 정량하지 못하므로 그 실험에는 회수율 근거가 없다.
-- 요청(ELN): `ConditionBlock.calibration_type: Literal["solvent","matrix-matched","standard-addition"] | None`,
-  라벨 "검량 방식", 기존 extra 값 하위호환. analysis·partner의 기존 두 CR(2값/3값)을 이 1건으로 대체한다.
-- 남은 상충(Partner): 설계기 `pre_post_spike` 제안이 `calibration_type = "solvent + matrix-matched"`(두 곡선 모두)를
-  낸다. 도메인 밖 값이므로 ELN 필드가 Literal이 되면 PAR-2 초안이 400이 된다. 제안 값 변경은 제안 서명과
-  seed lab 결정 이력에 영향을 주므로 이번 병합에서는 바꾸지 않았다 → Partner 후속(ISSUES.md).
-- 완료 기준: 필드 추가 후 `test_matrix_matched_calibration_selects_matrix_curve`,
-  `test_unsupported_calibration_type_is_flagged_not_silently_solvent` 통과.
-
-## [OPEN] analysis (+ eln) — 숫자 칸 결측(NaN) 처리
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: ELN `_validate_csv`는 빈 숫자 칸을 통과시킨다(pandas float NaN). 그런데 `calibrate`/`fit_line`이
-  NaN을 그대로 받아 slope=NaN 결과를 **저장**한다(재현: 검량선 CSV 한 행의 analyte_area를 비우고 run).
-  실제 장비 내보내기에는 빈 칸이 흔해서 시드는 결측을 "행 미보고"로만 표현했다.
-- 제안: Analysis가 NaN 행을 계산에서 제외하고 `excluded_rows: [{injection_id, analyte, column}]`을 결과에 기록
-  (+ QC 플래그 `missing_values`, `METHOD_VERSIONS` 올림). 또는 ELN이 빈 숫자 칸을 400으로 거부 — 둘 중 하나는 필요.
-- 완료 기준: 빈 칸 CSV로 NaN이 저장되지 않는 테스트. 처리 후 시드에 빈 칸 결측을 추가할 수 있다.
-
-## [DONE] partner — 기각된 제안 반복 금지 (결정 이력 인지 비판)
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: Critic이 같은 프로젝트에서 이미 기각된 제안을 다시 낸다.
-- 처리: feature/partner의 Decision History 피드백(`app/partner/feedback.py`, 설계 템플릿 선택 시 결정된
-  `proposal_signature` 제외·자원 제약·`supersedes_proposal_ids`).
-- 확인 (2026-11-03, seed-expansion + feature/partner 병합 상태): `load_seed_spec("lab").history.repeat_probes`
-  (8개 프로브, 기각 7건 전부)에서 다시 비판해도 기각된 서명이 나오지 않음. `tests/test_seed_lab.py::
-  test_critic_does_not_repeat_rejected_proposals`의 xfail 제거 — strict=False라 픽스처 오류까지 XFAIL로 가리고
-  있었다. 저장된 이력 자체도 검사(`test_later_critiques_never_reoffer_a_decided_proposal`).
+### Partner
 
 ## [OPEN] partner — 결정 기록의 actor·시점
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03 (feature/partner 기준으로 재확인 2026-11-03)
-- 필요 이유: `decide()`는 감사 actor를 `"user"`로 고정하고(`decision.*`, `status.change` 이벤트 둘 다)
-  `created_at`은 현재 시각뿐이다. 시드가 넣는 과거 결정 14건이 사용자 행위·시드 실행일로 기록된다(다른 시드
-  레코드는 actor=`seed`). 시드는 이제 결정을 각 비판 직후에 기록하므로 순서는 맞지만(감사 id 순서로 검증)
-  날짜는 여전히 오늘이다.
-- 제안: `decide(..., *, actor: Actor = "user")` 키워드 인자, `DecisionCreate.decided_on: date | None`(과거 결정 이관용, 필드 추가만).
-- 완료 기준: 시드 결정의 감사 actor가 `seed`, `decided_on`이 실험 날짜 이후로 기록. (시드 쪽은 `loader._replay_history`
-  에서 인자만 넘기면 된다.)
+- 요청자: seed · 날짜: 2026-11-03
+- 필요 이유: `decide()`는 감사 actor를 `"user"`로 고정하고 `created_at`은 현재 시각뿐이다. lab 시드의 과거 결정 14건이
+  사용자 행위·시드 실행일로 기록된다(다른 시드 레코드는 actor=`seed`).
+- 제안: `decide(..., *, actor: Actor = "user")`, `DecisionCreate.decided_on: date | None`(필드 추가만).
+- 완료 기준: 시드 결정의 감사 actor가 `seed`, `decided_on`이 실험 날짜 이후. (시드는 `loader._replay_history`에서 인자만 넘긴다.)
 
-## [DONE] core — 시드 프로파일 설정
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: auto-seed 프로파일을 지금은 `app.seed.loader`가 환경변수 `BIOPILOT_SEED_PROFILE`로 직접 읽는다
-  (`.env` 파일은 반영 안 됨).
-- 제안: `Settings.seed_profile: Literal["reference", "lab"] = "reference"`, `main.py`에서
-  `seed_if_empty(session, settings.seed_profile)`로 전달, `.env.example`에 항목 추가.
-- 완료 기준: `.env`의 `BIOPILOT_SEED_PROFILE=lab`로 lab 시드.
-- **완료(integration, 2026-11-03):** `core/config.py Settings.seed_profile`(기본 `reference`), `main.py`가
-  `seed_if_empty(session, settings.seed_profile)`로 전달, `seed.loader.resolve_profile`은 `Settings().seed_profile`을
-  읽는다, `.env.example` 항목 추가. 테스트 `tests/test_seed_profiles.py::test_settings_seed_profile_selects_lab`.
-  기본값은 reference로 유지(모든 모듈 테스트가 reference 7개 실험을 전제).
+## [OPEN] partner — Memory recall/근거 조각 활용 검토
+- 요청자: memory · 날짜: 2026-11-03
+- 내용: `memory.service.recall()` / `ask()`가 출처가 붙은 `EvidenceFragment`를 반환한다. Partner `/ask` 컨텍스트 보강에 쓸 수 있다.
 
-## [OPEN] eln/memory/analysis/partner 테스트 — 시드 모양 하드코딩 제거 (lab을 기본 시드로 전환하기 위한 선행)
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: 모듈 테스트가 reference 시드 모양에 묶여 있다 — 실험 id 1/7 = #018/#024(`test_memory_api`,
-  `test_partner_api`), 타임라인 7건·엣지 6개·루트 #018, `"7건"` 문구, pending 제안 = #024 비판 제안 전부 등.
-  그래서 기본 auto-seed를 lab으로 바꿀 수 없다.
-- 제안: id 대신 `seeded["#024"]`(코드 조회), 개수는 `len(seeded) - 1` 등 시드 대비 상대 검증. 각 모듈 담당이 자기 테스트 수정.
-- 완료 기준: `BIOPILOT_SEED_PROFILE=lab pytest` 전체 통과 → 그 다음 core 요청으로 기본값을 lab으로.
+### Seed
+
+## [OPEN] seed — 시드 데이터 추가 (3건 → 1건)
+- 요청자: eln(조건·프로토콜 템플릿, 첨부 파일), memory(지식 노트 예시) · 날짜: 2026-11-03
+- 제안:
+  - `eln.create_condition_template(...)`(기본 규칙과 동일, actor=seed),
+    `eln.create_protocol_template(name="AOAC 2007.01 기준 프로토콜", source_experiment_id=#018, actor="seed")`
+  - #024 첨부 바이너리 1개(위 `test_contract` `file_id` 요청의 선행 조건)
+  - `memory.create_knowledge_note(..., actor="seed")` #024 연결 예시 1건
+  - `test_principles`의 기대 엔티티 목록에 새 엔티티 추가.
+- 완료 기준: 새 DB에서 Notebook "프로토콜 템플릿으로 채우기"에 1개 이상, Overview 그래프에 note 노드 표시.
+
+## [OPEN] eln/memory/analysis/partner 테스트 — 시드 모양 하드코딩 제거
+- 요청자: seed · 날짜: 2026-11-03
+- 필요 이유: 모듈 테스트가 reference 시드 모양(id 1/7 = #018/#024, 타임라인 7건, `"7건"` 문구 등)에 묶여 있다.
+- 제안: id 대신 `seeded["#024"]`, 개수는 시드 대비 상대 검증. 각 모듈 담당이 자기 테스트를 고친다.
+- **완료 기준 정정(REVIEW §11-4):** `BIOPILOT_SEED_PROFILE=lab pytest`는 `client` 픽스처에만 적용되고 `seeded`
+  픽스처(`backend/conftest.py`)는 reference로 고정이다. 기준은 "lab 프로파일 픽스처를 추가하고 그 위에서 모듈
+  테스트가 통과"로 바꾼다. 기본 시드는 reference로 유지한다(integration 결정).
+
+### Frontend Shell
+
+## [OPEN] frontend/shell — `api/types.ts` 별칭 추가 (3건 → 1건)
+- 요청자: eln(notebook), memory, partner · 날짜: 2026-11-03
+- 별칭: `DatasetValidation`, `CsvIssue`, `ConditionIssue`, `HistoryEntry`, `ExperimentAddendumOut`, `AttachmentFileOut`,
+  `ProtocolTemplateOut`, `ImportPreview` (eln) · `KnowledgeGraph`, `KGNode`, `KGEdge`, `SearchHit`, `RecallBundle`,
+  `MemoryAnswer`, `SimilarExperiment`, `ConditionMatrix`, `ConditionHistoryEntry`, `KnowledgeNoteOut` (memory) ·
+  `CriticAssessment`, `ExperimentDesign`, `DecisionHistoryEntry`, `AnswerStatement` (partner).
+- 완료 기준: 공용 별칭 추가 후 각 화면이 로컬 `Schemas[...]` 별칭을 제거(각 담당 후속).
 
 ## [OPEN] frontend/shell — 프로젝트 선택
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
+- 요청자: seed · 날짜: 2026-11-03
 - 필요 이유: `lib/selection.ts useActiveProject()`가 첫 프로젝트만 쓴다. lab 시드에는 프로젝트가 2개(유기산 #OA01–#OA12).
-- 제안: 헤더 프로젝트 전환 + URL `?project=<id>` (기존 `?exp=`와 같은 방식), 프로젝트 전환 시 `?exp=` 초기화.
+- 제안: 헤더 프로젝트 전환 + URL `?project=<id>`, 전환 시 `?exp=` 초기화.
 - 완료 기준: lab 시드에서 두 프로젝트의 4탭이 모두 렌더.
 
-## [OPEN] eln — 조건 키 라벨 추가
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: lab 시드가 쓰는 조건 키 `mobile_phase`, `injection_volume_ul`(+ Partner 제안 키 `injection_dilution`,
-  `calibration_type`)에 라벨이 없어 diff·타임라인에 키 이름이 그대로 노출된다.
-- 제안: `CONDITION_FIELD_LABELS`에 `mobile_phase: 이동상`, `injection_volume_ul: 주입량 (µL)`,
-  `injection_dilution: 주입 희석`, `calibration_type: 검량선 종류` 추가.
-- 완료 기준: `/api/eln/condition-fields`에 포함.
+## [OPEN] frontend/shell — Overview가 프로젝트 활성 QC 기준을 쓰도록 `useCriteria(projectId)` 호출
+- 요청자: integration · 날짜: 2026-11-03
+- 기록: analysis 병합으로 공유 훅 `useCriteria`가 `useCriteria(projectId?: number | null)`로 바뀌었다(queryKey
+  `["analysis","criteria",projectId??null]`, `staleTime: Infinity` 제거). 인자 없는 호출은 기본 기준을 돌려주므로
+  하위 호환이다. `features/overview/OverviewPage.tsx`는 인자 없이 호출해 **기본 기준**만 표시한다.
+- 완료 기준: 프로젝트 기준 v1 생성 후 Overview의 기준 표시가 v1 값을 따른다.
 
-## [OPEN] docs — ARCHITECTURE §5 시드 시나리오 갱신
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: §5는 7개 실험 시나리오만 설명한다. 시드는 이제 `reference`/`lab` 프로파일을 가진다.
-- 제안: §5에 프로파일 표와 `backend/app/seed/SCENARIO.md` 링크 추가, 원본 위치를 `data/residue.json` 등으로 정정.
-- 완료 기준: 문서 갱신.
+## [OPEN] frontend/shell — 전역 검색 바를 헤더로 이동
+- 요청자: memory · 날짜: 2026-11-03
+- 제안: `features/overview/GlobalSearchBar.tsx`(+ `highlight.tsx`)를 `components/`로 옮겨 AppShell 헤더에 장착.
+  (memory가 Frontend Shell 영역 `features/overview/**`를 직접 수정한 것은 REVIEW §Memory-4 경계 위반으로 기록)
+- 완료 기준: 모든 탭에서 검색 가능, 결과 클릭 시 `/notebook?exp=`.
 
-## [OPEN] memory — 제안→후속 실험 엣지용 정답 데이터 제공 (MEM-1 참고)
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: TASKS MEM-1 `tests_proposal` 엣지를 만들 때 검증할 정답이 필요하다.
-- 제공: `load_seed_spec("lab").history.decisions[*].followed_by` — 수락/수정 결정 7건의 후속 실험 코드
-  (`SeedResult.decided_proposal_ids`로 제안 id 조회). 시드 쪽 변경은 필요 없음, 공지용.
-  (2026-11-03 갱신: 결정 id가 시간순 D01–D14로 바뀜 — feature/partner 엔진에 맞춰 이력을 다시 씀. 후속 실험 7건과
-  그 코드(#007 #017 #025 #026 #028 #OA07 #OA11)는 그대로. 결정은 `decision.proposal.template_id/signature`로 제안을 지정.)
-- 완료 기준: MEM-1 테스트가 lab 시드의 7개 엣지를 확인.
+---
+
+## 완료·종결 (DONE / REJECTED)
+
+## [DONE] core — Alembic 마이그레이션 도입 (3건 → 1건)
+- 요청자: skeleton, eln("기존 로컬 DB 재생성 필요"), memory("마이그레이션 대상 추가") · 날짜: 2026-11-03
+- 처리(integration): `app/core/migrate.py` + `app/core/migrations/`(env.py `render_as_batch=True`, FTS5
+  `memory_search_fts*`는 autogenerate 제외 — Memory가 첫 검색 때 지연 생성), 병합된 전체 스키마를 baseline
+  revision `0001_baseline` 하나로. `create_app`은 `Database.prepare_schema()`(빈 DB → create_all + stamp,
+  관리 DB → upgrade head, Alembic 이전 DB → `LegacyDatabaseError`). CI `alembic upgrade head && alembic check`.
+  기존 `biopilot.db`·`./eln_storage` 재생성 절차는 README. 테스트 `tests/test_migrations.py`.
+
+## [DONE] core / pyproject — `python-multipart` 의존성 (ELN 업로드)
+- 요청자: eln · 처리: feature/eln 4e7d365 — `python-multipart>=0.0.18` 선언, Starlette `MultiPartParser` 기반으로 교체
+  (닫는 경계 없는 본문·CTE·헤더 공백 400, 테스트 `app/eln/tests/test_upload_integrity.py`). REVIEW C3·C4 해소.
+
+## [DONE] core/composition — `app/wiring.py` 소유권
+- 요청자: memory · 결정(integration): **승인.** core 소유 composition root(CLAUDE.md §2·§3 공유 파일). `main.py` import 1줄 +
+  `install_memory_fact_providers()` 1줄 승인. `tests/test_architecture.py`: `test_wiring_imports_only_service_and_schemas`,
+  `test_feature_modules_do_not_import_wiring`. Analysis/Partner는 서비스 시그니처를 바꿀 때 wiring도 함께 고친다.
+
+## [DONE] core — LLM 게이트웨이 텍스트 스트리밍 (`stream_text`)
+- 요청자: partner · 처리(integration): `core/llm.py` `StreamingLLMGateway`·`LLMStreamError`·`ClaudeGateway.stream_text`
+  (`client.beta.messages.stream`, effort, server-side fallback, refusal·API 오류 시 예외). 테스트 `tests/test_llm_stream.py`
+  (스텁 클라이언트, 거절·연결 오류, 스트리밍 미지원 게이트웨이의 비스트리밍 경로).
+
+## [DONE] core — 시드 프로파일 설정
+- 요청자: seed · 처리(integration): `Settings.seed_profile`(`BIOPILOT_SEED_PROFILE`, 기본 `reference`), `main.py`가
+  `seed_if_empty(session, settings.seed_profile)`, `.env.example`. 테스트 `test_settings_seed_profile_selects_lab`.
+
+## [DONE] partner — 프로젝트별 기준 사용
+- 요청자: analysis · 처리(integration): `partner/context.py` 두 곳과 `partner/service.py:_pool_index`가
+  `get_project_criteria(...).active.criteria`. 테스트 `app/partner/tests/test_project_criteria.py`.
+  신규 지표(`qc_verdicts`, `p_holm`, `hedges_g` …) 활용은 ISSUES.md.
+
+## [DONE] analysis (frontend hook) — `useRunAnalysis` 훅
+- 요청자: frontend/notebook · 처리: analysis 브랜치가 이미 구현(중복 요청). 병합 중 Notebook CompareModal이 사용:
+  "현재/기준 실험 미분석" 표시 + "분석 실행" 버튼(`NotebookViews.test.tsx`).
+
+## [DONE] eln ↔ analysis — ELN-7 `ion_ratio@1` 계약 (양방향 충족)
+- 요청자: analysis(요청), eln(공지) · 처리: ELN `DATASET_KIND_REGISTRY` `ion_ratio@1`, Analysis는 병합 후 `kind == "ion_ratio"`만
+  읽는다(`other` 경유 임시 경로 제거). 통합 테스트 `test_eln_ion_ratio_upload_feeds_analysis_run`.
+
+## [DONE] partner — 기각된 제안 반복 금지 (결정 이력 인지 비판)
+- 요청자: seed · 처리: feature/partner `app/partner/feedback.py`(서명 제외·자원 제약·`supersedes_proposal_ids`).
+  seed lab 프로브에서 재등장 0건, `test_seed_lab.py`의 xfail 제거. 반복 요청 금지.
+
+## [DONE] tests — `tests/test_contract.py` 파라미터 표 추가 (memory 공지)
+- 요청자: memory · 내용: 새 GET 엔드포인트용 `PATH_PARAMS["key"]`와 `QUERY_PARAMS`만 추가(검사 로직 불변).
+  자기 승인([DONE] 표기)은 순서가 뒤바뀐 것이어서 integration이 사후 확인했다.
+
+## [DONE] frontend — Memory 계약 공지 (MEM-5 등)
+- 요청자: memory · 내용: `compare-conditions`, `/conditions/{key}/history`, `/experiments/{id}/similar`, `/projects/{id}/recall`,
+  `POST /projects/{id}/ask`, `/projects/{id}/knowledge-notes`, `/graph?relations=`. 공지만이며 계약은 openapi.json에 있다.
+
+## [REJECTED] memory — `create_knowledge_note(source_ref)`로 Partner가 결정을 push
+- 요청자: partner · 사유: 위 "결정 사유를 Research Memory 검색에 반영"에서 wiring pull로 통일.
