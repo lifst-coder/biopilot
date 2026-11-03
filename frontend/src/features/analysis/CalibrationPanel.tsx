@@ -13,7 +13,7 @@ import {
 } from "recharts";
 import type { AnalysisResultOut } from "@/api/types";
 import { Badge, Card, DataTable } from "@/components";
-import { seriesColor, TOKEN_HEX } from "@/lib/chartColors";
+import { CHART_FONT_SIZE, seriesColor, TOKEN_HEX } from "@/lib/chartColors";
 import { formatNumber, formatPValue, formatWithUnit } from "@/lib/format";
 import { WEIGHTING_LABELS } from "./labels";
 import { MethodNotes } from "./MethodNotes";
@@ -110,13 +110,13 @@ export function CalibrationPanel({ result, output }: Props) {
       {fit && (
         <div className="grid gap-4 xl:grid-cols-2">
           <div>
-            <h3 className="mb-1 text-xs font-medium text-ink-muted">면적비 vs 농도</h3>
+            <h3 className="mb-2 text-sm font-medium text-ink-muted">면적비 vs 농도</h3>
             <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e0e4ea" />
-                  <XAxis dataKey="level" type="number" name="농도" unit=" ng/mL" tick={{ fontSize: 11 }} />
-                  <YAxis dataKey="response_ratio" type="number" name="면적비" tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="level" type="number" name="농도" unit=" ng/mL" tick={{ fontSize: CHART_FONT_SIZE }} />
+                  <YAxis dataKey="response_ratio" type="number" name="면적비" tick={{ fontSize: CHART_FONT_SIZE }} />
                   <Tooltip />
                   <Scatter data={current.points} fill={TOKEN_HEX.brand} name="측정" />
                   <Line data={fit.fit_line} dataKey="response_ratio" stroke={TOKEN_HEX.warn} dot={false} name="적합선" />
@@ -126,7 +126,7 @@ export function CalibrationPanel({ result, output }: Props) {
           </div>
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <h3 className="text-xs font-medium text-ink-muted">
+              <h3 className="text-sm font-medium text-ink-muted">
                 잔차 플롯 · {mode === "re" ? "%RE = (x̂ − x)/x × 100" : "표준화 잔차 √w·(y − ŷ)/s"}
               </h3>
               <select
@@ -143,8 +143,8 @@ export function CalibrationPanel({ result, output }: Props) {
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e0e4ea" />
-                  <XAxis dataKey="level" type="number" name="농도" unit=" ng/mL" scale="log" domain={["dataMin", "dataMax"]} ticks={fit.back_calc.map((b) => b.level)} tick={{ fontSize: 11 }} />
-                  <YAxis dataKey={residualKey} type="number" name={mode === "re" ? "%RE" : "표준화 잔차"} tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="level" type="number" name="농도" unit=" ng/mL" scale="log" domain={["dataMin", "dataMax"]} ticks={fit.back_calc.map((b) => b.level)} tick={{ fontSize: CHART_FONT_SIZE }} />
+                  <YAxis dataKey={residualKey} type="number" name={mode === "re" ? "%RE" : "표준화 잔차"} tick={{ fontSize: CHART_FONT_SIZE }} />
                   <ReferenceLine y={0} stroke={TOKEN_HEX.faint} />
                   <Tooltip formatter={(v: number) => formatNumber(v, 2)} />
                   <Scatter data={fit.residuals} fill={seriesColor(1)} name="잔차" />
@@ -158,7 +158,7 @@ export function CalibrationPanel({ result, output }: Props) {
       {fit && (
         <div className="mt-3 grid gap-4 xl:grid-cols-2">
           <div className="space-y-3">
-            <dl className="grid grid-cols-3 gap-2 text-xs">
+            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 [&_dd]:tabular-nums">
               <div><dt className="text-ink-muted">기울기 b</dt><dd className="font-mono">{exp(fit.slope, 4)}</dd></div>
               <div><dt className="text-ink-muted">절편 a</dt><dd className="font-mono">{exp(fit.intercept)}</dd></div>
               <div><dt className="text-ink-muted">R² (가중)</dt><dd className="font-mono">{formatNumber(fit.r_squared, 5)}</dd></div>

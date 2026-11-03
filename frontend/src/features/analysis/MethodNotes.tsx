@@ -4,14 +4,14 @@ import type { MethodDoc } from "./types";
 export function MethodNotes({ method }: { method: MethodDoc | null | undefined }) {
   if (!method) return null;
   return (
-    <details className="mt-3 rounded-md border border-border bg-subtle/40 px-3 py-2 text-xs">
-      <summary className="cursor-pointer select-none font-medium text-ink-muted">
+    <details className="mt-4 rounded-md border border-border bg-subtle/40 px-3 py-2 text-sm">
+      <summary className="-mx-1 select-none px-1 py-0.5 font-medium text-ink-muted">
         공식과 가정 · {method.version}
       </summary>
       <div className="mt-2 grid gap-3 lg:grid-cols-2">
         <div>
           <h3 className="mb-1 font-semibold text-ink">공식</h3>
-          <ul className="space-y-0.5 font-mono text-[11px] text-ink">
+          <ul className="space-y-0.5 font-mono text-xs text-ink">
             {method.formulas.map((f) => (
               <li key={f}>{f}</li>
             ))}

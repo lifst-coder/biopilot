@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import type { AnalysisResultOut } from "@/api/types";
 import { Card, DataTable } from "@/components";
-import { TOKEN_HEX } from "@/lib/chartColors";
+import { CHART_FONT_SIZE, TOKEN_HEX } from "@/lib/chartColors";
 import { formatNumber, formatWithUnit } from "@/lib/format";
 import { MethodNotes } from "./MethodNotes";
 import { resultSubtitle } from "./ResultMeta";
@@ -49,14 +49,14 @@ export function ISResponsePanel({ result, output, criteria }: Props) {
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={sequence} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e0e4ea" />
-            <XAxis dataKey="injection_id" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-            <YAxis unit="%" tick={{ fontSize: 11 }} />
+            <XAxis dataKey="injection_id" tick={{ fontSize: CHART_FONT_SIZE }} interval="preserveStartEnd" />
+            <YAxis unit="%" tick={{ fontSize: CHART_FONT_SIZE }} />
             {criteria && (
               <ReferenceArea y1={criteria.is_response_min_pct} y2={criteria.is_response_max_pct} fill={TOKEN_HEX.ok} fillOpacity={0.08} ifOverflow="extendDomain" />
             )}
             <ReferenceLine y={100} stroke={TOKEN_HEX.faint} strokeDasharray="4 4" />
             {firstSample && output.calibration_injections.length > 0 && (
-              <ReferenceLine x={firstSample} stroke={TOKEN_HEX.faint} label={{ value: "시료", fontSize: 10, position: "insideTopLeft" }} />
+              <ReferenceLine x={firstSample} stroke={TOKEN_HEX.faint} label={{ value: "시료", fontSize: CHART_FONT_SIZE, position: "insideTopLeft" }} />
             )}
             <Tooltip
               formatter={(v: number) => formatWithUnit(v, "%")}
@@ -71,7 +71,7 @@ export function ISResponsePanel({ result, output, criteria }: Props) {
       </div>
       {flagged.length > 0 && (
         <div className="mt-3">
-          <h3 className="mb-1 text-xs font-medium text-crit">기준 이탈 주입</h3>
+          <h3 className="mb-2 text-sm font-medium text-crit">✕ 기준 이탈 주입</h3>
           <DataTable
             rows={flagged}
             rowKey={(i) => i.injection_id}

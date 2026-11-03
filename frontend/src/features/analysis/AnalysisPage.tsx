@@ -89,8 +89,9 @@ export function AnalysisPage() {
           const t = cmp?.recovery_t_test;
           return (
             <div className="space-y-2">
-              <h2 className="px-1 pt-2 text-xs font-semibold text-ink-muted">
-                판정의 근거 <span className="font-normal text-ink-faint">— 펼쳐서 확인 · 색 점: 빨강 불합격 / 주황 검토 / 초록 정상</span>
+              <h2 className="px-1 pt-4 text-sm font-semibold text-ink-muted">
+                판정의 근거{" "}
+                <span className="font-normal text-ink-faint">— 제목을 눌러 펼치기 · 표시: ✕ 불합격 / ! 검토 필요 / ✓ 정상</span>
               </h2>
               {rec?.output.kind === "recovery" && (
                 <Disclosure

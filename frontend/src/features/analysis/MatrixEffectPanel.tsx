@@ -1,7 +1,7 @@
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { AnalysisResultOut } from "@/api/types";
-import { Card, DataTable, Term } from "@/components";
-import { TOKEN_HEX } from "@/lib/chartColors";
+import { Card, DataTable, FlagMark, Term } from "@/components";
+import { CHART_FONT_SIZE, TOKEN_HEX } from "@/lib/chartColors";
 import { formatNumber, formatWithUnit } from "@/lib/format";
 import { MethodNotes } from "./MethodNotes";
 import { resultSubtitle } from "./ResultMeta";
@@ -24,8 +24,8 @@ export function MatrixEffectPanel({ result, output, criteria }: Props) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={output.analytes} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e4ea" />
-              <XAxis dataKey="analyte" tick={{ fontSize: 11 }} />
-              <YAxis unit="%" tick={{ fontSize: 11 }} />
+              <XAxis dataKey="analyte" tick={{ fontSize: CHART_FONT_SIZE }} />
+              <YAxis unit="%" tick={{ fontSize: CHART_FONT_SIZE }} />
               {limit !== null && <ReferenceArea y1={-limit} y2={limit} fill={TOKEN_HEX.ok} fillOpacity={0.08} ifOverflow="extendDomain" />}
               <Tooltip formatter={(v: number) => formatWithUnit(v, "%")} />
               <Bar dataKey="matrix_effect_pct" name="ME">
@@ -44,7 +44,13 @@ export function MatrixEffectPanel({ result, output, criteria }: Props) {
             { key: "a", header: "분석물", render: (a) => a.analyte },
             { key: "s", header: "기울기 (용매)", align: "right", render: (a) => formatNumber(a.slope_solvent, 0) },
             { key: "m", header: "기울기 (매트릭스)", align: "right", render: (a) => formatNumber(a.slope_matrix, 0) },
-            { key: "me", header: <Term k="matrixEffect">%ME</Term>, align: "right", render: (a) => formatWithUnit(a.matrix_effect_pct, "%") },
+            { key: "me", header: <Term k="matrixEffect">%ME</Term>, align: "right", render: (a) => (
+                <>
+                  {flagged.has(a.analyte) && <FlagMark tone="crit" label="기준 초과" />}
+                  {formatWithUnit(a.matrix_effect_pct, "%")}
+                </>
+              ),
+            },
           ]}
         />
       </div>

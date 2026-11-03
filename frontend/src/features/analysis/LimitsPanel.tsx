@@ -34,8 +34,8 @@ export function LimitsPanel({ result, output }: Props) {
           { key: "low", header: "최저 검량 수준", align: "right", render: (a) => formatNumber(a.lowest_level, 1) },
         ]}
       />
-      <details className="mt-3 text-xs">
-        <summary className="cursor-pointer text-ink-muted">σ 추정 방법별 값</summary>
+      <details className="mt-3 text-sm">
+        <summary className="px-1 py-1 text-ink-muted">σ 추정 방법별 값</summary>
         <DataTable
           rows={estimates}
           rowKey={(e) => `${e.analyte}-${e.method}`}

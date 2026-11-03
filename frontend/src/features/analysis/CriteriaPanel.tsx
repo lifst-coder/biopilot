@@ -60,7 +60,7 @@ function CriteriaEditor({
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
         {CRITERIA_FIELDS.map((f) => (
-          <label key={f.key} className="text-[11px] text-ink-muted">
+          <label key={f.key} className="text-xs text-ink-muted">
             {f.label}
             {f.unit && ` (${f.unit})`}
             <input
@@ -113,18 +113,18 @@ export function CriteriaPanel({ projectId, experimentId }: Props) {
       <QueryState query={criteria}>
         {(pc) => (
           <div className="space-y-3">
-            <p className="text-xs">
+            <p className="text-sm">
               활성 기준 <Badge tone="brand">{pc.active.label}</Badge>{" "}
               <span className="text-ink-muted">{pc.active.criteria.source}</span>
             </p>
-            <details className="text-xs">
-              <summary className="cursor-pointer text-ink-muted">기준 편집</summary>
+            <details className="text-sm">
+              <summary className="px-1 py-1 text-ink-muted">기준 편집</summary>
               <div className="mt-2">
                 <CriteriaEditor active={pc.active} projectId={pc.project_id} experimentId={experimentId} />
               </div>
             </details>
-            <details className="text-xs">
-              <summary className="cursor-pointer text-ink-muted">버전 이력 ({pc.history.length})</summary>
+            <details className="text-sm">
+              <summary className="px-1 py-1 text-ink-muted">버전 이력 ({pc.history.length})</summary>
               <DataTable
                 rows={[...pc.history].reverse()}
                 rowKey={(h) => h.version}

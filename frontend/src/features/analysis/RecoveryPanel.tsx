@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { AnalysisResultOut } from "@/api/types";
-import { Badge, Card, DataTable, Term } from "@/components";
-import { TOKEN_HEX } from "@/lib/chartColors";
+import { Badge, Card, DataTable, FlagMark, Term } from "@/components";
+import { CHART_FONT_SIZE, TOKEN_HEX } from "@/lib/chartColors";
 import { formatNumber, formatWithUnit } from "@/lib/format";
 import { MethodNotes } from "./MethodNotes";
 import { resultSubtitle } from "./ResultMeta";
@@ -37,13 +37,13 @@ export function RecoveryPanel({ result, output, criteria }: Props) {
       title={`회수율 · 평균 ${formatWithUnit(output.overall_mean_pct, "%")} · RSD ${formatWithUnit(output.overall_rsd_pct, "%")}`}
       subtitle={resultSubtitle(result)}
     >
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-4 2xl:grid-cols-2">
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 8, right: 16, bottom: 40, left: -8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e4ea" />
-              <XAxis dataKey="name" angle={-35} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
-              <YAxis unit="%" tick={{ fontSize: 11 }} />
+              <XAxis dataKey="name" angle={-35} textAnchor="end" interval={0} tick={{ fontSize: CHART_FONT_SIZE }} />
+              <YAxis unit="%" tick={{ fontSize: CHART_FONT_SIZE }} />
               {criteria && (
                 <ReferenceArea y1={criteria.recovery_min_pct} y2={criteria.recovery_max_pct} fill={TOKEN_HEX.ok} fillOpacity={0.08} ifOverflow="extendDomain" />
               )}
@@ -60,7 +60,17 @@ export function RecoveryPanel({ result, output, criteria }: Props) {
             { key: "a", header: "분석물", render: (g) => g.analyte },
             { key: "s", header: "첨가 (ng/g)", align: "right", render: (g) => formatNumber(g.spike_ng_g, 0) },
             { key: "n", header: "n", align: "right", render: (g) => g.n },
-            { key: "m", header: "평균", align: "right", render: (g) => formatWithUnit(g.mean_pct, "%") },
+            {
+              key: "m",
+              header: "평균",
+              align: "right",
+              render: (g) => (
+                <>
+                  {outOfRange(g.mean_pct, criteria) && <FlagMark tone="crit" label="허용 범위 밖" />}
+                  {formatWithUnit(g.mean_pct, "%")}
+                </>
+              ),
+            },
             { key: "sd", header: "SD", align: "right", render: (g) => formatNumber(g.sd_pct, 2) },
             { key: "r", header: <Term k="rsd">RSD</Term>, align: "right", render: (g) => formatWithUnit(g.rsd_pct, "%") },
             { key: "ni", header: <Term k="isUncorrected">IS 미보정</Term>, align: "right", render: (g) => formatWithUnit(g.mean_no_is_pct, "%") },
@@ -84,7 +94,7 @@ export function RecoveryPanel({ result, output, criteria }: Props) {
 
       {output.uncertainty.length > 0 && (
         <div className="mt-4">
-          <h3 className="mb-1 text-xs font-medium text-ink-muted"><Term k="uncertainty">측정 불확도</Term> (상대, %)</h3>
+          <h3 className="mb-2 text-sm font-medium text-ink-muted"><Term k="uncertainty">측정 불확도</Term> (상대, %)</h3>
           <DataTable
             rows={output.uncertainty}
             rowKey={(u) => u.analyte}
@@ -98,14 +108,24 @@ export function RecoveryPanel({ result, output, criteria }: Props) {
               { key: "ub", header: "u(bias)", align: "right", render: (u) => formatNumber(u.u_bias_pct, 1) },
               { key: "uc", header: "u_c", align: "right", render: (u) => formatNumber(u.u_combined_pct, 1) },
               { key: "k", header: "k", align: "right", render: (u) => formatNumber(u.coverage_factor, 0) },
-              { key: "U", header: <Term k="uncertainty">U</Term>, align: "right", render: (u) => <b>{formatNumber(u.expanded_pct, 1)}</b> },
+              {
+                key: "U",
+                header: <Term k="uncertainty">U</Term>,
+                align: "right",
+                render: (u) => (
+                  <>
+                    {criteria && u.expanded_pct > criteria.expanded_uncertainty_max_pct && <FlagMark tone="warn" label="기준 초과" />}
+                    <b>{formatNumber(u.expanded_pct, 1)}</b>
+                  </>
+                ),
+              },
             ]}
           />
         </div>
       )}
 
-      <details className="mt-4 text-xs" open={filter !== ""}>
-        <summary className="cursor-pointer text-ink-muted">주입별 원시 행 ({output.rows.length})</summary>
+      <details className="mt-4 text-sm" open={filter !== ""}>
+        <summary className="px-1 py-1 text-ink-muted">주입별 원시 행 ({output.rows.length})</summary>
         <input
           className="bp-input my-2 max-w-xs py-1 text-xs"
           placeholder="주입 ID / 시료 ID 필터 (예: S-03)"

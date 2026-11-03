@@ -36,7 +36,7 @@ export function ComparePanel({ experiments, current, defaultBaseline }: Props) {
             const level = t?.confidence != null ? `CI ${formatNumber(t.confidence, 2)}` : "CI";
             return (
               <div className="space-y-3">
-                <dl className="grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
+                <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 md:grid-cols-4 [&_dd]:tabular-nums">
                   <div><dt className="text-ink-muted">평균 회수율 차이 Δ (<Term k="percentPoint">%p</Term>)</dt><dd className="text-base font-semibold">{formatWithUnit(c.recovery_delta_pct_points, "%p")}</dd></div>
                   <div><dt className="text-ink-muted">Δ의 {level} (Welch)</dt><dd className="font-mono">{ci(t?.ci_low, t?.ci_high)}</dd></div>
                   <div><dt className="text-ink-muted"><Term k="welch">t (df)</Term> · <Term k="pValue">p</Term></dt><dd className="font-mono">{t ? `${formatNumber(t.t_statistic, 2)} (${formatNumber(t.df, 1)})` : "—"} · {formatPValue(t?.p_value)}</dd></div>

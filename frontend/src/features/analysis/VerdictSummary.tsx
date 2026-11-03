@@ -120,8 +120,11 @@ function CheckLine({
   const showRecovery = group.code === "recovery_out_of_range";
   const crit = criterionText(group.code, criteria);
   return (
-    <li className={clsx("flex flex-wrap items-baseline gap-x-2", strong ? "text-sm text-ink" : "text-xs text-ink-muted")}>
+    <li className={clsx("flex flex-wrap items-baseline gap-x-2 text-sm", strong ? "text-ink" : "text-ink-muted")}>
       <span className={clsx("font-semibold", strong ? "text-crit" : "text-warn")}>
+        <span aria-hidden className="mr-1 inline-block w-3 text-center">
+          {strong ? "✕" : "!"}
+        </span>
         {term ? <Term k={term}>{FLAG_LABELS[group.code]}</Term> : FLAG_LABELS[group.code]}
       </span>
       <span>
@@ -129,7 +132,7 @@ function CheckLine({
           .map((a) => (showRecovery && recovery.has(a) ? `${a} ${formatWithUnit(recovery.get(a), "%")}` : a))
           .join(", ")}
       </span>
-      {crit && <span className="text-xs text-ink-faint">({crit})</span>}
+      {crit && <span className="text-sm text-ink-faint">({crit})</span>}
     </li>
   );
 }
@@ -208,7 +211,7 @@ export function VerdictSummary({ metrics: m, criteria, baseline }: Props) {
         className={clsx("rounded-card border px-5 py-4", STATUS_FRAME[status])}
         data-testid="qc-verdict"
       >
-        <p className="text-xs text-ink-muted">
+        <p className="text-sm text-ink-muted">
           <Term k="qc">QC 판정</Term> — 허용 기준 대비 결정론적 판정
         </p>
         <p className={clsx("mt-1 flex flex-wrap items-baseline gap-x-3 text-2xl font-bold", STATUS_TEXT[status])}>
@@ -227,14 +230,14 @@ export function VerdictSummary({ metrics: m, criteria, baseline }: Props) {
           </ul>
         )}
         {warned.length > 0 && (
-          <ul className="mt-2 space-y-0.5" aria-label="검토 필요 항목">
+          <ul className="mt-2 space-y-1" aria-label="검토 필요 항목">
             {warned.map((g) => (
               <CheckLine key={g.code} group={g} m={m} criteria={criteria} strong={false} />
             ))}
           </ul>
         )}
         {status !== "pass" && (
-          <p className="mt-3 text-xs">
+          <p className="mt-3 text-sm">
             <Link to={{ pathname: "/research-ai", search, hash: "#critic" }} className="font-medium text-brand hover:underline">
               왜 이런 결과가 나왔는지 → Research AI의 비판적 검토
             </Link>
@@ -267,7 +270,7 @@ export function VerdictSummary({ metrics: m, criteria, baseline }: Props) {
         />
       </div>
 
-      <p className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-ink-muted">
+      <p className="flex flex-wrap gap-x-5 gap-y-1.5 px-1 text-sm text-ink-muted">
         <span>
           <Term k="r2">검량선 최소 R²</Term> <b className="tabular-nums text-ink">{formatNumber(m.min_r_squared, 4)}</b>
           {r2Ok !== null && criteria && (

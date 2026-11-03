@@ -1,5 +1,5 @@
 import type { AnalysisResultOut } from "@/api/types";
-import { Card, DataTable } from "@/components";
+import { Card, DataTable, FlagMark } from "@/components";
 import { formatNumber, formatWithUnit } from "@/lib/format";
 import { MethodNotes } from "./MethodNotes";
 import { resultSubtitle } from "./ResultMeta";
@@ -26,7 +26,17 @@ export function IonRatioPanel({ result, output }: Props) {
           { key: "a", header: "분석물", render: (r) => r.analyte },
           { key: "r", header: "이온비", align: "right", render: (r) => formatNumber(r.ion_ratio, 4) },
           { key: "ref", header: "기준", align: "right", render: (r) => formatNumber(r.reference_ratio, 4) },
-          { key: "d", header: "편차", align: "right", render: (r) => formatWithUnit(r.deviation_pct, "%") },
+          {
+            key: "d",
+            header: "편차",
+            align: "right",
+            render: (r) => (
+              <>
+                {r.flagged && <FlagMark tone="crit" label="허용 범위 밖" />}
+                {formatWithUnit(r.deviation_pct, "%")}
+              </>
+            ),
+          },
         ]}
       />
       <MethodNotes method={output.method} />
