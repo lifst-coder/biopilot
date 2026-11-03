@@ -35,8 +35,8 @@ export function OriginalVsDigest({ exp, changedKeys }: { exp: ExperimentOut; cha
           <h2 className="text-sm font-semibold">원본</h2>
           <OriginalBadge />
         </header>
-        <pre className="whitespace-pre-wrap rounded-md bg-subtle p-3 font-sans text-xs leading-relaxed">{exp.raw_note}</pre>
-        <details className="mt-3 text-xs">
+        <pre className="bp-prose whitespace-pre-wrap rounded-md bg-subtle p-3 font-sans">{exp.raw_note}</pre>
+        <details className="mt-3 text-sm">
           <summary className="cursor-pointer select-none font-semibold text-ink-muted">
             조건 블록 전체 ({Object.values(exp.condition_block).filter((v) => v !== null && v !== undefined).length}개)
             {changedKeys && changedKeys.size > 0 && (
@@ -69,7 +69,7 @@ export function OriginalVsDigest({ exp, changedKeys }: { exp: ExperimentOut; cha
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <EngineBadge engine={current.engine} model={current.model} />
-                  <span className="text-[11px] text-ink-faint">{formatDateTime(current.created_at)}</span>
+                  <span className="text-xs text-ink-faint">{formatDateTime(current.created_at)}</span>
                   {list.length > 1 && (
                     <select
                       aria-label="정리본 버전"
@@ -85,15 +85,15 @@ export function OriginalVsDigest({ exp, changedKeys }: { exp: ExperimentOut; cha
                     </select>
                   )}
                 </div>
-                <p className="rounded-md bg-ai-soft/40 p-3 text-xs leading-relaxed">{current.summary}</p>
+                <p className="rounded-md bg-ai-soft/40 bp-prose p-3">{current.summary}</p>
                 {current.key_points.length > 0 && (
-                  <ul className="list-disc space-y-0.5 pl-4 text-xs text-ink-muted">
+                  <ul className="list-disc space-y-0.5 pl-4 text-sm leading-relaxed text-ink-muted">
                     {current.key_points.map((k) => (
                       <li key={k}>{k}</li>
                     ))}
                   </ul>
                 )}
-                <p className="text-[11px] text-ink-faint">정리본은 원본과 분리된 불변 레코드입니다. 재생성해도 이전 정리본은 남습니다.</p>
+                <p className="text-sm text-ink-faint">정리본은 원본과 분리된 불변 레코드입니다. 재생성해도 이전 정리본은 남습니다.</p>
               </div>
             );
           }}

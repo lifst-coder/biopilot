@@ -18,7 +18,7 @@ export function DatasetPreviewTable({ datasetId }: { datasetId: number }) {
             }))}
           />
           {p.truncated && (
-            <p className="mt-1 text-[11px] text-ink-faint">
+            <p className="mt-1 text-xs text-ink-faint">
               전체 {p.dataset.row_count}행 중 {p.rows.length}행 표시 · sha256 {p.dataset.sha256.slice(0, 12)}…
             </p>
           )}

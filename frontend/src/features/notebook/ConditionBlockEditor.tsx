@@ -49,7 +49,7 @@ export function ConditionBlockEditor({ fields, value, onChange, issues }: Props)
           const hasError = fieldIssues.some((i) => i.level === "error");
           return (
             <div key={f.key}>
-              <label htmlFor={id} className="mb-0.5 flex items-center gap-1 text-[11px] text-ink-muted">
+              <label htmlFor={id} className="mb-0.5 flex items-center gap-1 text-xs text-ink-muted">
                 {f.label}
               </label>
               {f.value_type === "choice" ? (
@@ -79,11 +79,11 @@ export function ConditionBlockEditor({ fields, value, onChange, issues }: Props)
                       set(f.key, f.value_type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value)
                     }
                   />
-                  {f.unit && <span className="w-8 shrink-0 font-mono text-[11px] text-ink-faint">{f.unit}</span>}
+                  {f.unit && <span className="w-8 shrink-0 font-mono text-xs text-ink-faint">{f.unit}</span>}
                 </div>
               )}
               {fieldIssues.map((i) => (
-                <p key={i.code} className={`mt-0.5 text-[11px] ${i.level === "error" ? "text-crit" : "text-warn"}`}>
+                <p key={i.code} className={`mt-0.5 text-xs ${i.level === "error" ? "text-crit" : "text-warn"}`}>
                   {i.message}
                 </p>
               ))}
@@ -93,7 +93,7 @@ export function ConditionBlockEditor({ fields, value, onChange, issues }: Props)
       </div>
 
       <div>
-        <h4 className="mb-1 text-[11px] font-semibold text-ink-muted">추가 조건 (자유 키 · 단위는 키 이름에, 예: centrifuge_rpm)</h4>
+        <h4 className="mb-1 text-xs font-semibold text-ink-muted">추가 조건 (자유 키 · 단위는 키 이름에, 예: centrifuge_rpm)</h4>
         {custom.length > 0 && (
           <ul className="mb-2 space-y-1">
             {custom.map(([k, v]) => (

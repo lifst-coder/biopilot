@@ -26,7 +26,7 @@ const QUESTION = TABS.find((t) => t.path === "/notebook")?.question ?? "";
 function RecordDetails({ exp }: { exp: ExperimentOut }) {
   return (
     <div className="space-y-2">
-      <h2 className="px-1 pt-2 text-xs font-semibold text-ink-muted">자세히</h2>
+      <h2 className="px-1 pt-4 text-sm font-semibold text-ink-muted">자세히</h2>
       <Disclosure title="데이터셋 (CSV)" summary={exp.dataset_kinds.length ? exp.dataset_kinds.join(" · ") : "없음"}>
         <DatasetsPanel experimentId={exp.id} />
       </Disclosure>
@@ -114,18 +114,18 @@ export function NotebookPage() {
                   <Card title="실험이 저장되었습니다" actions={<button type="button" className="bp-btn-ghost px-2 py-0.5 text-xs" onClick={() => setNotice(null)}>닫기</button>}>
                     {notice.warnings.length > 0 && (
                       <>
-                        <p className="mb-1 text-xs text-ink-muted">조건 템플릿 경고 (저장은 완료):</p>
+                        <p className="mb-1 text-sm text-ink-muted">조건 템플릿 경고 (저장은 완료):</p>
                         <IssueList issues={notice.warnings} />
                       </>
                     )}
                     {notice.failures.length > 0 ? (
-                      <ul className="mt-2 space-y-0.5 text-xs text-crit">
+                      <ul className="mt-2 space-y-0.5 text-sm text-crit">
                         {notice.failures.map((f) => (
                           <li key={f}>업로드 실패 — {f} (아래 데이터셋/첨부에서 다시 올리세요)</li>
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-xs text-ok">모든 파일이 업로드되었습니다.</p>
+                      <p className="text-sm text-ok">모든 파일이 업로드되었습니다.</p>
                     )}
                   </Card>
                 )}
@@ -170,9 +170,9 @@ export function NotebookPage() {
                     </div>
                   }
                 >
-                  <p className="-mt-1 mb-3 text-[11px] text-ink-faint">이 화면의 질문 · {QUESTION}</p>
+                  <p className="-mt-1 mb-4 text-sm text-ink-muted">이 화면의 질문 · {QUESTION}</p>
                   <ExperimentHeadline exp={exp} experiments={experiments} onCompare={() => setDialog("compare")} />
-                  <p className="mt-3 text-[11px] text-ink-faint">
+                  <p className="mt-4 text-sm text-ink-faint">
                     원본 메모·조건 블록·CSV는 저장 후 변경되지 않습니다. 정정은 보충 기록·재업로드·메타데이터 수정(제목/작성자)으로
                     새 레코드를 남깁니다.
                   </p>

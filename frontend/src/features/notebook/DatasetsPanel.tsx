@@ -38,7 +38,7 @@ export function DatasetsPanel({ experimentId }: { experimentId: number }) {
                   <li
                     key={d.id}
                     className={clsx(
-                      "flex flex-wrap items-center gap-2 rounded-md border px-2 py-1 text-xs",
+                      "flex flex-wrap items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm",
                       selected === d.id ? "border-brand bg-brand-soft" : "border-border",
                       d.superseded_by_dataset_id && "opacity-60",
                     )}

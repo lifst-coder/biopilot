@@ -13,16 +13,16 @@ export function AddendumSection({ exp }: { exp: ExperimentOut }) {
   return (
     <div className="mt-3">
       <div className="mb-1 flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-ink-muted">보충 기록 ({exp.addenda?.length ?? 0})</h3>
+        <h3 className="text-sm font-semibold text-ink-muted">보충 기록 ({exp.addenda?.length ?? 0})</h3>
         <button type="button" className="bp-btn-ghost px-2 py-0.5 text-xs" onClick={() => setOpen(!open)}>
           {open ? "닫기" : "보충 기록 추가"}
         </button>
       </div>
       <ul className="space-y-1">
         {(exp.addenda ?? []).map((a) => (
-          <li key={a.id} className="rounded-md border-l-2 border-warn bg-warn-soft/40 px-2 py-1 text-xs">
+          <li key={a.id} className="rounded-md border-l-2 border-warn bg-warn-soft/40 px-3 py-2 text-sm">
             <p className="whitespace-pre-wrap">{a.note}</p>
-            <p className="text-[11px] text-ink-faint">
+            <p className="text-xs text-ink-faint">
               {a.author || "작성자 미기재"} · {formatDateTime(a.created_at)}
             </p>
           </li>

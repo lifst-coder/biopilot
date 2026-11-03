@@ -106,7 +106,7 @@ export function CompareModal({ experiments, current, defaultBaseline, onClose }:
                     메모 차이 {showNote ? "접기" : "보기"} ({d.note_diff.filter((l) => l.op !== "equal").length}줄 변경)
                   </button>
                   {showNote && (
-                    <pre className="mt-1 max-h-60 overflow-auto rounded-md bg-subtle p-2 font-mono text-[11px] leading-relaxed">
+                    <pre className="mt-1 max-h-60 overflow-auto rounded-md bg-subtle p-2 font-mono text-xs leading-relaxed">
                       {d.note_diff.map((line, i) => (
                         <div
                           key={i}

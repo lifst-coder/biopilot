@@ -51,7 +51,7 @@ function VersionHistory({ experimentId }: { experimentId: number }) {
       {(h) => (
         <ol className="relative space-y-3 border-l border-border pl-4" aria-label="버전 이력">
           {h.entries.map((e) => (
-            <li key={`${e.ref_type}-${e.ref_id}`} className="text-xs">
+            <li key={`${e.ref_type}-${e.ref_id}`} className="text-sm">
               <span
                 className={clsx(
                   "absolute -left-[5px] mt-1 h-2.5 w-2.5 rounded-full",
@@ -78,7 +78,7 @@ function VersionHistory({ experimentId }: { experimentId: number }) {
               )}
             </li>
           ))}
-          <li className="text-[11px] text-ink-faint">현재 메타데이터 버전 v{h.current_revision}</li>
+          <li className="text-xs text-ink-faint">현재 메타데이터 버전 v{h.current_revision}</li>
         </ol>
       )}
     </QueryState>
@@ -127,7 +127,7 @@ export function AuditLogViewer({ experimentId }: { experimentId: number }) {
                   header: "내용",
                   render: (e) =>
                     open === e.id ? (
-                      <pre className="max-w-md whitespace-pre-wrap break-all font-mono text-[10px]">{JSON.stringify(e.payload, null, 2)}</pre>
+                      <pre className="max-w-md whitespace-pre-wrap break-all font-mono text-xs">{JSON.stringify(e.payload, null, 2)}</pre>
                     ) : (
                       <span className="text-ink-faint">{Object.keys(e.payload).slice(0, 4).join(", ")} ▸</span>
                     ),

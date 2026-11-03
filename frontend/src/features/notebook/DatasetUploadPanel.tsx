@@ -141,7 +141,7 @@ export function DatasetUploadPanel({ experimentId, supersedes = null, onDone }: 
         )}
       </div>
       {mode === "import" && formats.data && (
-        <p className="text-[11px] text-ink-faint">
+        <p className="text-xs text-ink-faint">
           예시 헤더: <span className="font-mono">{formats.data.find((f) => f.name === format)?.example_header.join(", ")}</span>
         </p>
       )}

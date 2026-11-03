@@ -53,7 +53,7 @@ export function ExperimentList({ experiments, selectedId, onSelect, onNew }: Pro
           ))}
         </select>
       </div>
-      <ul className="space-y-1" aria-label="실험">
+      <ul className="max-h-72 space-y-1 overflow-y-auto lg:max-h-none lg:overflow-visible" aria-label="실험">
         {rows.map((e) => (
           <li key={e.id}>
             <button
@@ -61,7 +61,7 @@ export function ExperimentList({ experiments, selectedId, onSelect, onNew }: Pro
               onClick={() => onSelect(e.id)}
               aria-current={e.id === selectedId}
               className={clsx(
-                "w-full rounded-md px-2 py-1.5 text-left text-xs",
+                "w-full rounded-md px-2 py-1.5 text-left text-sm",
                 e.id === selectedId ? "bg-brand-soft text-brand-strong" : "hover:bg-subtle",
               )}
             >
@@ -77,9 +77,9 @@ export function ExperimentList({ experiments, selectedId, onSelect, onNew }: Pro
             </button>
           </li>
         ))}
-        {rows.length === 0 && <li className="py-2 text-center text-xs text-ink-faint">일치하는 실험 없음</li>}
+        {rows.length === 0 && <li className="py-2 text-center text-sm text-ink-faint">일치하는 실험 없음</li>}
       </ul>
-      <p className="mt-2 text-[11px] text-ink-faint">
+      <p className="mt-2 text-xs text-ink-faint">
         {rows.length}/{experiments.length}개
       </p>
     </Card>

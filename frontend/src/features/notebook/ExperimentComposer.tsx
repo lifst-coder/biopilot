@@ -265,7 +265,7 @@ export function ExperimentComposer({ projectId, experiments, source: initial, on
           <div className="mb-1 flex items-center gap-2">
             <h3 className="text-xs font-semibold text-ink-muted">조건 블록</h3>
             {check.data && (
-              <span className="text-[11px] text-ink-faint">
+              <span className="text-xs text-ink-faint">
                 템플릿 {check.data.template_source === "default" ? "기본" : `v${check.data.template_version}`} 기준 검증
               </span>
             )}

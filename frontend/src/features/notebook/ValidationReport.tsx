@@ -26,7 +26,7 @@ export function ValidationReport({ report }: { report: DatasetValidation }) {
             }))}
           />
           {report.row_count > report.preview_rows.length && (
-            <p className="mt-1 text-[11px] text-ink-faint">
+            <p className="mt-1 text-xs text-ink-faint">
               미리보기 {report.preview_rows.length}행 / 전체 {report.row_count}행
             </p>
           )}
