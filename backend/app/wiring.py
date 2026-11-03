@@ -353,6 +353,7 @@ class PartnerFactProvider(FactProvider):
 
 
 def install() -> None:
-    """Register every fact provider with Memory (idempotent)."""
+    """Register every fact provider with Memory and its write-time index sync (idempotent)."""
     memory.register_fact_provider(AnalysisFactProvider())
     memory.register_fact_provider(PartnerFactProvider())
+    memory.install_search_index_sync()

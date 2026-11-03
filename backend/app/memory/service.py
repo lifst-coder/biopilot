@@ -447,8 +447,19 @@ def diff(session: Session, a_id: int, b_id: int) -> ExperimentDiff:
 # ----------------------------------------------------------------- search
 
 
+def install_search_index_sync() -> None:
+    """Index new audit events whenever a transaction that recorded them commits.
+
+    Called by the composition root; makes ``GET`` search/recall read-only.
+    """
+    search_index.install_sync_on_commit()
+
+
 def search(session: Session, project_id: int, query: str, limit: int = 50) -> list[SearchHit]:
-    """Ranked full-text search over notes, conditions, datasets, digests, critiques, notes."""
+    """Ranked full-text search over notes, conditions, datasets, digests, critiques, notes.
+
+    Read-only (no DDL, no index writes); see :mod:`app.memory.search_index`.
+    """
     return search_index.search(session, project_id, query, limit)
 
 
@@ -457,6 +468,8 @@ def sync_search_index(
 ) -> SearchIndexSync:
     """Bring the derived FTS index up to date (write path: start-up, explicit POST).
 
+    Committing writes already index themselves (:func:`install_search_index_sync`), so
+    this catches up databases indexed before that hook or after a failed sync.
     Search itself is read-only and also finds records added after the last sync, so
     calling this only keeps searches fast; it never changes what they return.
     """

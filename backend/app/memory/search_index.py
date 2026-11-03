@@ -11,7 +11,8 @@ same transaction as the index rows. Other databases use an in-Python scan of the
 documents.
 
 Reads never write (ISSUES P1-7). :func:`sync` — DDL, watermark upsert, index rows — runs
-only from write paths: application start-up (after seeding) and
+only from write paths: the commit of any transaction that recorded audit events (same
+transaction, :func:`install_sync_on_commit`), application start-up (after seeding) and
 ``POST /api/memory/search-index/sync``. :func:`search` is read-only: it queries the FTS
 rows up to the watermark and scans the audit events *after* the watermark in Python, so
 records added since the last sync are still found and their stale index rows are
@@ -20,10 +21,11 @@ ignored. Without an FTS table it scans everything in Python.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import delete, event, select, text
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
@@ -35,6 +37,8 @@ from app.memory.conditions import conditions, display, label
 from app.memory.facts import dataset_vocab
 from app.memory.models import ExperimentDigest, IndexState, KnowledgeNote
 from app.memory.schemas import SearchField, SearchHit, SourceRef
+
+logger = logging.getLogger(__name__)
 
 FTS_TABLE = "memory_search_fts"
 _DDL = (
@@ -200,15 +204,36 @@ def is_sqlite(session: Session) -> bool:
     return session.get_bind().dialect.name == "sqlite"
 
 
+def table_exists(session: Session) -> bool:
+    """Whether the FTS5 table exists (read-only check)."""
+    return (
+        session.execute(
+            text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:n"), {"n": FTS_TABLE}
+        ).first()
+        is not None
+    )
+
+
+def ensure_table(session: Session) -> bool:
+    """Create the FTS5 table if missing (write path only). Returns ``True`` if created.
+
+    A freshly created table is empty, so every project's watermark is reset with it —
+    otherwise projects indexed into a dropped table would stay invisible to FTS.
+    """
+    if table_exists(session):
+        return False
+    session.execute(text(_DDL))
+    session.execute(delete(IndexState).where(IndexState.name.like("search:%")))
+    return True
+
+
 def sync(session: Session, project_id: int) -> int:
     """Index audit events newer than the stored watermark. Returns events applied.
 
-    Writes (DDL, watermark, index rows): call it from a write path, never from a GET.
+    Writes (DDL, watermark, index rows): called from write paths only — the commit hook
+    (:func:`install_sync_on_commit`), start-up and ``POST /search-index/sync`` — never a GET.
     """
-    exists = session.execute(
-        text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:n"), {"n": FTS_TABLE}
-    ).first()
-    session.execute(text(_DDL))
+    ensure_table(session)
     name = f"search:{project_id}"
     # Upsert first: this write takes SQLite's write lock before the watermark is read,
     # so concurrent first searches neither collide on the row nor index twice.
@@ -217,8 +242,6 @@ def sync(session: Session, project_id: int) -> int:
     )
     state = session.get(IndexState, name, populate_existing=True)
     assert state is not None
-    if not exists:
-        state.last_event_id = 0
     events = _events(session, project_id, state.last_event_id)
     for ev in events:
         doc_key = f"{ev.entity_type}:{ev.entity_id}"
@@ -293,12 +316,9 @@ def _query_python(session: Session, project_id: int, terms: list[str]) -> list[t
 
 def indexed_watermark(session: Session, project_id: int) -> int | None:
     """Last audit event id in the FTS index, ``None`` when there is no FTS table (read-only)."""
-    exists = session.execute(
-        text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:n"), {"n": FTS_TABLE}
-    ).first()
-    if not exists:
+    if not table_exists(session):
         return None
-    state = session.get(IndexState, f"search:{project_id}")
+    state = session.get(IndexState, f"search:{project_id}", populate_existing=True)
     return state.last_event_id if state is not None else 0
 
 
@@ -334,3 +354,58 @@ def search(session: Session, project_id: int, query: str, limit: int = 50) -> li
         h.project_id = project_id
     hits.sort(key=lambda h: (-h.score, h.experiment_id, h.field, h.snippet))
     return hits[:limit]
+
+
+# ------------------------------------------------------- write-time sync
+
+_DIRTY = "memory.search_index.dirty_projects"
+
+
+def _after_flush(session: Session, _context: Any) -> None:
+    """Remember which projects got new audit events in this transaction."""
+    projects = {
+        obj.project_id
+        for obj in session.new
+        if isinstance(obj, AuditEvent) and obj.project_id is not None
+    }
+    if projects:
+        session.info.setdefault(_DIRTY, set()).update(projects)
+
+
+def _before_commit(session: Session) -> None:
+    """Index the projects written in this transaction, inside the same transaction.
+
+    Runs in a SAVEPOINT — safe here because audit rows were already inserted, so the
+    outer transaction is open. If indexing fails, the original write still commits and
+    the index merely stays behind its watermark; searches cover that gap by scanning.
+    """
+    if session.new or session.dirty:
+        session.flush()  # audit rows added without a flush still mark their project
+    projects: set[int] = session.info.pop(_DIRTY, set())
+    if not projects or not is_sqlite(session):
+        return
+    try:
+        with session.begin_nested():
+            for pid in sorted(projects):
+                sync(session, pid)
+    except Exception:  # derived data must never block an original record
+        logger.exception("search index sync failed; searches will scan pending events")
+
+
+def _after_rollback(session: Session) -> None:
+    session.info.pop(_DIRTY, None)
+
+
+def install_sync_on_commit() -> None:
+    """Index new audit events when the transaction that recorded them commits (idempotent).
+
+    Keeps the FTS index current without any GET writing, so the read path's scan of
+    events after the watermark stays empty in normal operation.
+    """
+    for name, fn in (
+        ("after_flush", _after_flush),
+        ("before_commit", _before_commit),
+        ("after_rollback", _after_rollback),
+    ):
+        if not event.contains(Session, name, fn):
+            event.listen(Session, name, fn)

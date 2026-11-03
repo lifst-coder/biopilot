@@ -56,21 +56,27 @@ def _sqlite_changes(session: Session) -> int:
 def test_search_and_recall_never_write(session: Session, seeded: dict[str, int]) -> None:
     """ISSUES P1-7: GET search/recall run no DDL, no watermark upsert, no index rows."""
     pid = seeded["project"]
+    watermark = search_index.indexed_watermark(session, pid)  # the seed commit indexed it
+    assert watermark is not None and watermark > 0
     before = _sqlite_changes(session)
-    assert service.search(session, pid, "gcb")  # no FTS table yet → Python scan
+    assert service.search(session, pid, "gcb")
     service.search_all(session, "회수율")
     service.recall(session, pid, "carbendazim")
     service.recall_all(session, "GCB")
     assert _sqlite_changes(session) == before
+    session.execute(text(f"DROP TABLE {search_index.FTS_TABLE}"))
+    before = _sqlite_changes(session)
+    assert service.search(session, pid, "gcb")  # no FTS table → Python scan, still no DDL
+    service.recall(session, pid, "carbendazim")
+    assert _sqlite_changes(session) == before
     assert search_index.indexed_watermark(session, pid) is None
-    assert session.get(IndexState, f"search:{pid}") is None
     assert not session.new and not session.dirty
 
 
 def test_index_is_incremental_and_transactional(session: Session, seeded: dict[str, int]) -> None:
     pid = seeded["project"]
-    synced = service.sync_search_index(session)
-    assert synced.indexed_events > 0 and pid in synced.project_ids
+    synced = service.sync_search_index(session)  # the seed commit already indexed it
+    assert synced.indexed_events == 0 and pid in synced.project_ids
     state = session.get(IndexState, f"search:{pid}")
     assert state is not None and state.last_event_id > 0
     assert search_index.sync(session, pid) == 0
