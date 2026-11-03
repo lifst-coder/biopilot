@@ -790,6 +790,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/memory/failures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Failures
+         * @description Failure archive: failures by type and repeated-failure patterns (stored QC only).
+         */
+        get: operations["memory_failure_archive"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/memory/projects/{project_id}/ask": {
         parameters: {
             query?: never;
@@ -946,6 +966,46 @@ export interface paths {
          * @description Chronological experiments with changed keys versus parent.
          */
         get: operations["memory_timeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memory/recall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recall All
+         * @description Cross-project recall (experiments ranked across projects, facets per project).
+         */
+        get: operations["memory_recall_all"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memory/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search All
+         * @description Cross-project full-text search; each hit carries ``project_id``.
+         */
+        get: operations["memory_search_all"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3062,6 +3122,149 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** FailureArchive */
+        FailureArchive: {
+            /**
+             * Analyzed Count
+             * @description Experiments with at least one stored result
+             */
+            analyzed_count: number;
+            /** Experiment Count */
+            experiment_count: number;
+            /** Failure Count */
+            failure_count: number;
+            /**
+             * Failures
+             * @description Newest first
+             */
+            failures: components["schemas"]["FailureRecord"][];
+            /** Patterns */
+            patterns: components["schemas"]["FailurePattern"][];
+            /** Project Ids */
+            project_ids: number[];
+            /** Types */
+            types: components["schemas"]["FailureType"][];
+        };
+        /**
+         * FailurePattern
+         * @description Two or more connected failures — the same failure repeated.
+         */
+        FailurePattern: {
+            /** Codes */
+            codes: string[];
+            /**
+             * Experiment Ids
+             * @description Chronological
+             */
+            experiment_ids: number[];
+            /** Id */
+            id: string;
+            /** Links */
+            links: components["schemas"]["FailurePatternLink"][];
+            /** Project Ids */
+            project_ids: number[];
+            /** @description First later child of a member with a stored recovery and no critical flag */
+            resolution?: components["schemas"]["ExperimentSummary"] | null;
+            /**
+             * Resolution Changes
+             * @default []
+             */
+            resolution_changes: components["schemas"]["ConditionChange"][];
+            /**
+             * Resolution Qc
+             * @description pass | warning
+             */
+            resolution_qc?: string | null;
+            resolution_recovery?: components["schemas"]["ResultFact"] | null;
+            /**
+             * Shared Analytes
+             * @description Analytes that failed in at least two members
+             */
+            shared_analytes: string[];
+        };
+        /**
+         * FailurePatternLink
+         * @description Why two failures belong to one pattern.
+         */
+        FailurePatternLink: {
+            /** From Experiment Id */
+            from_experiment_id: number;
+            /** Key */
+            key?: string | null;
+            /**
+             * Kind
+             * @description retry: child of a failed experiment failed again; same_condition: a later failure kept the condition value introduced by an earlier one and missed the same analyte
+             * @enum {string}
+             */
+            kind: "retry" | "same_condition";
+            /** Label */
+            label?: string | null;
+            /**
+             * Shared Analytes
+             * @default []
+             */
+            shared_analytes: string[];
+            /** To Experiment Id */
+            to_experiment_id: number;
+            /** Value */
+            value?: unknown;
+        };
+        /**
+         * FailureRecord
+         * @description One experiment whose stored QC has a critical flag (a failure), with its trigger.
+         *
+         *     The trigger is what changed versus the parent experiment's condition block; the
+         *     failure type is derived from it deterministically (see ``memory.failures``).
+         */
+        FailureRecord: {
+            /**
+             * Changes
+             * @description Condition changes versus the parent
+             */
+            changes: components["schemas"]["ConditionChange"][];
+            experiment: components["schemas"]["ExperimentSummary"];
+            /** Failed Analytes */
+            failed_analytes: string[];
+            /**
+             * Failed Checks
+             * @description Critical QC flag codes
+             */
+            failed_checks: string[];
+            parent?: components["schemas"]["ExperimentSummary"] | null;
+            /**
+             * Parent Failed
+             * @default false
+             */
+            parent_failed: boolean;
+            /** Project Name */
+            project_name: string;
+            /** @description Stored mean recovery (copied) */
+            recovery?: components["schemas"]["ResultFact"] | null;
+            /**
+             * Sources
+             * @description Stored QC flags of the failure
+             * @default []
+             */
+            sources: components["schemas"]["app__memory__schemas__SourceRef"][];
+            /**
+             * Type Id
+             * @description initial | no_change | multi_change | change:<condition key>
+             */
+            type_id: string;
+            /** Type Label */
+            type_label: string;
+        };
+        /** FailureType */
+        FailureType: {
+            /** Count */
+            count: number;
+            /** Experiment Ids */
+            experiment_ids: number[];
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        };
         /** Finding */
         Finding: {
             /** Body */
@@ -4056,6 +4259,12 @@ export interface components {
         RecallBundle: {
             /** Experiments */
             experiments: components["schemas"]["RecallExperiment"][];
+            /**
+             * Project Ids
+             * @description Projects searched (one for project recall, several for cross-project)
+             * @default []
+             */
+            project_ids: number[];
             /** Protocols */
             protocols: components["schemas"]["ProtocolGroup"][];
             /** Query */
@@ -4292,6 +4501,11 @@ export interface components {
                 number,
                 number
             ][];
+            /**
+             * Project Id
+             * @description Project of the experiment (set by project and cross-project search)
+             */
+            project_id?: number | null;
             /**
              * Score
              * @default 0
@@ -7271,6 +7485,65 @@ export interface operations {
             };
         };
     };
+    memory_failure_archive: {
+        parameters: {
+            query?: {
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FailureArchive"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     memory_ask: {
         parameters: {
             query?: never;
@@ -7777,6 +8050,128 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TimelineEntry"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_recall_all: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecallBundle"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_search_all: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchHit"][];
                 };
             };
             /** @description Bad Request */

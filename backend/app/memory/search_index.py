@@ -285,5 +285,7 @@ def search(session: Session, project_id: int, query: str, limit: int = 50) -> li
     else:  # pragma: no cover - exercised only on non-SQLite deployments
         found = _query_python(session, project_id, terms)
     hits = [_hit(d, codes.get(d.experiment_id, "?"), terms, s) for d, s in found]
+    for h in hits:
+        h.project_id = project_id
     hits.sort(key=lambda h: (-h.score, h.experiment_id, h.field, h.snippet))
     return hits[:limit]

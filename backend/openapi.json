@@ -4303,6 +4303,343 @@
         "title": "ExperimentSummary",
         "type": "object"
       },
+      "FailureArchive": {
+        "properties": {
+          "analyzed_count": {
+            "description": "Experiments with at least one stored result",
+            "title": "Analyzed Count",
+            "type": "integer"
+          },
+          "experiment_count": {
+            "title": "Experiment Count",
+            "type": "integer"
+          },
+          "failure_count": {
+            "title": "Failure Count",
+            "type": "integer"
+          },
+          "failures": {
+            "description": "Newest first",
+            "items": {
+              "$ref": "#/components/schemas/FailureRecord"
+            },
+            "title": "Failures",
+            "type": "array"
+          },
+          "patterns": {
+            "items": {
+              "$ref": "#/components/schemas/FailurePattern"
+            },
+            "title": "Patterns",
+            "type": "array"
+          },
+          "project_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Project Ids",
+            "type": "array"
+          },
+          "types": {
+            "items": {
+              "$ref": "#/components/schemas/FailureType"
+            },
+            "title": "Types",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_ids",
+          "experiment_count",
+          "analyzed_count",
+          "failure_count",
+          "types",
+          "patterns",
+          "failures"
+        ],
+        "title": "FailureArchive",
+        "type": "object"
+      },
+      "FailurePattern": {
+        "description": "Two or more connected failures — the same failure repeated.",
+        "properties": {
+          "codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Codes",
+            "type": "array"
+          },
+          "experiment_ids": {
+            "description": "Chronological",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Experiment Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/FailurePatternLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "project_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Project Ids",
+            "type": "array"
+          },
+          "resolution": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First later child of a member with a stored recovery and no critical flag"
+          },
+          "resolution_changes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ConditionChange"
+            },
+            "title": "Resolution Changes",
+            "type": "array"
+          },
+          "resolution_qc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "pass | warning",
+            "title": "Resolution Qc"
+          },
+          "resolution_recovery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultFact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shared_analytes": {
+            "description": "Analytes that failed in at least two members",
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared Analytes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "experiment_ids",
+          "codes",
+          "project_ids",
+          "shared_analytes",
+          "links"
+        ],
+        "title": "FailurePattern",
+        "type": "object"
+      },
+      "FailurePatternLink": {
+        "description": "Why two failures belong to one pattern.",
+        "properties": {
+          "from_experiment_id": {
+            "title": "From Experiment Id",
+            "type": "integer"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "kind": {
+            "description": "retry: child of a failed experiment failed again; same_condition: a later failure kept the condition value introduced by an earlier one and missed the same analyte",
+            "enum": [
+              "retry",
+              "same_condition"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "shared_analytes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared Analytes",
+            "type": "array"
+          },
+          "to_experiment_id": {
+            "title": "To Experiment Id",
+            "type": "integer"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "kind",
+          "from_experiment_id",
+          "to_experiment_id"
+        ],
+        "title": "FailurePatternLink",
+        "type": "object"
+      },
+      "FailureRecord": {
+        "description": "One experiment whose stored QC has a critical flag (a failure), with its trigger.\n\nThe trigger is what changed versus the parent experiment's condition block; the\nfailure type is derived from it deterministically (see ``memory.failures``).",
+        "properties": {
+          "changes": {
+            "description": "Condition changes versus the parent",
+            "items": {
+              "$ref": "#/components/schemas/ConditionChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "experiment": {
+            "$ref": "#/components/schemas/ExperimentSummary"
+          },
+          "failed_analytes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Analytes",
+            "type": "array"
+          },
+          "failed_checks": {
+            "description": "Critical QC flag codes",
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Checks",
+            "type": "array"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "parent_failed": {
+            "default": false,
+            "title": "Parent Failed",
+            "type": "boolean"
+          },
+          "project_name": {
+            "title": "Project Name",
+            "type": "string"
+          },
+          "recovery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResultFact"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stored mean recovery (copied)"
+          },
+          "sources": {
+            "default": [],
+            "description": "Stored QC flags of the failure",
+            "items": {
+              "$ref": "#/components/schemas/app__memory__schemas__SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "type_id": {
+            "description": "initial | no_change | multi_change | change:<condition key>",
+            "title": "Type Id",
+            "type": "string"
+          },
+          "type_label": {
+            "title": "Type Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment",
+          "project_name",
+          "type_id",
+          "type_label",
+          "failed_checks",
+          "failed_analytes",
+          "changes"
+        ],
+        "title": "FailureRecord",
+        "type": "object"
+      },
+      "FailureType": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "experiment_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Experiment Ids",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "count",
+          "experiment_ids"
+        ],
+        "title": "FailureType",
+        "type": "object"
+      },
       "Finding": {
         "properties": {
           "body": {
@@ -6688,6 +7025,15 @@
             "title": "Experiments",
             "type": "array"
           },
+          "project_ids": {
+            "default": [],
+            "description": "Projects searched (one for project recall, several for cross-project)",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Project Ids",
+            "type": "array"
+          },
           "protocols": {
             "items": {
               "$ref": "#/components/schemas/ProtocolGroup"
@@ -7406,6 +7752,18 @@
             },
             "title": "Highlights",
             "type": "array"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Project of the experiment (set by project and cross-project search)",
+            "title": "Project Id"
           },
           "score": {
             "default": 0.0,
@@ -11743,6 +12101,91 @@
         ]
       }
     },
+    "/api/memory/failures": {
+      "get": {
+        "description": "Failure archive: failures by type and repeated-failure patterns (stored QC only).",
+        "operationId": "memory_failure_archive",
+        "parameters": [
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FailureArchive"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Failures",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
     "/api/memory/projects/{project_id}/ask": {
       "post": {
         "description": "Question answering with evidence fragments (rules) or a grounded summary (Claude).",
@@ -12570,6 +13013,226 @@
           }
         },
         "summary": "Timeline",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/recall": {
+      "get": {
+        "description": "Cross-project recall (experiments ranked across projects, facets per project).",
+        "operationId": "memory_recall_all",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecallBundle"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recall All",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/search": {
+      "get": {
+        "description": "Cross-project full-text search; each hit carries ``project_id``.",
+        "operationId": "memory_search_all",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SearchHit"
+                  },
+                  "title": "Response Memory Search All",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search All",
         "tags": [
           "memory"
         ]

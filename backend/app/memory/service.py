@@ -23,6 +23,7 @@ from app.core.errors import NotFoundError, ValidationFailedError
 from app.core.llm import LLMGateway, get_gateway
 from app.eln import service as eln
 from app.eln.schemas import CONDITION_FIELD_LABELS, ExperimentOut, ExperimentSummary
+from app.memory import failures as failure_archive_mod
 from app.memory import knowledge_graph as kg
 from app.memory import ports, search_index
 from app.memory.conditions import (
@@ -51,6 +52,7 @@ from app.memory.schemas import (
     ExperimentDiff,
     Facet,
     FactProvider,
+    FailureArchive,
     GraphEdge,
     GraphNode,
     GraphRelation,
@@ -87,6 +89,7 @@ __all__ = [
     "create_knowledge_note",
     "diff",
     "digest_fingerprint",
+    "failure_archive",
     "get_digest",
     "get_graph",
     "get_knowledge_graph",
@@ -95,10 +98,12 @@ __all__ = [
     "list_digests",
     "list_knowledge_notes",
     "recall",
+    "recall_all",
     "register_fact_provider",
     "registered_fact_providers",
     "rules_digest",
     "search",
+    "search_all",
     "similar_experiments",
     "unregister_fact_provider",
 ]
@@ -445,6 +450,31 @@ def search(session: Session, project_id: int, query: str, limit: int = 50) -> li
     return search_index.search(session, project_id, query, limit)
 
 
+def _project_ids(session: Session, project_ids: Iterable[int] | None) -> list[int]:
+    known = [p.id for p in eln.list_projects(session)]
+    if project_ids is None:
+        return known
+    wanted = set(project_ids)
+    missing = sorted(wanted - set(known))
+    if missing:
+        raise NotFoundError(f"project {missing[0]} not found")
+    return [p for p in known if p in wanted]
+
+
+def search_all(
+    session: Session, query: str, limit: int = 50, project_ids: Iterable[int] | None = None
+) -> list[SearchHit]:
+    """Cross-project search: every project's ranked hits merged by score.
+
+    Each hit carries ``project_id`` so the UI can say which project it came from.
+    """
+    hits: list[SearchHit] = []
+    for pid in _project_ids(session, project_ids):
+        hits.extend(search_index.search(session, pid, query, limit))
+    hits.sort(key=lambda h: (-h.score, h.project_id or 0, h.experiment_id, h.field, h.snippet))
+    return hits[:limit]
+
+
 _PARTICLES = tuple(
     sorted(
         (
@@ -669,9 +699,63 @@ def recall(session: Session, project_id: int, query: str, limit: int = 10) -> Re
                     results.append(r)
             elif r.analyte is None:
                 results.append(r)
+    for x in experiments:
+        for h in x.reasons:
+            h.project_id = project_id
     return RecallBundle(
-        query=query, terms=matched, experiments=experiments, protocols=protocols, results=results
+        query=query,
+        terms=matched,
+        experiments=experiments,
+        protocols=protocols,
+        results=results,
+        project_ids=[project_id],
     )
+
+
+def recall_all(
+    session: Session, query: str, limit: int = 10, project_ids: Iterable[int] | None = None
+) -> RecallBundle:
+    """Cross-project recall: :func:`recall` per project, merged.
+
+    Experiments are ranked by score across projects (``experiment.project_id`` names
+    the project); facets are classified against each project's own vocabulary and a
+    term keeps the first non-keyword facet it matched anywhere.
+    """
+    pids = _project_ids(session, project_ids)
+    bundles = [recall(session, pid, query, limit) for pid in pids]
+    terms: dict[str, MatchedTerm] = {}
+    for b in bundles:
+        for t in b.terms:
+            cur = terms.get(t.term)
+            if cur is None:
+                terms[t.term] = t.model_copy(deep=True)
+                continue
+            if cur.facet == "keyword" and t.facet != "keyword":
+                cur.facet = t.facet
+            cur.matches = sorted(set(cur.matches) | set(t.matches))
+    ranked = sorted(
+        (x for b in bundles for x in b.experiments),
+        key=lambda x: (-x.score, x.experiment.performed_on, x.experiment.id),
+    )[:limit]
+    kept = {x.experiment.id for x in ranked}
+    for x in ranked:
+        for h in x.reasons:
+            h.project_id = x.experiment.project_id
+    return RecallBundle(
+        query=query,
+        terms=list(terms.values()),
+        experiments=ranked,
+        protocols=[
+            p for b in bundles for p in b.protocols if any(i in kept for i in p.experiment_ids)
+        ],
+        results=[r for b in bundles for r in b.results if r.source.experiment_id in kept],
+        project_ids=pids,
+    )
+
+
+def failure_archive(session: Session, project_ids: Iterable[int] | None = None) -> FailureArchive:
+    """Failures (stored critical QC), their type and repeat patterns across projects."""
+    return failure_archive_mod.archive(session, _project_ids(session, project_ids))
 
 
 _FIELD_LABELS = {

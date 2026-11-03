@@ -280,6 +280,10 @@ class SearchHit(BaseModel):
         default=[], description="[start, end) character offsets of matches inside snippet"
     )
     source: SourceRef | None = None
+    project_id: int | None = Field(
+        default=None,
+        description="Project of the experiment (set by project and cross-project search)",
+    )
 
 
 Facet = Literal["strain", "sample", "condition", "analyte", "keyword"]
@@ -326,6 +330,10 @@ class RecallBundle(BaseModel):
     experiments: list[RecallExperiment]
     protocols: list[ProtocolGroup]
     results: list[ResultFact]
+    project_ids: list[int] = Field(
+        default=[],
+        description="Projects searched (one for project recall, several for cross-project)",
+    )
 
 
 class EvidenceFragment(BaseModel):
@@ -491,3 +499,81 @@ class FactProvider:
     def proposals(self, session: Session, project_id: int) -> list[ProposalFact]:
         """Stored proposals of a project (for ``tests_proposal`` edges)."""
         return []
+
+
+# ------------------------------------------------------- failure archive
+
+FailureTypeId = str
+PatternLinkKind = Literal["retry", "same_condition"]
+
+
+class FailureRecord(BaseModel):
+    """One experiment whose stored QC has a critical flag (a failure), with its trigger.
+
+    The trigger is what changed versus the parent experiment's condition block; the
+    failure type is derived from it deterministically (see ``memory.failures``).
+    """
+
+    experiment: ExperimentSummary
+    project_name: str
+    parent: ExperimentSummary | None = None
+    parent_failed: bool = False
+    type_id: FailureTypeId = Field(
+        description="initial | no_change | multi_change | change:<condition key>"
+    )
+    type_label: str
+    failed_checks: list[str] = Field(description="Critical QC flag codes")
+    failed_analytes: list[str]
+    changes: list[ConditionChange] = Field(description="Condition changes versus the parent")
+    recovery: ResultFact | None = Field(default=None, description="Stored mean recovery (copied)")
+    sources: list[SourceRef] = Field(default=[], description="Stored QC flags of the failure")
+
+
+class FailureType(BaseModel):
+    id: FailureTypeId
+    label: str
+    count: int
+    experiment_ids: list[int]
+
+
+class FailurePatternLink(BaseModel):
+    """Why two failures belong to one pattern."""
+
+    kind: PatternLinkKind = Field(
+        description="retry: child of a failed experiment failed again; same_condition: a later "
+        "failure kept the condition value introduced by an earlier one and missed the same analyte"
+    )
+    from_experiment_id: int
+    to_experiment_id: int
+    key: str | None = None
+    label: str | None = None
+    value: Any = None
+    shared_analytes: list[str] = []
+
+
+class FailurePattern(BaseModel):
+    """Two or more connected failures — the same failure repeated."""
+
+    id: str
+    experiment_ids: list[int] = Field(description="Chronological")
+    codes: list[str]
+    project_ids: list[int]
+    shared_analytes: list[str] = Field(description="Analytes that failed in at least two members")
+    links: list[FailurePatternLink]
+    resolution: ExperimentSummary | None = Field(
+        default=None,
+        description="First later child of a member with a stored recovery and no critical flag",
+    )
+    resolution_qc: str | None = Field(default=None, description="pass | warning")
+    resolution_changes: list[ConditionChange] = []
+    resolution_recovery: ResultFact | None = None
+
+
+class FailureArchive(BaseModel):
+    project_ids: list[int]
+    experiment_count: int
+    analyzed_count: int = Field(description="Experiments with at least one stored result")
+    failure_count: int
+    types: list[FailureType]
+    patterns: list[FailurePattern]
+    failures: list[FailureRecord] = Field(description="Newest first")

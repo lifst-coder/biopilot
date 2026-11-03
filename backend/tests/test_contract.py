@@ -23,6 +23,9 @@ QUERY_PARAMS: dict[str, dict[str, str | int]] = {
     "/api/memory/projects/{project_id}/search": {"q": "GCB"},
     "/api/memory/projects/{project_id}/recall": {"q": "GCB carbendazim"},
     "/api/memory/compare-conditions": {"ids": "1,2,7"},
+    "/api/memory/search": {"q": "GCB"},
+    "/api/memory/recall": {"q": "GCB carbendazim"},
+    "/api/analysis/records/conditions": {"key": "cleanup_sorbent"},
     "/api/partner/hypotheses": {"project_id": 1},
     "/api/partner/proposals": {"project_id": 1},
 }

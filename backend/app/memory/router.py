@@ -14,6 +14,7 @@ from app.memory.schemas import (
     ConditionMatrix,
     DigestOut,
     ExperimentDiff,
+    FailureArchive,
     GraphRelation,
     KGNodeType,
     KnowledgeGraph,
@@ -96,6 +97,40 @@ def recall(
 ) -> RecallBundle:
     """Experiments, protocols and stored results related to strain/sample/condition/analyte."""
     return service.recall(session, project_id, q, limit)
+
+
+_PROJECTS = Query(default=None, description="Restrict to these projects (default: every project)")
+
+
+@router.get("/search", response_model=list[SearchHit], operation_id="memory_search_all")
+def search_all(
+    q: str = Query(min_length=1, max_length=200),
+    limit: int = Query(default=50, ge=1, le=200),
+    project_id: list[int] | None = _PROJECTS,
+    session: Session = Depends(get_session),
+) -> list[SearchHit]:
+    """Cross-project full-text search; each hit carries ``project_id``."""
+    return service.search_all(session, q, limit, project_id)
+
+
+@router.get("/recall", response_model=RecallBundle, operation_id="memory_recall_all")
+def recall_all(
+    q: str = Query(min_length=1, max_length=200),
+    limit: int = Query(default=10, ge=1, le=50),
+    project_id: list[int] | None = _PROJECTS,
+    session: Session = Depends(get_session),
+) -> RecallBundle:
+    """Cross-project recall (experiments ranked across projects, facets per project)."""
+    return service.recall_all(session, q, limit, project_id)
+
+
+@router.get("/failures", response_model=FailureArchive, operation_id="memory_failure_archive")
+def failures(
+    project_id: list[int] | None = _PROJECTS,
+    session: Session = Depends(get_session),
+) -> FailureArchive:
+    """Failure archive: failures by type and repeated-failure patterns (stored QC only)."""
+    return service.failure_archive(session, project_id)
 
 
 @router.post("/projects/{project_id}/ask", response_model=MemoryAnswer, operation_id="memory_ask")
