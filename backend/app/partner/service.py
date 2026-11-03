@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.analysis import service as analysis
 from app.core.audit import Actor, record_event
 from app.core.errors import NotFoundError, ValidationFailedError
+from app.core.grounding import GroundingIndex, base_index
 from app.core.llm import LLMGateway, get_gateway
 from app.eln import service as eln
 from app.eln.schemas import ConditionBlock, ExperimentCreate, ProjectOut
@@ -37,7 +38,6 @@ from app.partner.engines.claude import ClaudeCritiqueEngine
 from app.partner.engines.project import ProjectRulesEngine
 from app.partner.engines.rules import RulesCritiqueEngine
 from app.partner.feedback import classify_rationale, proposal_signature
-from app.partner.grounding import GroundingIndex, base_index
 from app.partner.models import (
     Critique,
     Decision,

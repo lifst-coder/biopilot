@@ -27,12 +27,12 @@ from app.analysis.schemas import (
     ResultKind,
     TrendPoint,
 )
+from app.core.grounding import GroundingIndex, base_index
 from app.eln import service as eln
 from app.eln.schemas import ExperimentOut, ExperimentSummary
 from app.memory import service as memory
 from app.memory.schemas import ConditionChange, ExperimentDiff
 from app.partner.feedback import ACTION_LABEL, DecisionMemory, load_decisions
-from app.partner.grounding import GroundingIndex, base_index
 from app.partner.knowledge import MATRIX_MATCHED_VALUES, PRETREATMENT_KEYS
 from app.partner.schemas import CritiqueDraft, Evidence
 
