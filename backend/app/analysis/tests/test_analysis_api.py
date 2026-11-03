@@ -83,3 +83,39 @@ def test_report_export_markdown_and_csv(client: TestClient) -> None:
     assert client.get("/api/analysis/experiments/7/report", params={"format": "x"}).status_code == (
         422
     )
+
+
+def test_eln_ion_ratio_upload_feeds_analysis_run(client: TestClient) -> None:
+    """Integration: ELN-7 ``ion_ratio@1`` multipart upload → analysis run → ``ion_ratio`` result."""
+    exp = client.post(
+        "/api/eln/projects/1/experiments",
+        json={
+            "code": "#IR1",
+            "title": "ion ratio integration",
+            "performed_on": "2026-11-03",
+            "raw_note": "qualifier/quantifier check",
+            "condition_block": {},
+        },
+    )
+    assert exp.status_code == 201
+    exp_id = exp.json()["id"]
+    csv = (
+        b"injection_id,sample_type,analyte,quantifier_area,qualifier_area\n"
+        b"STD-1,standard,carbendazim,1000,500\nSTD-2,standard,carbendazim,2000,1000\n"
+        b"S-1,sample,carbendazim,1000,520\nS-2,sample,carbendazim,1000,800\n"
+    )
+    up = client.post(
+        f"/api/eln/experiments/{exp_id}/datasets/upload",
+        files={"file": ("ion.csv", csv, "text/csv")},
+        data={"kind": "ion_ratio"},
+    )
+    assert up.status_code == 201, up.text
+    assert up.json()["kind"] == "ion_ratio"
+    run = client.post(f"/api/analysis/experiments/{exp_id}/run").json()
+    assert [r["kind"] for r in run["results"]] == ["ion_ratio"]
+    ion = run["results"][0]
+    assert ion["input_dataset_ids"] == [up.json()["id"]]
+    assert ion["output"]["flagged_count"] == 1
+    assert {f["code"] for f in ion["flags"]} == {"ion_ratio_out_of_range"}
+    metrics = client.get(f"/api/analysis/experiments/{exp_id}/metrics").json()
+    assert metrics["ion_ratio_injections_flagged"] == 1

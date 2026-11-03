@@ -305,9 +305,7 @@ def test_data_problems_are_reported_as_skipped(session: Session, seeded: dict[st
     assert any(s.startswith("matrix_effect:") for s in res.skipped)
 
 
-def test_ion_ratio_from_other_dataset_with_ion_columns(
-    session: Session, seeded: dict[str, int]
-) -> None:
+def test_ion_ratio_reads_eln_ion_ratio_kind_only(session: Session, seeded: dict[str, int]) -> None:
     exp_id = _experiment(session, seeded, "#904")
     content = (
         "injection_id,sample_type,analyte,quantifier_area,qualifier_area\n"
@@ -315,7 +313,7 @@ def test_ion_ratio_from_other_dataset_with_ion_columns(
         "S-1,sample,x,1000,550\nS-2,sample,x,1000,700\n"
     )
     eln.create_dataset(
-        session, exp_id, DatasetCreate(kind="other", filename="ion.csv", content=content)
+        session, exp_id, DatasetCreate(kind="ion_ratio", filename="ion.csv", content=content)
     )
     eln.create_dataset(
         session, exp_id, DatasetCreate(kind="other", filename="note.csv", content="a,b\n1,2\n")
@@ -327,13 +325,22 @@ def test_ion_ratio_from_other_dataset_with_ion_columns(
     assert ion.output.flagged_count == 1 and ion.flags[0].context["injection_id"] == "S-2"
     m = service.get_metrics(session, exp_id)
     assert m.ion_ratio_injections_flagged == 1 and m.qc_status == "fail"
+    # No standard injections → no reference ratio → reported in ``skipped``.
     bad = _experiment(session, seeded, "#905")
     eln.create_dataset(
         session,
         bad,
-        DatasetCreate(kind="other", filename="i.csv", content=content.replace("standard", "x")),
+        DatasetCreate(
+            kind="ion_ratio", filename="i.csv", content=content.replace("standard", "sample")
+        ),
     )
     assert service.run_experiment(session, bad).skipped[0].startswith("ion_ratio:")
+    # The pre-ELN-7 fallback is gone: an ``other`` dataset with the same columns is not read.
+    legacy = _experiment(session, seeded, "#906")
+    eln.create_dataset(
+        session, legacy, DatasetCreate(kind="other", filename="ion.csv", content=content)
+    )
+    assert service.run_experiment(session, legacy).results == []
 
 
 def test_report_renders_stored_values(session: Session, seeded: dict[str, int]) -> None:

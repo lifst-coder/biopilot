@@ -5,6 +5,8 @@ description = "BioPilot — AI Research Partner backend (ELN · Memory · Analys
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
+    # multipart/form-data parsing for ELN uploads (FastAPI UploadFile/Form, Starlette)
+    "python-multipart>=0.0.18",
     "uvicorn[standard]>=0.30",
     "sqlalchemy>=2.0.30",
     "pydantic>=2.7",

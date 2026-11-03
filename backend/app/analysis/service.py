@@ -268,13 +268,6 @@ def _calibration_type(cond: ConditionBlock) -> calc.CalibrationType:
     return "matrix-matched" if text in {"matrix-matched", "matrix", "mm"} else "solvent"
 
 
-def _is_ion_ratio_dataset(ds: DatasetOut) -> bool:
-    """ELN-7 kind ``ion_ratio``, or an ``other`` dataset carrying the ion-ratio columns."""
-    if str(ds.kind) == "ion_ratio":
-        return True
-    return ds.kind == "other" and set(calc.ION_RATIO_COLUMNS) <= set(ds.columns)
-
-
 # ------------------------------------------------------------ computations
 
 
@@ -596,11 +589,10 @@ def run_experiment(session: Session, experiment_id: int, *, actor: Actor = "user
     criteria, label = version.criteria, version.label
     crit_params = _criteria_params(version)
     latest: dict[str, DatasetOut] = {}
-    ion_ds: DatasetOut | None = None
     for ds in eln.list_datasets(session, experiment_id):
         latest[ds.kind] = ds  # later uploads supersede earlier ones of the same kind
-        if _is_ion_ratio_dataset(ds):
-            ion_ds = ds
+    # ELN-7 ``ion_ratio@1`` datasets only (the pre-ELN-7 ``other`` fallback was removed).
+    ion_ds = latest.get("ion_ratio")
     cond = exp.condition_block
     weighting: calc.Weighting = cond.calibration_weighting or "none"
     calibration_type = _calibration_type(cond)

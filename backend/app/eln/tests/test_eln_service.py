@@ -84,9 +84,9 @@ def test_dataset_roundtrip_and_hash(session: Session, project_id: int) -> None:
 @pytest.mark.parametrize(
     ("content", "message"),
     [
-        ("injection_id,level_ng_ml\nA,1\n", "missing columns"),
-        (CAL_CSV.replace("100,1000", "abc,1000"), "must be numeric"),
-        ("injection_id,level_ng_ml,analyte,analyte_area,is_area\n", "no data rows"),
+        ("injection_id,level_ng_ml\nA,1\n", "필수 컬럼 누락"),
+        (CAL_CSV.replace("100,1000", "abc,1000"), "숫자가 아님"),
+        ("injection_id,level_ng_ml,analyte,analyte_area,is_area\n", "데이터 행이 없습니다"),
     ],
 )
 def test_invalid_csv_rejected(

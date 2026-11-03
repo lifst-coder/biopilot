@@ -9,31 +9,31 @@ API 변경 시 `openapi.json`/`schema.d.ts` 재생성, 새 쓰기 경로는 Audi
 
 ## ELN (`backend/app/eln/**`, `frontend/src/features/notebook/**`)
 
-- [ ] **ELN-1 파일 업로드(multipart) 데이터셋 수집**
+- [x] **ELN-1 파일 업로드(multipart) 데이터셋 수집**
   `POST /api/eln/experiments/{id}/datasets/upload` (multipart, UTF-8/CP949 자동 판별, 최대 크기 제한).
   완료 기준: 기존 JSON 업로드와 같은 검증·sha256·감사 이벤트; 잘못된 인코딩/크기 초과 시 400 테스트.
-- [ ] **ELN-2 실험 보충 기록(Addendum)**
+- [x] **ELN-2 실험 보충 기록(Addendum)**
   원본을 고치지 않고 `ExperimentAddendum{experiment_id, note, author, created_at}`(불변)을 추가하는 엔드포인트.
   완료 기준: `ExperimentOut.addenda[]` 노출, 원본 raw_note 불변 테스트, 감사 이벤트.
-- [ ] **ELN-3 제목/작성자 변경 API + 감사**
+- [x] **ELN-3 제목/작성자 변경 API + 감사**
   현재 title/author는 ORM상 변경 가능하지만 API·감사가 없다. `PATCH /api/eln/experiments/{id}/metadata`.
   완료 기준: 변경 전/후 값을 AuditEvent payload에 기록, 불변 필드 포함 시 409.
-- [ ] **ELN-4 첨부파일 바이너리 저장**
+- [x] **ELN-4 첨부파일 바이너리 저장**
   attachments는 현재 메타데이터만. 파일 저장소(로컬 디렉터리, sha256 이름) + 다운로드 엔드포인트.
   완료 기준: 업로드 후 sha256 일치, 동일 파일 재업로드 시 중복 저장 없음, 삭제 엔드포인트 없음.
-- [ ] **ELN-5 프로젝트별 조건 블록 템플릿**
+- [x] **ELN-5 프로젝트별 조건 블록 템플릿**
   필수 키·단위·허용 범위를 프로젝트에 정의하고 실험 생성 시 검증(경고 vs 오류 구분).
   완료 기준: 템플릿 위반 시 400(오류) 또는 `warnings[]`(경고) 응답, 시드 프로젝트 템플릿 포함.
-- [ ] **ELN-6 목록 페이지네이션·필터**
+- [x] **ELN-6 목록 페이지네이션·필터**
   `list_experiments`에 `limit/offset`, 기간, 작성자, dataset_kind 필터.
   완료 기준: 기존 응답 형태 유지(필드 추가만), 경계값 테스트.
-- [ ] **ELN-7 데이터셋 종류 레지스트리 확장**
+- [x] **ELN-7 데이터셋 종류 레지스트리 확장**
   `DATASET_COLUMNS`를 버전 있는 레지스트리로(`kind@version`), 신규 kind `ion_ratio`(qualifier/quantifier 면적).
   완료 기준: 기존 kind 하위호환, Analysis 담당에 CHANGES_REQUESTED로 계약 공지.
-- [ ] **ELN-8 Notebook: 실험 생성 폼 + CSV 업로드 UI**
+- [x] **ELN-8 Notebook: 실험 생성 폼 + CSV 업로드 UI**
   조건 블록 편집기(조건 라벨은 `/api/eln/condition-fields`), 부모 실험 선택, CSV 드래그&드롭.
   완료 기준: 생성 후 목록 갱신, 서버 검증 오류 표시, 컴포넌트 테스트.
-- [ ] **ELN-9 장비 내보내기 형식 변환기**
+- [x] **ELN-9 장비 내보내기 형식 변환기**
   벤더 CSV(wide 형식)를 long 형식 계약으로 변환하는 순수 함수 + 미리보기 엔드포인트.
   완료 기준: 샘플 파일 2종 변환 테스트, 원본 파일도 그대로 보관.
 
@@ -97,7 +97,7 @@ API 변경 시 `openapi.json`/`schema.d.ts` 재생성, 새 쓰기 경로는 Audi
 - [x] **ANA-8 이온비(qualifier/quantifier) QC**
   ELN-7의 `ion_ratio` kind 소비, 기준 ±30% 플래그.
   완료 기준: ELN-7 완료 후 진행, 결과 kind `ion_ratio`.
-  → `ion_ratio@1` 계산·플래그 완료. ELN-7 전까지는 같은 컬럼의 `other` 데이터셋을 소비(계약은 CHANGES_REQUESTED).
+  → `ion_ratio@1` 계산·플래그 완료. 병합 후 ELN-7 `ion_ratio` kind만 읽는다(`other` 경유 임시 경로 제거, 통합 테스트 `test_eln_ion_ratio_upload_feeds_analysis_run`).
 - [x] **ANA-9 Analysis 탭: 잔차 플롯·원시 행 테이블**
   검량선 잔차(%RE) 차트, 회수율 rows 테이블(주입 ID 필터).
   완료 기준: 모든 값은 API 필드 그대로 표시, 프론트 계산 없음.

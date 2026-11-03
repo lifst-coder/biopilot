@@ -8,6 +8,10 @@ import type { DecisionCreate } from "./types";
 
 // Request-body aliases used by mutation hooks below (one block; add new aliases here).
 type CriteriaCreate = Schemas["CriteriaCreate"];
+type ConditionBlock = Schemas["ConditionBlock"];
+type ExperimentCreate = Schemas["ExperimentCreate"];
+type ExperimentMetadataUpdate = Schemas["ExperimentMetadataUpdate"];
+type ProtocolTemplateCreate = Schemas["ProtocolTemplateCreate"];
 
 const enabled = (...ids: Array<number | null | undefined>) => ids.every((v) => v != null);
 
@@ -72,6 +76,240 @@ export const useDatasetPreview = (datasetId: number | null, limit = 20) =>
         }),
       ),
   });
+
+// eln — Notebook authoring (ELN-1..9). Multipart endpoints take a FormData body.
+type ElnKind = "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+const asForm = (form: FormData) => form as unknown as { file: string; kind: ElnKind; format: string };
+const passForm = (body: unknown) => body as FormData;
+
+/** Invalidate every query that shows one experiment's ELN state (and the audit log). */
+const invalidateExperiment = (qc: ReturnType<typeof useQueryClient>, experimentId: number) => {
+  void qc.invalidateQueries({ queryKey: ["eln", "experiment", experimentId] });
+  void qc.invalidateQueries({ queryKey: ["eln", "datasets", experimentId] });
+  void qc.invalidateQueries({ queryKey: ["eln", "history", experimentId] });
+  void qc.invalidateQueries({ queryKey: ["eln", "audit", experimentId] });
+  void qc.invalidateQueries({ queryKey: ["eln", "experiments"] });
+  void qc.invalidateQueries({ queryKey: ["system", "audit"] });
+};
+
+export const useDatasetKinds = () =>
+  useQuery({
+    queryKey: ["eln", "dataset-kinds"],
+    queryFn: () => unwrap(api.GET("/api/eln/dataset-kinds")),
+    staleTime: Infinity,
+  });
+
+export const useImportFormats = () =>
+  useQuery({
+    queryKey: ["eln", "import-formats"],
+    queryFn: () => unwrap(api.GET("/api/eln/import-formats")),
+    staleTime: Infinity,
+  });
+
+export const useConditionTemplate = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["eln", "condition-template", projectId],
+    enabled: enabled(projectId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/eln/projects/{project_id}/condition-template", {
+          params: { path: { project_id: projectId! } },
+        }),
+      ),
+  });
+
+export const useCheckConditions = () =>
+  useMutation({
+    mutationFn: ({ projectId, block }: { projectId: number; block: ConditionBlock }) =>
+      unwrap(
+        api.POST("/api/eln/projects/{project_id}/condition-check", {
+          params: { path: { project_id: projectId } },
+          body: block,
+        }),
+      ),
+  });
+
+export const useExperimentDraft = (
+  projectId: number | null,
+  source: { sourceExperimentId?: number | null; protocolTemplateId?: number | null },
+  active = true,
+) =>
+  useQuery({
+    queryKey: ["eln", "draft", projectId, source.sourceExperimentId ?? null, source.protocolTemplateId ?? null],
+    enabled: active && enabled(projectId),
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/eln/projects/{project_id}/experiment-draft", {
+          params: {
+            path: { project_id: projectId! },
+            query: {
+              source_experiment_id: source.sourceExperimentId ?? undefined,
+              protocol_template_id: source.protocolTemplateId ?? undefined,
+            },
+          },
+        }),
+      ),
+  });
+
+export const useCreateExperiment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, body }: { projectId: number; body: ExperimentCreate }) =>
+      unwrap(
+        api.POST("/api/eln/projects/{project_id}/experiments", {
+          params: { path: { project_id: projectId } },
+          body,
+        }),
+      ),
+    onSuccess: (exp) => {
+      invalidateExperiment(qc, exp.id);
+      void qc.invalidateQueries({ queryKey: ["eln", "projects"] });
+      void qc.invalidateQueries({ queryKey: ["memory"] });
+    },
+  });
+};
+
+export const useUpdateMetadata = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ experimentId, body }: { experimentId: number; body: ExperimentMetadataUpdate }) =>
+      unwrap(
+        api.PATCH("/api/eln/experiments/{experiment_id}/metadata", {
+          params: { path: { experiment_id: experimentId } },
+          body,
+        }),
+      ),
+    onSuccess: (exp) => invalidateExperiment(qc, exp.id),
+  });
+};
+
+export const useAddAddendum = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ experimentId, note, author }: { experimentId: number; note: string; author: string }) =>
+      unwrap(
+        api.POST("/api/eln/experiments/{experiment_id}/addenda", {
+          params: { path: { experiment_id: experimentId } },
+          body: { note, author },
+        }),
+      ),
+    onSuccess: (a) => invalidateExperiment(qc, a.experiment_id),
+  });
+};
+
+export const useExperimentHistory = (experimentId: number | null) =>
+  useQuery({
+    queryKey: ["eln", "history", experimentId],
+    enabled: enabled(experimentId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/eln/experiments/{experiment_id}/history", {
+          params: { path: { experiment_id: experimentId! } },
+        }),
+      ),
+  });
+
+export const useExperimentAudit = (experimentId: number | null, limit = 200) =>
+  useQuery({
+    queryKey: ["eln", "audit", experimentId, limit],
+    enabled: enabled(experimentId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/eln/experiments/{experiment_id}/audit", {
+          params: { path: { experiment_id: experimentId! }, query: { limit } },
+        }),
+      ),
+  });
+
+export const useValidateDatasetUpload = () =>
+  useMutation({
+    mutationFn: (form: FormData) =>
+      unwrap(
+        api.POST("/api/eln/datasets/validate-upload", { body: asForm(form), bodySerializer: passForm }),
+      ),
+  });
+
+export const useUploadDataset = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ experimentId, form }: { experimentId: number; form: FormData }) =>
+      unwrap(
+        api.POST("/api/eln/experiments/{experiment_id}/datasets/upload", {
+          params: { path: { experiment_id: experimentId } },
+          body: asForm(form),
+          bodySerializer: passForm,
+        }),
+      ),
+    onSuccess: (d) => invalidateExperiment(qc, d.experiment_id),
+  });
+};
+
+export const usePreviewImport = () =>
+  useMutation({
+    mutationFn: (form: FormData) =>
+      unwrap(api.POST("/api/eln/import/preview", { body: asForm(form), bodySerializer: passForm })),
+  });
+
+export const useImportDataset = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ experimentId, form }: { experimentId: number; form: FormData }) =>
+      unwrap(
+        api.POST("/api/eln/experiments/{experiment_id}/datasets/import", {
+          params: { path: { experiment_id: experimentId } },
+          body: asForm(form),
+          bodySerializer: passForm,
+        }),
+      ),
+    onSuccess: (d) => invalidateExperiment(qc, d.experiment_id),
+  });
+};
+
+export const useUploadAttachment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ experimentId, form }: { experimentId: number; form: FormData }) =>
+      unwrap(
+        api.POST("/api/eln/experiments/{experiment_id}/attachment-files", {
+          params: { path: { experiment_id: experimentId } },
+          body: asForm(form),
+          bodySerializer: passForm,
+        }),
+      ),
+    onSuccess: (f) => invalidateExperiment(qc, f.experiment_id),
+  });
+};
+
+export const useProtocolTemplates = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["eln", "protocol-templates", projectId],
+    enabled: enabled(projectId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/eln/projects/{project_id}/protocol-templates", {
+          params: { path: { project_id: projectId! } },
+        }),
+      ),
+  });
+
+export const useCreateProtocolTemplate = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, body }: { projectId: number; body: ProtocolTemplateCreate }) =>
+      unwrap(
+        api.POST("/api/eln/projects/{project_id}/protocol-templates", {
+          params: { path: { project_id: projectId } },
+          body,
+        }),
+      ),
+    onSuccess: (t) => {
+      void qc.invalidateQueries({ queryKey: ["eln", "protocol-templates", t.project_id] });
+      void qc.invalidateQueries({ queryKey: ["system", "audit"] });
+    },
+  });
+};
 
 // ---------------------------------------------------------------- memory
 export const useTimeline = (projectId: number | null) =>
