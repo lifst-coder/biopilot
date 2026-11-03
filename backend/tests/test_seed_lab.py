@@ -294,6 +294,33 @@ def test_decisions_are_recorded_right_after_their_critique(
             assert decided_at < _audit_id(lab_session, "partner.Critique", lab.critique_ids[c])
 
 
+def test_decisions_are_seed_actions_dated_on_their_experiment(
+    lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
+) -> None:
+    """ISSUES P1-9: the 14 back-filled decisions are seed records with their own day.
+
+    Not ``actor="user"`` on the day the seed ran: the audit actor is ``seed`` like every
+    other seeded record, and ``decided_on`` is the decided experiment's date (before
+    its follow-up experiment).
+    """
+    for d in lab_spec.history.decisions:
+        p = _proposal(lab_session, lab, d)
+        assert p.decision is not None
+        performed = _exp(lab_session, lab, d.project, d.experiment).performed_on
+        assert p.decision.decided_on == performed, d.id
+        if d.followed_by:
+            follow = _exp(lab_session, lab, d.project, d.followed_by)
+            assert p.decision.decided_on < follow.performed_on, d.id
+        events = lab_session.scalars(
+            select(AuditEvent).where(
+                AuditEvent.entity_type == "partner.Decision",
+                AuditEvent.entity_id == p.decision.id,
+            )
+        ).all()
+        assert [(e.actor, e.payload["decided_by"]) for e in events] == [("seed", d.decided_by)]
+        assert events[0].payload["decided_on"] == performed.isoformat()
+
+
 def test_later_critiques_never_reoffer_a_decided_proposal(
     lab_session: Session, lab: SeedResult, lab_spec: SeedSpec
 ) -> None:
@@ -360,6 +387,10 @@ def test_follow_up_experiments_implement_the_decision(
         conditions = follow.condition_block.model_dump()
         for change in applied:
             assert _same_value(conditions.get(change.key), change.value), (d.id, change.key)
+        # Partner names the same changes as what a follow-up implements (ISSUES P1-10)
+        assert [(c.key, c.value) for c in p.implementing_changes] == [
+            (c.key, c.value) for c in applied if c.value != "researcher-defined"
+        ], d.id
 
 
 def _project_condition_keys(s: Session, project_id: int) -> set[str]:

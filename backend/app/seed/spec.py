@@ -162,6 +162,10 @@ class DecisionSpec(_Strict):
     rationale: str
     modifications: list[ProposalChange] = []
     decided_by: str
+    decided_on: date | None = Field(
+        default=None,
+        description="Day of the decision; default: the decided experiment's performed_on",
+    )
     followed_by: str | None = Field(
         default=None, description="Experiment that implemented an accepted/modified proposal"
     )

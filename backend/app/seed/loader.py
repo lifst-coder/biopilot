@@ -176,6 +176,9 @@ def _replay_history(session: Session, spec: SeedSpec, result: SeedResult) -> Non
         offered = [partner.get_proposal(session, pid) for pid in critique.proposal_ids]
         for d in spec.history.decisions_after(c.id):
             proposal = find_decided_proposal(offered, d)
+            performed_on = eln.get_experiment(
+                session, result.experiment_ids[(d.project, d.experiment)]
+            ).performed_on
             partner.decide(
                 session,
                 proposal.id,
@@ -184,7 +187,10 @@ def _replay_history(session: Session, spec: SeedSpec, result: SeedResult) -> Non
                     rationale=d.stored_rationale(),
                     modifications=d.modifications,
                     decided_by=d.decided_by,
+                    # a back-filled history: the day of the decision, not the seed run
+                    decided_on=d.decided_on or performed_on,
                 ),
+                actor="seed",
             )
             result.decided_proposal_ids[d.id] = proposal.id
 
