@@ -37,9 +37,16 @@ def test_024_critique_names_failure_confound_mechanisms_and_is(
     assert "흡착제" in statements and "추출 시간" in statements
     gcb = next(h for h in draft.hypotheses if "흡착제" in h.statement)
     assert "GCB" in gcb.rationale and "carbendazim" in gcb.rationale
-    single = [p for p in draft.proposals if p.title.startswith("단일 변수 실험")]
-    assert {p.changes[0].key for p in single} == {"extraction_time_min", "cleanup_sorbent"}
-    assert all(p.hypothesis_index is not None for p in single)
+    templates = [p.design.template_id for p in draft.proposals if p.design]
+    # the confound is separated by one 2×2 factorial (single-variable designs are its
+    # fallback after a rejection — see test_designer.py)
+    assert templates == ["pre_post_spike", "factorial_pretreatment", "dilution_reinjection"]
+    factorial = draft.proposals[1]
+    assert {c.key for c in factorial.changes} >= {
+        "factor_extraction_time_min",
+        "factor_cleanup_sorbent",
+    }
+    assert all(p.hypothesis_index is not None for p in draft.proposals)
 
 
 def test_numbers_in_findings_match_evidence(session: Session, seeded: dict[str, int]) -> None:
@@ -68,7 +75,7 @@ def test_grounding_guard_rejects_invented_numbers(session: Session, seeded: dict
         hypotheses=[],
         proposals=[],
     )
-    assert "73.3" in ungrounded_numbers(fake, ctx)
+    assert any("73.3" in t for t in ungrounded_numbers(fake, ctx))
     assert unknown_evidence_keys(fake, ctx) == ["E999"]
     # experiment codes and criteria are allowed
     ok = fake.model_copy(update={"summary": "#024는 70–120% 기준 미달", "findings": []})

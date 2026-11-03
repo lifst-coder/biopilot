@@ -416,6 +416,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/partner/ask/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask Stream
+         * @description SSE: ``start`` → ``delta``* → ``replace``? → ``final`` (AskResponse JSON).
+         */
+        post: operations["partner_ask_stream"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/partner/critiques/{critique_id}": {
         parameters: {
             query?: never;
@@ -469,6 +489,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/partner/hypotheses/{hypothesis_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change Hypothesis Status */
+        post: operations["partner_change_hypothesis_status"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/partner/mode": {
         parameters: {
             query?: never;
@@ -478,6 +515,58 @@ export interface paths {
         };
         /** Get Mode */
         get: operations["partner_get_mode"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/partner/projects/{project_id}/critiques": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Project Critiques */
+        get: operations["partner_list_project_critiques"];
+        put?: never;
+        /** Run Project Critique */
+        post: operations["partner_run_project_critique"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/partner/projects/{project_id}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Decision History */
+        get: operations["partner_decision_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/partner/projects/{project_id}/exchanges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Exchanges */
+        get: operations["partner_list_exchanges"];
         put?: never;
         post?: never;
         delete?: never;
@@ -531,6 +620,23 @@ export interface paths {
         put?: never;
         /** Decide */
         post: operations["partner_decide_proposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/partner/proposals/{proposal_id}/experiment-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Experiment Draft */
+        get: operations["partner_get_experiment_draft"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -608,6 +714,37 @@ export interface components {
              * @default SANTE/11312/2021
              */
             source: string;
+        };
+        /**
+         * AlternativeExplanation
+         * @description A competing explanation of the observation with its own pro/contra arguments.
+         */
+        AlternativeExplanation: {
+            /**
+             * Id
+             * @description Stable id, e.g. 'matrix_suppression'
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Mechanism */
+            mechanism: string;
+            /**
+             * Opposing
+             * @default []
+             */
+            opposing: components["schemas"]["CriticArgument"][];
+            /**
+             * Status
+             * @default untested
+             * @enum {string}
+             */
+            status: "plausible" | "weakened" | "untested";
+            /**
+             * Supporting
+             * @default []
+             */
+            supporting: components["schemas"]["CriticArgument"][];
         };
         /**
          * AnalysisResultOut
@@ -694,6 +831,28 @@ export interface components {
             /** Rsd Pct */
             rsd_pct: number;
         };
+        /**
+         * AnswerStatement
+         * @description One sentence of an answer.
+         *
+         *     ``fact`` restates stored evidence, ``inference`` is a rule-based judgement over
+         *     cited evidence, ``estimate`` (추정) has no direct supporting data. Statements
+         *     without evidence keys are always downgraded to ``estimate``.
+         */
+        AnswerStatement: {
+            /**
+             * Evidence Keys
+             * @default []
+             */
+            evidence_keys: string[];
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "fact" | "inference" | "estimate";
+            /** Text */
+            text: string;
+        };
         /** AskRequest */
         AskRequest: {
             /** Experiment Id */
@@ -707,6 +866,8 @@ export interface components {
         AskResponse: {
             /** Answer */
             answer: string;
+            /** Critique Id */
+            critique_id?: number | null;
             /**
              * Engine
              * @enum {string}
@@ -714,6 +875,33 @@ export interface components {
             engine: "rules" | "claude";
             /** Evidence */
             evidence: components["schemas"]["Evidence"][];
+            /** Exchange Id */
+            exchange_id?: number | null;
+            /** Experiment Id */
+            experiment_id?: number | null;
+            /** Fallback Reason */
+            fallback_reason?: string | null;
+            /**
+             * Intent
+             * @default facts
+             * @enum {string}
+             */
+            intent: "cause" | "next_experiment" | "decisions" | "facts" | "project";
+            /**
+             * Proposal Ids
+             * @default []
+             */
+            proposal_ids: number[];
+            /**
+             * Sources
+             * @default []
+             */
+            sources: components["schemas"]["SourceRef"][];
+            /**
+             * Statements
+             * @default []
+             */
+            statements: components["schemas"]["AnswerStatement"][];
             /** Topics */
             topics: string[];
         };
@@ -852,15 +1040,94 @@ export interface components {
             /** Label */
             label: string;
         };
+        /**
+         * CriticArgument
+         * @description One argument in a structured critique.
+         *
+         *     ``basis`` says what the argument rests on: ``data`` (stored evidence),
+         *     ``domain_rule`` (documented domain knowledge, not measured here) or ``decision``
+         *     (a recorded researcher decision).
+         */
+        CriticArgument: {
+            /**
+             * Basis
+             * @default data
+             * @enum {string}
+             */
+            basis: "data" | "domain_rule" | "decision";
+            /**
+             * Evidence Keys
+             * @default []
+             */
+            evidence_keys: string[];
+            /** Statement */
+            statement: string;
+        };
+        /**
+         * CriticAssessment
+         * @description Structured Research Critic output for one claim.
+         *
+         *     Sections map 1:1 to the critic contract: 지지 근거 / 반대 근거 / 누락 대조군 /
+         *     대안 설명 / 현재 데이터로 확정 불가한 이유.
+         */
+        CriticAssessment: {
+            /**
+             * Alternative Explanations
+             * @default []
+             */
+            alternative_explanations: components["schemas"]["AlternativeExplanation"][];
+            /** Claim */
+            claim: string;
+            /**
+             * Id
+             * @description Stable id, e.g. 'recovery_cause'
+             */
+            id: string;
+            /**
+             * Missing Controls
+             * @default []
+             */
+            missing_controls: components["schemas"]["MissingControl"][];
+            /**
+             * Opposing Evidence
+             * @default []
+             */
+            opposing_evidence: components["schemas"]["CriticArgument"][];
+            /** Question */
+            question: string;
+            /**
+             * Supporting Evidence
+             * @default []
+             */
+            supporting_evidence: components["schemas"]["CriticArgument"][];
+            /**
+             * Undetermined Reasons
+             * @default []
+             */
+            undetermined_reasons: components["schemas"]["CriticArgument"][];
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "supported" | "refuted" | "indeterminate" | "no_issue";
+            /** Verdict Reason */
+            verdict_reason: string;
+        };
         /** CritiqueOut */
         CritiqueOut: {
+            /** Assessments */
+            assessments: components["schemas"]["CriticAssessment"][];
             /** Baseline Experiment Id */
             baseline_experiment_id: number | null;
+            /** Context Fingerprint */
+            context_fingerprint: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Decision Feedback */
+            decision_feedback: components["schemas"]["DecisionFeedback"][];
             /**
              * Engine
              * @enum {string}
@@ -869,7 +1136,7 @@ export interface components {
             /** Evidence */
             evidence: components["schemas"]["Evidence"][];
             /** Experiment Id */
-            experiment_id: number;
+            experiment_id: number | null;
             /** Fallback Reason */
             fallback_reason: string | null;
             /** Findings */
@@ -880,8 +1147,15 @@ export interface components {
             id: number;
             /** Model */
             model: string | null;
+            /** Project Id */
+            project_id: number;
             /** Proposal Ids */
             proposal_ids: number[];
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "experiment" | "project";
             /** Summary */
             summary: string;
         };
@@ -967,6 +1241,64 @@ export interface components {
              */
             rationale: string;
         };
+        /**
+         * DecisionFeedback
+         * @description How a recorded researcher decision was reflected in a critique.
+         */
+        DecisionFeedback: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "accept" | "modify" | "reject";
+            /**
+             * Applied
+             * @enum {string}
+             */
+            applied: "suppressed_repeat" | "alternative_proposed" | "noted" | "awaiting_result";
+            /** Decision Id */
+            decision_id: number;
+            /** Evidence Key */
+            evidence_key?: string | null;
+            /** Note */
+            note: string;
+            /** Proposal Id */
+            proposal_id: number;
+            /** Rationale */
+            rationale: string;
+            /** Reason Category */
+            reason_category: string;
+        };
+        /** DecisionHistory */
+        DecisionHistory: {
+            /** Entries */
+            entries: components["schemas"]["DecisionHistoryEntry"][];
+            /** Project Id */
+            project_id: number;
+        };
+        /**
+         * DecisionHistoryEntry
+         * @description A decision with the proposal it decided and where it was fed back.
+         */
+        DecisionHistoryEntry: {
+            decision: components["schemas"]["DecisionOut"];
+            /** Experiment Code */
+            experiment_code: string;
+            /** Experiment Id */
+            experiment_id: number;
+            /** Proposal Changes */
+            proposal_changes: components["schemas"]["ProposalChange"][];
+            /** Proposal Id */
+            proposal_id: number;
+            /** Proposal Title */
+            proposal_title: string;
+            /**
+             * Reflected In Critique Ids
+             * @description Later critiques whose decision_feedback cites this decision
+             * @default []
+             */
+            reflected_in_critique_ids: number[];
+        };
         /** DecisionOut */
         DecisionOut: {
             /**
@@ -974,6 +1306,11 @@ export interface components {
              * @enum {string}
              */
             action: "accept" | "modify" | "reject";
+            /**
+             * Constraints
+             * @default []
+             */
+            constraints: string[];
             /**
              * Created At
              * Format: date-time
@@ -989,6 +1326,38 @@ export interface components {
             proposal_id: number;
             /** Rationale */
             rationale: string;
+            /**
+             * Reason Category
+             * @default other
+             */
+            reason_category: string;
+        };
+        /** DesignControl */
+        DesignControl: {
+            /** Name */
+            name: string;
+            /** Purpose */
+            purpose: string;
+        };
+        /**
+         * DesignVariable
+         * @description A variable of the proposed experiment (varied or held fixed).
+         */
+        DesignVariable: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Levels
+             * @default []
+             */
+            levels: (string | number | null)[];
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "varied" | "fixed";
         };
         /** DigestOut */
         DigestOut: {
@@ -1046,13 +1415,58 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "eln" | "memory" | "analysis";
+            source: "eln" | "memory" | "analysis" | "partner";
             /** Text */
             text?: string | null;
             /** Unit */
             unit?: string | null;
             /** Value */
             value?: number | null;
+        };
+        /** ExchangeHistory */
+        ExchangeHistory: {
+            /** Experiment Id */
+            experiment_id: number | null;
+            /** Items */
+            items: components["schemas"]["ExchangeOut"][];
+            /** Project Id */
+            project_id: number;
+        };
+        /**
+         * ExchangeOut
+         * @description A stored question/answer pair (immutable).
+         */
+        ExchangeOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Experiment Id */
+            experiment_id: number | null;
+            /** Id */
+            id: number;
+            /** Project Id */
+            project_id: number;
+            /** Question */
+            question: string;
+            response: components["schemas"]["AskResponse"];
+        };
+        /**
+         * ExpectedOutcome
+         * @description If-then reading of the result: what each outcome would imply.
+         */
+        ExpectedOutcome: {
+            /** Interpretation */
+            interpretation: string;
+            /** Observation */
+            observation: string;
+            /**
+             * Supports
+             * @description AlternativeExplanation ids
+             * @default []
+             */
+            supports: string[];
         };
         /** ExperimentCreate */
         ExperimentCreate: {
@@ -1085,6 +1499,83 @@ export interface components {
             title: string;
         };
         /**
+         * ExperimentDesign
+         * @description Next-experiment design: variables, controls, replicates, measurements, power.
+         */
+        ExperimentDesign: {
+            /**
+             * Addresses Controls
+             * @description MissingControl ids
+             * @default []
+             */
+            addresses_controls: string[];
+            /**
+             * Basis Experiment Ids
+             * @description Experiments whose stored records justify this design
+             * @default []
+             */
+            basis_experiment_ids: number[];
+            /**
+             * Controls
+             * @default []
+             */
+            controls: components["schemas"]["DesignControl"][];
+            /**
+             * Discriminates
+             * @description AlternativeExplanation ids
+             * @default []
+             */
+            discriminates: string[];
+            /**
+             * Discriminating Power
+             * @default medium
+             * @enum {string}
+             */
+            discriminating_power: "high" | "medium" | "low";
+            /**
+             * Expected Outcomes
+             * @default []
+             */
+            expected_outcomes: components["schemas"]["ExpectedOutcome"][];
+            /**
+             * Measurements
+             * @default []
+             */
+            measurements: string[];
+            /** Objective */
+            objective: string;
+            /**
+             * Power Rationale
+             * @default
+             */
+            power_rationale: string;
+            /**
+             * Replicates
+             * @description Replicates per level — taken from stored data, never invented
+             */
+            replicates?: number | null;
+            /** Replicates Basis */
+            replicates_basis?: string | null;
+            /** Replicates Evidence Key */
+            replicates_evidence_key?: string | null;
+            /**
+             * Requires
+             * @description Resources needed, e.g. 'blank_matrix' (matched to rejections)
+             * @default []
+             */
+            requires: string[];
+            /**
+             * Template Id
+             * @description Rules design template id
+             */
+            template_id?: string | null;
+            /**
+             * Variables
+             * @default []
+             */
+            variables: components["schemas"]["DesignVariable"][];
+        };
+        /**
          * ExperimentDiff
          * @description Structural diff of two experiments' original records (no numbers computed here).
          */
@@ -1105,6 +1596,33 @@ export interface components {
             relation: "same" | "a_is_ancestor" | "b_is_ancestor" | "siblings" | "unrelated";
             /** Unchanged Keys */
             unchanged_keys: string[];
+        };
+        /**
+         * ExperimentDraftOut
+         * @description Unsaved ``ExperimentCreate`` built from a proposal (creation happens in ELN).
+         */
+        ExperimentDraftOut: {
+            /** Applied Changes */
+            applied_changes: components["schemas"]["ProposalChange"][];
+            /** Base Experiment Code */
+            base_experiment_code: string;
+            /** Base Experiment Id */
+            base_experiment_id: number;
+            draft: components["schemas"]["ExperimentCreate"];
+            /** Notes */
+            notes: string[];
+            /** Proposal Id */
+            proposal_id: number;
+            /**
+             * Proposal Status
+             * @enum {string}
+             */
+            proposal_status: "pending" | "accepted" | "modified" | "rejected";
+            /**
+             * Ready
+             * @description True when the proposal was accepted or modified
+             */
+            ready: boolean;
         };
         /**
          * ExperimentMetrics
@@ -1319,6 +1837,66 @@ export interface components {
              * @enum {string}
              */
             status: "proposed" | "open" | "supported" | "refuted";
+            /**
+             * Transitions
+             * @default []
+             */
+            transitions: components["schemas"]["HypothesisTransitionOut"][];
+        };
+        /**
+         * HypothesisStatusChange
+         * @description Request to move a hypothesis along proposed → open → supported/refuted.
+         */
+        HypothesisStatusChange: {
+            /**
+             * Decided By
+             * @default researcher
+             */
+            decided_by: string;
+            /**
+             * Evidence Result Ids
+             * @description AnalysisResult ids backing the transition
+             * @default []
+             */
+            evidence_result_ids: number[];
+            /**
+             * Rationale
+             * @description Why — required for every transition
+             */
+            rationale: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "proposed" | "open" | "supported" | "refuted";
+        };
+        /** HypothesisTransitionOut */
+        HypothesisTransitionOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided By */
+            decided_by: string;
+            /** Evidence Result Ids */
+            evidence_result_ids: number[];
+            /**
+             * From Status
+             * @enum {string}
+             */
+            from_status: "proposed" | "open" | "supported" | "refuted";
+            /** Hypothesis Id */
+            hypothesis_id: number;
+            /** Id */
+            id: number;
+            /** Rationale */
+            rationale: string;
+            /**
+             * To Status
+             * @enum {string}
+             */
+            to_status: "proposed" | "open" | "supported" | "refuted";
         };
         /** ISInjectionOut */
         ISInjectionOut: {
@@ -1385,6 +1963,37 @@ export interface components {
             recovery_delta_pct_points: number | null;
             recovery_t_test: components["schemas"]["RecoveryTTest"] | null;
         };
+        /**
+         * MissingControl
+         * @description A control/measurement that is absent but needed to separate explanations.
+         */
+        MissingControl: {
+            /**
+             * Decision Note
+             * @description How a recorded decision on this control was taken into account
+             */
+            decision_note?: string | null;
+            /**
+             * Distinguishes
+             * @description AlternativeExplanation ids this control separates
+             * @default []
+             */
+            distinguishes: string[];
+            /**
+             * Evidence Keys
+             * @default []
+             */
+            evidence_keys: string[];
+            /**
+             * Id
+             * @description Stable id, e.g. 'pre_post_spike'
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Purpose */
+            purpose: string;
+        };
         /** NoteDiffLine */
         NoteDiffLine: {
             /**
@@ -1406,6 +2015,23 @@ export interface components {
             mode: "rules" | "claude";
             /** Model */
             model: string | null;
+        };
+        /**
+         * PriorityFactor
+         * @description One additive term of a proposal's deterministic priority score.
+         */
+        PriorityFactor: {
+            /** Detail */
+            detail: string;
+            /**
+             * Evidence Keys
+             * @default []
+             */
+            evidence_keys: string[];
+            /** Name */
+            name: string;
+            /** Points */
+            points: number;
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -1455,6 +2081,8 @@ export interface components {
         };
         /** ProposalOut */
         ProposalOut: {
+            /** Base Experiment Id */
+            base_experiment_id?: number | null;
             /** Changes */
             changes: components["schemas"]["ProposalChange"][];
             /**
@@ -1467,6 +2095,7 @@ export interface components {
             decision: components["schemas"]["DecisionOut"] | null;
             /** Description */
             description: string;
+            design?: components["schemas"]["ExperimentDesign"] | null;
             /** Evidence Keys */
             evidence_keys: string[];
             /** Experiment Id */
@@ -1480,13 +2109,30 @@ export interface components {
              * @enum {string}
              */
             origin: "user" | "ai:rules" | "ai:claude";
+            /**
+             * Priority
+             * @default 0
+             */
+            priority: number;
+            /**
+             * Priority Factors
+             * @default []
+             */
+            priority_factors: components["schemas"]["PriorityFactor"][];
             /** Project Id */
             project_id: number;
+            /** Signature */
+            signature?: string | null;
             /**
              * Status
              * @enum {string}
              */
             status: "pending" | "accepted" | "modified" | "rejected";
+            /**
+             * Supersedes Proposal Ids
+             * @default []
+             */
+            supersedes_proposal_ids: number[];
             /** Title */
             title: string;
         };
@@ -1617,6 +2263,18 @@ export interface components {
             field: "title" | "raw_note" | "condition_block" | "digest";
             /** Snippet */
             snippet: string;
+        };
+        /**
+         * SourceRef
+         * @description A stored record an answer relies on (for 출처 display).
+         */
+        SourceRef: {
+            /** Label */
+            label: string;
+            /** Ref Id */
+            ref_id: number;
+            /** Ref Type */
+            ref_type: string;
         };
         /** SystemInfo */
         SystemInfo: {
@@ -3306,6 +3964,66 @@ export interface operations {
             };
         };
     };
+    partner_ask_stream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description SSE events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     partner_get_critique: {
         parameters: {
             query?: never;
@@ -3599,6 +4317,68 @@ export interface operations {
             };
         };
     };
+    partner_change_hypothesis_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hypothesis_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HypothesisStatusChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HypothesisOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     partner_get_mode: {
         parameters: {
             query?: never;
@@ -3646,12 +4426,251 @@ export interface operations {
             };
         };
     };
+    partner_list_project_critiques: {
+        parameters: {
+            query?: {
+                scope?: ("experiment" | "project") | null;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CritiqueOut"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    partner_run_project_critique: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CritiqueOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    partner_decision_history: {
+        parameters: {
+            query?: {
+                experiment_id?: number | null;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionHistory"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    partner_list_exchanges: {
+        parameters: {
+            query?: {
+                experiment_id?: number | null;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeHistory"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     partner_list_proposals: {
         parameters: {
             query: {
                 project_id: number;
                 experiment_id?: number | null;
                 status?: ("pending" | "accepted" | "modified" | "rejected") | null;
+                sort?: "id" | "priority";
             };
             header?: never;
             path?: never;
@@ -3786,6 +4805,64 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProposalOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    partner_get_experiment_draft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentDraftOut"];
                 };
             };
             /** @description Bad Request */
