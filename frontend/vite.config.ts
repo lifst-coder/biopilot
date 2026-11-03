@@ -8,7 +8,10 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {
     port: 5173,
-    proxy: { "/api": { target: "http://127.0.0.1:8000", changeOrigin: true } },
+    // BIOPILOT_API_PROXY lets the E2E suite point each dev server at its own backend.
+    proxy: {
+      "/api": { target: process.env.BIOPILOT_API_PROXY ?? "http://127.0.0.1:8000", changeOrigin: true },
+    },
   },
   test: { environment: "jsdom", globals: false, include: ["src/**/*.test.{ts,tsx}"] },
 });

@@ -23,3 +23,8 @@ frontend/dist/
 .DS_Store
 .idea/
 .vscode/
+
+# E2E (Playwright)
+backend/.e2e/
+frontend/test-results/
+frontend/playwright-report/
