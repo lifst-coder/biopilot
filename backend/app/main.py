@@ -41,7 +41,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             from app.seed.loader import seed_if_empty
 
             with db.session() as session:
-                seed_if_empty(session)
+                seed_if_empty(session, settings.seed_profile)
                 session.commit()
         yield
 

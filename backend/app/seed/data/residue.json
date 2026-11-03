@@ -1,0 +1,1038 @@
+{
+  "key": "residue",
+  "data_dir": "residue",
+  "project": {
+    "name": "잔류농약 QuEChERS·LC-MS/MS 회수율 최적화",
+    "objective": "사과 매트릭스 5종 농약의 QuEChERS 전처리 회수율을 SANTE 기준(70–120%, RSD ≤20%) 내에서 유지하며 처리량을 높인다.",
+    "description": "분석 대상: azoxystrobin, carbendazim, imidacloprid, tebuconazole, thiabendazole. 내부표준 TPP."
+  },
+  "experiments": [
+    {
+      "code": "#001",
+      "title": "SOP v1 도입 — EN 15662 기준 회수율",
+      "author": "김연구",
+      "performed_on": "2026-05-11",
+      "parent_code": null,
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 35,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "none",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: EN 15662(시트레이트 완충) 기반 SOP v1의 사과 매트릭스 회수율 첫 확인.\n절차: 사과 15 g + 아세토니트릴 15 mL, 시트레이트 완충염 첨가 후 수동 진탕 1분, 원심분리 3000 rpm 5분.\n5종 농약 2수준(10, 50 ng/g) 각 5반복 첨가, PSA d-SPE 정제.\n용매 표준 6수준 검량선(무가중), 내부표준 TPP는 최종 추출액에 첨가.\n관찰:\n- 전 분석물 검출, 피크 형태 양호\n- 반복 간 편차가 다소 큼 — 진탕 세기 편차 가능성\n- 정제 후 추출액 황색, PSA 단독으로는 색소 제거 부족",
+      "attachments": [
+        {
+          "name": "sop_v1_en15662.pdf",
+          "media_type": "application/pdf",
+          "description": "SOP v1 문서"
+        }
+      ],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp001_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp001_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#002",
+      "title": "SOP v1 작업자 재현 (이분석)",
+      "author": "이분석",
+      "performed_on": "2026-05-13",
+      "parent_code": "#001",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 35,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "none",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: #001과 동일 SOP를 다른 작업자가 수행해 재현성 확인.\n절차: #001과 동일 조건. 시료 수화 10분 후 기계식 진탕기(1500 rpm) 1분, 원심분리 4000 rpm 10분.\n내부표준 TPP는 추출 전 시료에 첨가(본인 습관).\n2수준 각 5반복.\n관찰:\n- 회수율 반복 간 편차가 #001보다 작아 보임\n- S-07 thiabendazole 피크 적분 실패(분할 피크) — 해당 값 미보고\n- 추출액 색상은 #001과 동일",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp002_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp002_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#003",
+      "title": "매트릭스 효과 평가 (PSA 단독 정제)",
+      "author": "김연구",
+      "performed_on": "2026-05-18",
+      "parent_code": "#001",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 35,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "none",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: SOP v1 추출액의 이온화 억제 정도 확인.\n절차: 블랭크 사과를 SOP v1로 추출한 매트릭스 매칭 표준과 용매 표준 5수준 비교.\n내부표준 미사용(절대 면적).\n관찰:\n- imidacloprid 면적이 매트릭스 매칭에서 크게 감소\n- carbendazim, thiabendazole도 감소 폭이 작지 않음\n- PSA 단독 정제로는 매트릭스 제거가 부족해 보임",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "matrix_effect",
+          "file": "exp003_matrix_effect.csv"
+        }
+      ]
+    },
+    {
+      "code": "#004",
+      "title": "d-SPE에 C18 추가",
+      "author": "이분석",
+      "performed_on": "2026-05-21",
+      "parent_code": "#001",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 35,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "none",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 비극성 공추출물 제거를 위해 d-SPE에 C18 50 mg 추가.\n절차: 정제 흡착제만 변경, 나머지는 SOP v1. 시료 수화 10분 후 기계식 진탕기(1500 rpm) 1분, 원심분리 4000 rpm 10분.\n2수준 각 5반복.\n관찰:\n- 정제 후 추출액이 #001보다 맑음\n- 회수율 저하 징후 없음\n- SOP v1.1로 채택 제안",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp004_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp004_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#005",
+      "title": "매트릭스 효과 재평가 (PSA+C18)",
+      "author": "이분석",
+      "performed_on": "2026-05-26",
+      "parent_code": "#004",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 35,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "none",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: C18 추가 후 매트릭스 효과 변화 확인 (#003과 비교).\n절차: SOP v1.1 블랭크 추출액 매트릭스 매칭 표준 vs 용매 표준 5수준.\n절대 면적 비교.\n관찰:\n- imidacloprid 억제가 #003보다 줄어든 것으로 보임\n- 나머지 분석물은 억제 폭 작음",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "matrix_effect",
+          "file": "exp005_matrix_effect.csv"
+        }
+      ]
+    },
+    {
+      "code": "#006",
+      "title": "검량선 가중 평가 (1–200 ng/mL ×3, 무가중)",
+      "author": "김연구",
+      "performed_on": "2026-06-01",
+      "parent_code": "#004",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 35,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "none",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 저농도 정량 정확도 개선을 위해 검량선 가중 방식 비교용 데이터 확보.\n절차: 용매 표준 8수준, 수준당 3반복 주입.\n현행 SOP대로 무가중으로 적합.\n관찰:\n- 최저 수준 역산 편차가 큼\n- 고농도 수준은 편차 작음 — 분산이 농도에 비례하는 양상\n- 가중 적용 여부 검토 필요",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp006_calibration.csv"
+        }
+      ]
+    },
+    {
+      "code": "#007",
+      "title": "1/x 가중 적용 회수율",
+      "author": "김연구",
+      "performed_on": "2026-06-04",
+      "parent_code": "#006",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 35,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: #006 검토 결과에 따라 1/x 가중 검량선으로 회수율 산출.\n절차: SOP v1.1, 검량선만 1/x 가중. 수동 진탕 1분, 원심분리 3000 rpm 5분.\n2수준 각 5반복.\n관찰:\n- 저농도 역산이 개선됨\n- S-04 첨가 시 피펫 2회 분주 의심 — 해당 시료 전 분석물 면적 큼\n- S-04는 기록 보존, 재계산하지 않음",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp007_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp007_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#008",
+      "title": "컬럼 온도 35→40 °C",
+      "author": "이분석",
+      "performed_on": "2026-06-10",
+      "parent_code": "#007",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: carbendazim 피크 테일링 개선을 위해 컬럼 온도 상향.\n절차: 전처리는 #007과 동일. 시료 수화 10분 후 기계식 진탕기(1500 rpm) 1분, 원심분리 4000 rpm 10분.\n컬럼 온도만 40 °C로 변경.\n관찰:\n- carbendazim 피크 대칭성 개선\n- 머무름 시간 약간 감소\n- SOP v1.2로 채택",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp008_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp008_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#009",
+      "title": "메탄올 추출 + 시료량 10 g 시도",
+      "author": "김연구",
+      "performed_on": "2026-06-17",
+      "parent_code": "#008",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "메탄올",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: imidacloprid 등 극성 분석물 추출 개선 기대로 메탄올 추출 시험. 시료량도 10 g으로 감량.\n절차: 추출 용매 메탄올 15 mL, 시료 10 g. 수동 진탕 1분, 원심분리 3000 rpm 5분.\n2수준 각 5반복.\n관찰:\n- 염석 후 층 분리가 불명확 — 메탄올이 수층과 섞임\n- 추출액이 탁하고 당 성분이 많아 보임\n- 시퀀스 후반 LC 배압 상승 경고(프릿 막힘 의심) — 컬럼 역세척\n- imidacloprid 외 분석물 피크가 작아 보임",
+      "attachments": [
+        {
+          "name": "exp009_pressure_log.png",
+          "media_type": "image/png",
+          "description": "배압 로그"
+        }
+      ],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp009_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp009_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#010",
+      "title": "반복성 평가 n=6 (SOP v1.2)",
+      "author": "이분석",
+      "performed_on": "2026-06-24",
+      "parent_code": "#008",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: SOP v1.2 저농도 반복성 확인.\n절차: SOP v1.2, 10 ng/g 6반복. 시료 수화 10분 후 기계식 진탕기(1500 rpm) 1분, 원심분리 4000 rpm 10분.\n관찰:\n- 반복 간 편차 매우 작음\n- 장비 상태 양호, IS 면적 안정",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp010_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp010_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#011",
+      "title": "정기 배치 — IS 면적 저하 관찰",
+      "author": "김연구",
+      "performed_on": "2026-07-01",
+      "parent_code": "#008",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: SOP v1.2 정기 회수율 배치.\n절차: SOP v1.2. 수동 진탕 1분, 원심분리 3000 rpm 5분.\n2수준 각 5반복, 시퀀스 순서대로 주입.\n관찰:\n- 시퀀스 후반(S-06 이후)으로 갈수록 IS(TPP) 면적 감소\n- C18 컬럼을 유기산 프로젝트(#OA02, 100% 수계)와 공유 사용한 직후 — 피크 테일링 약간\n- 검량선 주입 구간(시퀀스 초반)은 정상",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp011_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp011_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#012",
+      "title": "반복 배치 — 시퀀스 중단",
+      "author": "김연구",
+      "performed_on": "2026-07-08",
+      "parent_code": "#011",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: #011 IS 저하 재확인 겸 정기 배치.\n절차: #011과 동일. 수동 진탕 1분, 원심분리 3000 rpm 5분.\n2수준 각 5반복 예정(10 주입).\n관찰:\n- S-04부터 IS 면적 급감, S-06 이후 시퀀스 중단 — S-07~S-10 미주입\n- 이온원 오염 의심, 기기 점검 요청 (7/13~8/3 점검: 이온원 세척, 캐필러리 교체, 질량 보정)\n- 유기산 프로젝트 #OA03 배치도 같은 주 IS 저하",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp012_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp012_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#013",
+      "title": "기기 점검 후 시스템 적합성 확인",
+      "author": "이분석",
+      "performed_on": "2026-08-04",
+      "parent_code": "#008",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 점검(이온원 세척·캐필러리 교체) 후 감도와 검량선 확인.\n절차: 용매 표준 6수준, 수준당 2반복 주입.\n관찰:\n- IS 면적이 점검 전보다 큼 — 감도 회복\n- CAL-03 imidacloprid에 간섭 피크 겹침(이월 의심) — 기록 보존\n- 시스템 적합성 통과, 실험 재개",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp013_calibration.csv"
+        }
+      ]
+    },
+    {
+      "code": "#014",
+      "title": "#010 반복성 재현 시도 (점검 후)",
+      "author": "김연구",
+      "performed_on": "2026-08-06",
+      "parent_code": "#010",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 점검 후 #010 반복성 결과 재현.\n절차: #010과 동일 조건, 10 ng/g 6반복. 수동 진탕 1분, 원심분리 3000 rpm 5분.\nMgSO4 새 lot(B) 개봉해 사용.\n관찰:\n- MgSO4 첨가 시 덩어리 생김, 발열 약함\n- 전 분석물 회수율이 #010보다 낮아 보임\n- 반복 간 편차 큼 — 재현 실패",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp014_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp014_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#015",
+      "title": "재시도 — 진탕 시간 연장",
+      "author": "김연구",
+      "performed_on": "2026-08-07",
+      "parent_code": "#014",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 15,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: #014 재현 실패 원인이 추출 부족인지 확인.\n절차: 추출(진탕) 시간만 15분으로 연장. 수동 진탕 1분, 원심분리 3000 rpm 5분.\n같은 MgSO4 lot B 사용, 10 ng/g 6반복.\n관찰:\n- 개선 미미 — 여전히 #010보다 낮음\n- lot B MgSO4가 흡습된 것으로 의심 (개봉 후 보관 용기 뚜껑 불량)",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp015_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp015_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#016",
+      "title": "MgSO4 lot 교체 후 재시도",
+      "author": "김연구",
+      "performed_on": "2026-08-11",
+      "parent_code": "#015",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 15,
+        "extraction_solvent": "아세토니트릴",
+        "extraction_volume_ml": 15,
+        "extraction_time_min": 10,
+        "ph": 5.5,
+        "buffer": "시트레이트 (EN 15662)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 흡습 의심 MgSO4 lot B를 새 lot C로 교체해 재현 재시도.\n절차: 추출 시간 10분 복귀, MgSO4 lot C(신규 개봉). 수동 진탕 1분, 원심분리 3000 rpm 5분.\n10 ng/g 6반복.\n관찰:\n- MgSO4 첨가 시 정상 발열\n- 회수율 #010 수준으로 회복 — 재현 실패 원인은 시약(흡습 MgSO4)으로 판단\n- lot B 폐기, 시약 개봉일 기록 규칙 추가",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp016_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp016_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#017",
+      "title": "SOP v2 전환 — AOAC 2007.01, 10 g/10 mL",
+      "author": "이분석",
+      "performed_on": "2026-08-25",
+      "parent_code": "#016",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: SOP v2 초안 검증: AOAC 2007.01 아세테이트 완충 + 시료/용매 10 g/10 mL (#009 결정 반영).\n절차: 사과 10 g + 1% 아세트산 아세토니트릴 10 mL, 아세테이트 완충염. 시료 수화 10분 후 기계식 진탕기(1500 rpm) 1분, 원심분리 4000 rpm 10분.\n정제·LC 조건은 SOP v1.2 유지. 2수준 각 5반복.\n관찰:\n- 전 분석물 회수율 양호, 벤즈이미다졸계 안정\n- 시료량 감소로 처리 시간 단축\n- SOP v2로 확정, 다음 실험(#018)을 기준으로 사용",
+      "attachments": [
+        {
+          "name": "sop_v2_aoac.pdf",
+          "media_type": "application/pdf",
+          "description": "SOP v2 문서"
+        }
+      ],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp017_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp017_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#018",
+      "title": "기준 프로토콜 회수율 확인",
+      "author": "김연구",
+      "performed_on": "2026-09-08",
+      "parent_code": "#017",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 현행 QuEChERS 기준 프로토콜(AOAC 2007.01 아세테이트 완충)의 사과 매트릭스 회수율 확인.\n절차: 균질 사과 시료에 5종 농약을 두 수준으로 첨가(각 5반복), 아세토니트릴 추출 후 PSA/C18 d-SPE 정제.\n검량선은 용매 표준 6수준, 내부표준 TPP 보정.\n관찰:\n- 전 분석물 피크 형태 양호, 머무름 시간 안정\n- 정제 후 추출액 색상 연한 황색\n- 특이사항 없음, 이후 실험의 기준으로 사용",
+      "attachments": [
+        {
+          "name": "exp018_sequence.pdf",
+          "media_type": "application/pdf",
+          "description": "LC-MS/MS 시퀀스 리포트"
+        }
+      ],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp018_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp018_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#019",
+      "title": "무완충 추출 (pH 영향)",
+      "author": "김연구",
+      "performed_on": "2026-09-15",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 6.5,
+        "buffer": "없음 (무완충)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 완충염 없이 추출했을 때 pH 의존성 분석물 회수율 변화 확인.\n절차: #018과 동일하되 아세테이트 완충염 생략.\n관찰:\n- 카벤다짐, 티아벤다졸 피크 면적이 기준 대비 작아 보임\n- 나머지 분석물은 큰 차이 없어 보임\n- 추출액 pH 측정값 기록지 첨부",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp019_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp019_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#020",
+      "title": "컬럼·온도 변경 (분리능 개선)",
+      "author": "이분석",
+      "performed_on": "2026-09-22",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "Phenyl-Hexyl 2.1×100 mm, 2.7 µm",
+        "column_temp_c": 30,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 이미다클로프리드 근접 피크 분리 개선을 위해 Phenyl-Hexyl 컬럼 시험.\n절차: 시료 전처리는 #018과 동일, LC 컬럼과 온도만 변경.\n관찰:\n- 이미다클로프리드와 매트릭스 간섭 피크 분리 개선\n- 전체 머무름 시간 증가, 분석 시간 늘어남\n- 회수율은 전처리와 무관할 것으로 예상",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp020_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp020_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#021",
+      "title": "매트릭스 효과 평가 (용매 vs 매트릭스 매칭)",
+      "author": "이분석",
+      "performed_on": "2026-09-29",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 사과 추출물의 이온화 억제/증강 정도 정량.\n절차: 블랭크 사과 추출액(기준 프로토콜)과 용매로 각각 5수준 검량선 제조, 기울기 비교.\n관찰:\n- 매트릭스 매칭 표준에서 이미다클로프리드 면적이 뚜렷이 감소\n- 다른 분석물은 감소 폭이 작아 보임\n- 내부표준 미사용(절대 면적 비교)",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "matrix_effect",
+          "file": "exp021_matrix_effect.csv"
+        }
+      ]
+    },
+    {
+      "code": "#022",
+      "title": "반복성 평가 (저농도 n=6)",
+      "author": "김연구",
+      "performed_on": "2026-10-06",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 저농도 첨가 수준 반복성 확인.\n절차: 기준 프로토콜, 저농도 수준 6반복.\n관찰:\n- 반복 간 피크 면적 편차 작음\n- 장비 상태 양호",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp022_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp022_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#023",
+      "title": "검량선 검증 (넓은 범위, 1/x 가중)",
+      "author": "이분석",
+      "performed_on": "2026-10-13",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 정량 범위를 넓혔을 때 가중 방식(무가중 vs 1/x) 적합성 검증.\n절차: 용매 표준 8수준, 수준당 3반복 주입.\n관찰:\n- 최저 수준에서 무가중 역산값 편차가 커 보임\n- 1/x 가중 적용 시 저농도 역산 개선 예상\n- 고농도 수준 검출기 포화 징후 없음",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp023_calibration.csv"
+        }
+      ]
+    },
+    {
+      "code": "#024",
+      "title": "변경 프로토콜 (추출 단축 + GCB 정제)",
+      "author": "김연구",
+      "performed_on": "2026-10-20",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 5,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + GCB 7.5 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 처리량 향상을 위해 추출 시간을 줄이고, 색소 제거를 위해 GCB 정제 도입.\n절차: #018 기준에서 추출 시간 단축, d-SPE 흡착제 C18 → GCB 교체.\n관찰:\n- 정제 후 추출액이 거의 무색으로 맑아짐\n- 카벤다짐, 티아벤다졸 피크가 확연히 작음\n- 일부 시료(S-03, S-07, S-09) IS 피크 면적이 눈에 띄게 낮음\n- 원인 미확인, 재검토 필요",
+      "attachments": [
+        {
+          "name": "exp024_chromatogram.png",
+          "media_type": "image/png",
+          "description": "S-03 크로마토그램 캡처"
+        }
+      ],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp024_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp024_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#025",
+      "title": "단일 변수: 추출 시간 5분 (#024 후속)",
+      "author": "이분석",
+      "performed_on": "2026-10-22",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 5,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: #024 비판의 단일 변수 제안(추출 시간만 변경) 수행.\n절차: SOP v2에서 추출 시간만 5분. 시료 수화 10분 후 기계식 진탕기(1500 rpm) 1분, 원심분리 4000 rpm 10분.\n2수준 각 5반복.\n관찰:\n- 회수율이 #018과 비슷해 보임\n- 추출 시간 단축은 회수율 저하의 주원인이 아닌 것으로 보임",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp025_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp025_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#026",
+      "title": "단일 변수: GCB 정제 (#024 후속)",
+      "author": "김연구",
+      "performed_on": "2026-10-23",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + GCB 7.5 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: #024 비판의 단일 변수 제안(정제 흡착제만 변경) 수행.\n절차: SOP v2에서 d-SPE 흡착제만 C18 → GCB 7.5 mg. 수동 진탕 1분, 원심분리 3000 rpm 5분.\n2수준 각 5반복.\n관찰:\n- 추출액 무색\n- carbendazim, thiabendazole 피크가 #024처럼 작음\n- IS 면적은 정상 — #024의 IS 저하와는 별개 현상으로 보임",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp026_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp026_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#027",
+      "title": "GCB 감량 (2.5 mg)",
+      "author": "이분석",
+      "performed_on": "2026-10-26",
+      "parent_code": "#026",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + GCB 2.5 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: GCB 흡착 손실을 줄이면서 색소 제거 효과를 유지할 수 있는지 확인.\n절차: GCB를 2.5 mg으로 감량. 시료 수화 10분 후 기계식 진탕기(1500 rpm) 1분, 원심분리 4000 rpm 10분.\n2수준 각 5반복.\n관찰:\n- 추출액 연한 황색 — 색소 제거는 부분적\n- 벤즈이미다졸계 피크가 #026보다 확연히 큼\n- 처리량 목표와 회수율 사이 절충안 후보",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp027_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp027_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#028",
+      "title": "#024 조건 주입량 축소 재분석 (5→1 µL)",
+      "author": "김연구",
+      "performed_on": "2026-10-27",
+      "parent_code": "#024",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 5,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + GCB 7.5 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)",
+        "injection_volume_ul": 1
+      },
+      "raw_note": "목적: #024 IS 억제가 이온화 억제인지 확인 (#024 비판 제안을 수정 채택: 희석 대신 주입량 축소).\n절차: #024 조건으로 재추출, 주입량만 기본 5 µL → 1 µL. 수동 진탕 1분, 원심분리 3000 rpm 5분.\n검량선도 1 µL 주입. 2수준 각 5반복.\n관찰:\n- IS 면적 저하 시료 없음 — #024의 IS 억제는 주입 매트릭스 부하 때문으로 보임\n- carbendazim, thiabendazole은 여전히 낮음 — GCB 흡착 손실은 이온화와 무관\n- 감도 저하로 저농도 피크 S/N 감소",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp028_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp028_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#029",
+      "title": "작업자 비교 — 김연구 (SOP v2)",
+      "author": "김연구",
+      "performed_on": "2026-10-29",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 같은 SOP v2를 두 작업자가 같은 주에 수행해 작업자 간 차이 확인 (#030과 짝).\n절차: SOP v2 그대로. 평소 방식대로 수동 진탕 1분, 원심분리 3000 rpm 5분.\n내부표준은 최종 추출액에 첨가.\n2수준 각 5반복.\n관찰:\n- 조건 차이 없음\n- 반복 간 편차가 #030보다 큰 것으로 보임",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp029_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp029_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#030",
+      "title": "작업자 비교 — 이분석 (SOP v2)",
+      "author": "이분석",
+      "performed_on": "2026-10-30",
+      "parent_code": "#018",
+      "condition_block": {
+        "matrix": "사과 (균질화)",
+        "sample_mass_g": 10,
+        "extraction_solvent": "아세토니트릴 (1% 아세트산)",
+        "extraction_volume_ml": 10,
+        "extraction_time_min": 10,
+        "ph": 5.0,
+        "buffer": "아세테이트 (AOAC 2007.01)",
+        "cleanup_sorbent": "PSA 50 mg + C18 50 mg + MgSO4 150 mg",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI+, MRM)"
+      },
+      "raw_note": "목적: 같은 SOP v2를 두 작업자가 같은 주에 수행해 작업자 간 차이 확인 (#029와 짝).\n절차: SOP v2 그대로. 평소 방식대로 시료 수화 10분 후 기계식 진탕기(1500 rpm) 1분, 원심분리 4000 rpm 10분.\n내부표준은 추출 전 시료에 첨가.\n2수준 각 5반복.\n관찰:\n- 조건 차이 없음\n- 회수율 평균이 #029보다 높고 편차 작아 보임 — 진탕 방식·IS 첨가 시점 차이 의심",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "exp030_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "exp030_recovery.csv"
+        }
+      ]
+    }
+  ]
+}

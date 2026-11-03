@@ -1,0 +1,419 @@
+{
+  "critiques": [
+    {
+      "id": "C01",
+      "project": "residue",
+      "experiment": "#006"
+    },
+    {
+      "id": "C02",
+      "project": "residue",
+      "experiment": "#009"
+    },
+    {
+      "id": "C03",
+      "project": "residue",
+      "experiment": "#009"
+    },
+    {
+      "id": "C04",
+      "project": "residue",
+      "experiment": "#024"
+    },
+    {
+      "id": "C05",
+      "project": "organic_acids",
+      "experiment": "#OA03"
+    },
+    {
+      "id": "C06",
+      "project": "organic_acids",
+      "experiment": "#OA06"
+    },
+    {
+      "id": "C07",
+      "project": "organic_acids",
+      "experiment": "#OA06"
+    },
+    {
+      "id": "C08",
+      "project": "organic_acids",
+      "experiment": "#OA09"
+    },
+    {
+      "id": "C09",
+      "project": "organic_acids",
+      "experiment": "#OA10"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D01",
+      "critique": "C01",
+      "project": "residue",
+      "experiment": "#006",
+      "proposal": {
+        "template_id": "calibration_weighting",
+        "signature": "b6af1e625dcdc8a0fd94963108ef171b3aaa708b31405176a4f7962f091f8e63",
+        "changes": [
+          {
+            "key": "calibration_weighting",
+            "value": "1/x2"
+          }
+        ]
+      },
+      "action": "modify",
+      "rationale": "무가중 대비 가중 적용은 타당하다. 다만 1/x와 1/x²의 역산 오차 합 차이가 작고 1/x²는 고농도 구간 가중이 지나치게 작아지므로 1/x를 다음 배치(#007)부터 적용한다.",
+      "modifications": [
+        {
+          "key": "calibration_weighting",
+          "value": "1/x"
+        }
+      ],
+      "decided_by": "김연구",
+      "followed_by": "#007"
+    },
+    {
+      "id": "D02",
+      "critique": "C02",
+      "project": "residue",
+      "experiment": "#009",
+      "proposal": {
+        "template_id": "factorial_pretreatment",
+        "signature": "4d9eb29bbd54c15d5348e94d0590290fa3aeb0c1413dd31c4f45ae737b94f755",
+        "changes": [
+          {
+            "key": "design",
+            "value": "factorial 2x2"
+          },
+          {
+            "key": "factor_extraction_solvent",
+            "value": "아세토니트릴 | 메탄올"
+          },
+          {
+            "key": "factor_sample_mass_g",
+            "value": "15 | 10"
+          }
+        ]
+      },
+      "action": "reject",
+      "reason": "workload",
+      "rationale": "2×2 네 셀을 한 배치로 돌리면 시료 20개에 검량선까지 하루에 끝낼 수 없고, 6월은 이분석이 SOP v1.2 검증에 묶여 인력이 없다. 두 변경은 단일 변수 실험으로 하나씩 나눠 확인한다.",
+      "decided_by": "김연구"
+    },
+    {
+      "id": "D03",
+      "critique": "C03",
+      "project": "residue",
+      "experiment": "#009",
+      "proposal": {
+        "template_id": "single_variable",
+        "signature": "47983889a9576336b83a1f8b453251be1b5fb32e0df38aff3005a45a76dab7bb",
+        "changes": [
+          {
+            "key": "extraction_solvent",
+            "value": "메탄올"
+          }
+        ]
+      },
+      "action": "reject",
+      "reason": "column_pressure",
+      "rationale": "메탄올 추출액은 염석 후 층 분리가 안 돼 당·펙틴이 함께 주입된다. #009 시퀀스에서 이미 배압 상승 경고가 났고, 유기산 프로젝트와 공유하는 1.8 µm C18 컬럼 손상이 우려되어 메탄올 단독 재시험은 하지 않는다.",
+      "decided_by": "김연구"
+    },
+    {
+      "id": "D04",
+      "critique": "C03",
+      "project": "residue",
+      "experiment": "#009",
+      "proposal": {
+        "template_id": "single_variable",
+        "signature": "b16b22501f7bf27f2ffb2b2b2ff4ea0552be87ed7127c659d7b2025af1d64408",
+        "changes": [
+          {
+            "key": "sample_mass_g",
+            "value": 10.0
+          }
+        ]
+      },
+      "action": "modify",
+      "rationale": "시료량만 줄이면 시료/용매 비가 바뀐다. 용매도 10 mL로 함께 줄여 비율을 유지하고 SOP v2 개정 때 반영한다.",
+      "modifications": [
+        {
+          "key": "sample_mass_g",
+          "value": 10
+        },
+        {
+          "key": "extraction_volume_ml",
+          "value": 10
+        }
+      ],
+      "decided_by": "이분석",
+      "followed_by": "#017"
+    },
+    {
+      "id": "D05",
+      "critique": "C04",
+      "project": "residue",
+      "experiment": "#024",
+      "proposal": {
+        "template_id": "single_variable",
+        "signature": "0991d2fc13940e5cada96a0034182a0b3bc55c769f52a039ffa16633097e3b11",
+        "changes": [
+          {
+            "key": "extraction_time_min",
+            "value": 5.0
+          }
+        ]
+      },
+      "action": "accept",
+      "rationale": "처리량 목표의 핵심인 추출 시간 단축의 단독 영향부터 확인한다.",
+      "decided_by": "이분석",
+      "followed_by": "#025"
+    },
+    {
+      "id": "D06",
+      "critique": "C04",
+      "project": "residue",
+      "experiment": "#024",
+      "proposal": {
+        "template_id": "single_variable",
+        "signature": "963dc76d5c9d9851ee603a8441d79126df019acd89c9bf45cfe90c076301b8a3",
+        "changes": [
+          {
+            "key": "cleanup_sorbent",
+            "value": "PSA 50 mg + GCB 7.5 mg + MgSO4 150 mg"
+          }
+        ]
+      },
+      "action": "accept",
+      "rationale": "GCB 단독 영향을 분리해 벤즈이미다졸계 손실 원인을 확인한다.",
+      "decided_by": "김연구",
+      "followed_by": "#026"
+    },
+    {
+      "id": "D07",
+      "critique": "C04",
+      "project": "residue",
+      "experiment": "#024",
+      "proposal": {
+        "template_id": "dilution_reinjection",
+        "signature": "2b0ce14ef750f976d9fce2c211034afec7a9d9e668676df07f5f207feb749490",
+        "changes": [
+          {
+            "key": "injection_dilution",
+            "value": "researcher-defined"
+          },
+          {
+            "key": "calibration_type",
+            "value": "matrix-matched"
+          }
+        ]
+      },
+      "action": "modify",
+      "rationale": "희석 재추출 대신 주입량을 1 µL로 줄여 매트릭스 부하를 낮춘다. 검량선도 1 µL로 주입하고 매트릭스 매칭 검량선은 이번에는 만들지 않는다.",
+      "modifications": [
+        {
+          "key": "injection_volume_ul",
+          "value": 1
+        }
+      ],
+      "decided_by": "김연구",
+      "followed_by": "#028"
+    },
+    {
+      "id": "D08",
+      "critique": "C05",
+      "project": "organic_acids",
+      "experiment": "#OA03",
+      "proposal": {
+        "template_id": "dilution_reinjection",
+        "signature": "2b0ce14ef750f976d9fce2c211034afec7a9d9e668676df07f5f207feb749490",
+        "changes": [
+          {
+            "key": "injection_dilution",
+            "value": "researcher-defined"
+          },
+          {
+            "key": "calibration_type",
+            "value": "matrix-matched"
+          }
+        ]
+      },
+      "action": "reject",
+      "reason": "budget",
+      "rationale": "매트릭스 매칭 검량선용 유기산 표준품을 새로 사야 하는데 이번 분기 소모품 예산이 소진되었다. IS 저하가 같은 주 농약 #012와 겹치므로 이온원 오염으로 보고 기기 점검을 먼저 요청한다.",
+      "decided_by": "김연구"
+    },
+    {
+      "id": "D09",
+      "critique": "C06",
+      "project": "organic_acids",
+      "experiment": "#OA06",
+      "proposal": {
+        "template_id": "factorial_pretreatment",
+        "signature": "5570faab9cb380c096a04351f021c557640003cdc73cded2632226fb15c58a44",
+        "changes": [
+          {
+            "key": "design",
+            "value": "factorial 2x2"
+          },
+          {
+            "key": "factor_cleanup_sorbent",
+            "value": "없음 (0.22 µm PTFE 여과) | PSA 50 mg + MgSO4 150 mg"
+          },
+          {
+            "key": "factor_extraction_solvent",
+            "value": "초순수 | 아세토니트릴:물 (50:50)"
+          }
+        ]
+      },
+      "action": "reject",
+      "reason": "workload",
+      "rationale": "김치 시료로 2×2 네 셀(시료 20개)을 한 배치로 돌리기에는 8월 작업량이 너무 많다 — 농약 SOP v2 검증과 겹친다. 두 변경을 단일 변수 실험으로 하나씩 나눈다.",
+      "decided_by": "이분석"
+    },
+    {
+      "id": "D10",
+      "critique": "C07",
+      "project": "organic_acids",
+      "experiment": "#OA06",
+      "proposal": {
+        "template_id": "single_variable",
+        "signature": "124b4f5f29bba60eb65a4b166b47bfe22daa2bc12732c2b59f48a9955bd758f1",
+        "changes": [
+          {
+            "key": "cleanup_sorbent",
+            "value": "PSA 50 mg + MgSO4 150 mg"
+          }
+        ]
+      },
+      "action": "reject",
+      "reason": "already_tried",
+      "rationale": "PSA는 약음이온교환 흡착제로 농약 SOP에서는 유기산을 제거하려고 쓰는 것이다. 이 실험에서 이미 회수율 붕괴로 실패가 확인되었으므로 PSA 단독 반복은 의미가 없다.",
+      "decided_by": "이분석"
+    },
+    {
+      "id": "D11",
+      "critique": "C07",
+      "project": "organic_acids",
+      "experiment": "#OA06",
+      "proposal": {
+        "template_id": "single_variable",
+        "signature": "ed77045caf67c533f93d93ac2a77dc77ffd4e4a09502382bc29df3d88348a843",
+        "changes": [
+          {
+            "key": "extraction_solvent",
+            "value": "아세토니트릴:물 (50:50)"
+          }
+        ]
+      },
+      "action": "accept",
+      "rationale": "추출 용매 효과만 따로 확인한다.",
+      "decided_by": "이분석",
+      "followed_by": "#OA07"
+    },
+    {
+      "id": "D12",
+      "critique": "C08",
+      "project": "organic_acids",
+      "experiment": "#OA09",
+      "proposal": {
+        "template_id": "dilution_series",
+        "signature": "2f3caa3635feffb5f78635f8bd89194639276786bf4086d669ce5fbd462ad8df",
+        "changes": [
+          {
+            "key": "injection_dilution",
+            "value": "series (researcher-defined)"
+          }
+        ]
+      },
+      "action": "reject",
+      "reason": "instrument_schedule",
+      "rationale": "공용 LC-MS/MS가 9월 말부터 농약 프로젝트 반복성·검량선 검증 배치(#020~#023)에 배정되어 재주입 슬롯이 없다. 13C 내부표준이 억제를 함께 받아 회수율은 기준 안이므로 희석 조건은 다음 정기 배치에 포함한다.",
+      "decided_by": "이분석"
+    },
+    {
+      "id": "D13",
+      "critique": "C09",
+      "project": "organic_acids",
+      "experiment": "#OA10",
+      "proposal": {
+        "template_id": "single_variable",
+        "signature": "4ac2866d619609e3c8e925f581aadd9eabf011b9c36224f7290c9497c77ac36d",
+        "changes": [
+          {
+            "key": "extraction_solvent",
+            "value": "메탄올:물 (80:20)"
+          }
+        ]
+      },
+      "action": "reject",
+      "reason": "reagent_unavailable",
+      "rationale": "LC-MS급 메탄올 재고가 1병뿐이고 이동상용으로 우선 배정되어 있다. 추가 발주 납기가 6주라 메탄올 단독 추출 시험은 보류한다.",
+      "decided_by": "이분석"
+    },
+    {
+      "id": "D14",
+      "critique": "C09",
+      "project": "organic_acids",
+      "experiment": "#OA10",
+      "proposal": {
+        "template_id": "single_variable",
+        "signature": "23dd625aa55a6716f0af6e3cdc3ed3613e18edfe9193c9ea8c424f435bfb8898",
+        "changes": [
+          {
+            "key": "extraction_time_min",
+            "value": 30.0
+          }
+        ]
+      },
+      "action": "accept",
+      "rationale": "추출 시간 30분의 단독 효과를 확인한다.",
+      "decided_by": "김연구",
+      "followed_by": "#OA11"
+    }
+  ],
+  "repeat_probes": [
+    {
+      "decision": "D02",
+      "project": "residue",
+      "experiment": "#009"
+    },
+    {
+      "decision": "D03",
+      "project": "residue",
+      "experiment": "#009"
+    },
+    {
+      "decision": "D08",
+      "project": "organic_acids",
+      "experiment": "#OA03"
+    },
+    {
+      "decision": "D08",
+      "project": "organic_acids",
+      "experiment": "#OA09"
+    },
+    {
+      "decision": "D09",
+      "project": "organic_acids",
+      "experiment": "#OA06"
+    },
+    {
+      "decision": "D10",
+      "project": "organic_acids",
+      "experiment": "#OA06"
+    },
+    {
+      "decision": "D12",
+      "project": "organic_acids",
+      "experiment": "#OA09"
+    },
+    {
+      "decision": "D13",
+      "project": "organic_acids",
+      "experiment": "#OA10"
+    }
+  ]
+}

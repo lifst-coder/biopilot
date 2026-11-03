@@ -1,0 +1,395 @@
+{
+  "key": "organic_acids",
+  "data_dir": "organic_acids",
+  "project": {
+    "name": "발효식품 유기산 LC-MS/MS 정량법 확립",
+    "objective": "김치·된장의 유기산 5종을 LC-MS/MS(ESI−)로 회수율 70–120%, RSD ≤20% 범위에서 정량하는 방법을 확립한다.",
+    "description": "분석 대상: citric, fumaric, lactic, malic, succinic acid. 농약 프로젝트와 LC-MS/MS·작업자를 공유하며, 초기에는 C18 컬럼과 내부표준 TPP도 공유했다."
+  },
+  "experiments": [
+    {
+      "code": "#OA01",
+      "title": "초기 조건 — 검량선·회수율 (대체 매트릭스)",
+      "author": "이분석",
+      "performed_on": "2026-06-15",
+      "parent_code": null,
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 발효식품 유기산 5종 LC-MS/MS 정량 초기 조건 확인. 농약 프로젝트와 같은 LC-MS/MS·C18 컬럼·내부표준(TPP) 사용.\n절차: 김치 1 g + 초순수 50 mL, 초음파 후 원심분리(4000 rpm 10분) 상등액 여과.\n회수율은 음이온교환으로 유기산을 제거한 대체 매트릭스에 2수준(5000, 25000 ng/g) 각 5반복 첨가.\nTPP는 극성 전환(ESI+) 채널로 측정, 유기산은 ESI−.\n관찰:\n- citric acid, malic acid 머무름이 공극 부근(1분 이내)\n- 두 분석물 회수율이 낮아 보임 — 공용출 매트릭스 억제 의심\n- succinic acid, fumaric acid는 머무름 양호",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa01_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa01_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA02",
+      "title": "매트릭스 효과 평가 (김치 추출액)",
+      "author": "이분석",
+      "performed_on": "2026-06-25",
+      "parent_code": "#OA01",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 김치 추출액의 ESI− 이온화 억제 정량.\n절차: 대체 매트릭스 추출액 매칭 표준 vs 용매 표준 5수준, 절대 면적 비교.\nC18 컬럼 100% 수계 구간 장시간 사용 (농약 프로젝트와 공유 컬럼).\n관찰:\n- citric acid, malic acid 억제가 큼\n- 공극 부근 용출 분석물일수록 억제가 큰 경향\n- 컬럼 반납 후 농약 팀에 100% 수계 사용 사실 공유",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "matrix_effect",
+          "file": "oa02_matrix_effect.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA03",
+      "title": "된장 매트릭스 적용",
+      "author": "김연구",
+      "performed_on": "2026-07-09",
+      "parent_code": "#OA01",
+      "condition_block": {
+        "matrix": "된장 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "C18 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 40,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 김치 조건을 된장 매트릭스에 그대로 적용.\n절차: 된장 1 g + 초순수 50 mL, 초음파 15분 후 바로 여과.\n2수준 각 5반복 예정.\n관찰:\n- S-05 바이알 균열로 미주입 (결측)\n- 시퀀스 후반 IS(TPP) 면적 감소 — 같은 주 농약 #012 배치와 동일 현상, 기기 점검 대기\n- 된장 추출액이 진하고 회수율 전반적으로 낮아 보임",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa03_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa03_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA04",
+      "title": "컬럼 변경: HSS T3 (100% 수계 호환), 30 °C",
+      "author": "이분석",
+      "performed_on": "2026-08-05",
+      "parent_code": "#OA01",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 극성 유기산 머무름 확보를 위해 100% 수계 호환 컬럼 도입 (기기 점검 후 첫 배치).\n절차: 전처리 #OA01과 동일, 초음파 후 원심분리(4000 rpm 10분) 상등액 여과.\nLC 컬럼을 HSS T3 전용 컬럼으로 교체(농약 프로젝트와 컬럼 공유 중단), 컬럼 온도 30 °C.\n2수준 각 5반복.\n관찰:\n- citric acid, malic acid 머무름 2분 이상으로 증가\n- 회수율 전반 개선\n- 100% 수계·30 °C에서 배압이 시스템 상한에 가까움 — 유속 상향 불가",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa04_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa04_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA05",
+      "title": "매트릭스 효과 재평가 (HSS T3)",
+      "author": "이분석",
+      "performed_on": "2026-08-12",
+      "parent_code": "#OA04",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 컬럼 변경 후 매트릭스 효과 변화 확인 (#OA02와 비교).\n절차: 매트릭스 매칭 vs 용매 표준 5수준, 절대 면적 비교.\n관찰:\n- 억제 폭이 #OA02보다 전반적으로 작아 보임",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "matrix_effect",
+          "file": "oa05_matrix_effect.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA06",
+      "title": "농약 SOP 정제 적용 (아세토니트릴:물 + PSA)",
+      "author": "김연구",
+      "performed_on": "2026-08-19",
+      "parent_code": "#OA04",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "아세토니트릴:물 (50:50)",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "PSA 50 mg + MgSO4 150 mg",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 농약 프로젝트 SOP처럼 유기용매 추출 + d-SPE로 매트릭스를 더 줄여보려는 시도.\n절차: 아세토니트릴:물(50:50) 50 mL 추출, PSA d-SPE 정제. 초음파 15분 후 바로 여과.\n2수준 각 5반복.\n관찰:\n- 전 분석물 피크가 매우 작음\n- S-03 citric acid만 면적 큼 — 첨가 오류 의심, 기록 보존\n- PSA가 산성 화합물을 흡착할 수 있음을 사후에 확인",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa06_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa06_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA07",
+      "title": "단일 변수: 추출 용매 아세토니트릴:물 (50:50)",
+      "author": "이분석",
+      "performed_on": "2026-08-26",
+      "parent_code": "#OA04",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "아세토니트릴:물 (50:50)",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "TPP (triphenyl phosphate)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: #OA06 비판의 단일 변수 제안(추출 용매만 변경) 수행.\n절차: 추출 용매만 아세토니트릴:물(50:50), 정제 없음. 초음파 후 원심분리(4000 rpm 10분) 상등액 여과.\n2수준 각 5반복.\n관찰:\n- 회수율 #OA04와 큰 차이 없음\n- #OA06 회수율 붕괴는 PSA 정제 때문으로 판단\n- 이득이 없어 초순수 추출 유지",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa07_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa07_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA08",
+      "title": "내부표준 변경: TPP → 숙신산-13C4",
+      "author": "이분석",
+      "performed_on": "2026-09-02",
+      "parent_code": "#OA04",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "숙신산-13C4 (succinic acid-13C4)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: ESI− 억제를 보정할 수 있는 동위원소 내부표준 도입.\n절차: #OA04 조건, 내부표준만 숙신산-13C4로 교체(추출 전 첨가). 초음파 후 원심분리(4000 rpm 10분) 상등액 여과.\n2수준 각 5반복.\n관찰:\n- TPP는 ESI+ 채널이라 ESI− 억제를 따라가지 못함 (#OA03 된장에서 확인)\n- 회수율이 100%에 가까워지고 편차 감소\n- 농약 프로젝트는 ESI+ 분석이라 TPP 유지가 타당 — 팀 공유",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa08_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa08_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA09",
+      "title": "된장 매트릭스 재적용 (13C 내부표준)",
+      "author": "김연구",
+      "performed_on": "2026-09-16",
+      "parent_code": "#OA08",
+      "condition_block": {
+        "matrix": "된장 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 15,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "숙신산-13C4 (succinic acid-13C4)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 동위원소 내부표준으로 된장 매트릭스 재평가 (#OA03 재시도).\n절차: 된장 1 g + 초순수 50 mL, 초음파 15분 후 바로 여과.\n2수준 각 5반복.\n관찰:\n- 회수율은 기준 안으로 회복\n- S-02, S-05, S-09 내부표준 면적이 낮음 — 된장 고농도 시료\n- 희석 주입 검토 필요",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa09_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa09_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA10",
+      "title": "추출 30분 + 메탄올:물 (80:20)",
+      "author": "이분석",
+      "performed_on": "2026-09-30",
+      "parent_code": "#OA08",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "메탄올:물 (80:20)",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 30,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "숙신산-13C4 (succinic acid-13C4)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 고형분이 많은 시료 대비 추출 강화 시도: 메탄올 비율과 추출 시간을 함께 변경.\n절차: 메탄올:물(80:20) 50 mL, 초음파 30분. 초음파 후 원심분리(4000 rpm 10분) 상등액 여과.\n2수준 각 5반복.\n관찰:\n- citric acid, malic acid 피크 감소\n- 두 조건을 동시에 바꿔 원인 분리 불가 — 후속 실험 필요",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa10_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa10_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA11",
+      "title": "단일 변수: 추출 시간 30분",
+      "author": "김연구",
+      "performed_on": "2026-10-14",
+      "parent_code": "#OA08",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 30,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "숙신산-13C4 (succinic acid-13C4)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: #OA10 비판의 단일 변수 제안(추출 시간만 변경) 수행.\n절차: 초순수, 초음파 30분. 초음파 15분 후 바로 여과.\n2수준 각 5반복.\n관찰:\n- 회수율 #OA08과 비슷하거나 약간 높음\n- S-07 fumaric acid 정량한계 미만으로 미보고 (결측)\n- #OA10 저하는 메탄올 비율 때문으로 판단",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa11_calibration.csv"
+        },
+        {
+          "kind": "recovery",
+          "file": "oa11_recovery.csv"
+        }
+      ]
+    },
+    {
+      "code": "#OA12",
+      "title": "검량선 범위 확장 (20–5000 ng/mL ×3)",
+      "author": "이분석",
+      "performed_on": "2026-10-28",
+      "parent_code": "#OA11",
+      "condition_block": {
+        "matrix": "김치 (균질화)",
+        "sample_mass_g": 1,
+        "extraction_solvent": "초순수",
+        "extraction_volume_ml": 50,
+        "extraction_time_min": 30,
+        "cleanup_sorbent": "없음 (0.22 µm PTFE 여과)",
+        "column": "HSS T3 2.1×100 mm, 1.8 µm",
+        "column_temp_c": 30,
+        "internal_standard": "숙신산-13C4 (succinic acid-13C4)",
+        "calibration_weighting": "1/x",
+        "instrument": "LC-MS/MS (ESI−, MRM)",
+        "mobile_phase": "0.1% 포름산 수용액 / 아세토니트릴"
+      },
+      "raw_note": "목적: 고농도 시료 대응을 위해 검량선 상한 확장, 가중 방식 재검토.\n절차: 용매 표준 8수준, 수준당 3반복 주입, 1/x 가중.\n관찰:\n- 최고 수준에서도 검출기 포화 징후 없음\n- 저농도 역산 편차 확인 필요",
+      "attachments": [],
+      "datasets": [
+        {
+          "kind": "calibration",
+          "file": "oa12_calibration.csv"
+        }
+      ]
+    }
+  ]
+}
