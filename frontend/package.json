@@ -11,7 +11,10 @@
     "test": "vitest run",
     "gen:api": "openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts",
     "check:api": "openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts && git diff --exit-code -- src/api/schema.d.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "demo:export": "cd ../backend && python -m app.scripts.export_scenario --profile reference && python -m app.scripts.export_scenario --profile lab",
+    "dev:demo": "VITE_DEMO=true vite",
+    "build:demo": "tsc -b && VITE_DEMO=true vite build"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.105.3",

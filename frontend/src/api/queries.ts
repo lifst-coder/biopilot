@@ -4,7 +4,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ApiError, api, unwrap, type Schemas } from "./client";
+import { ApiError, api, apiFetch, unwrap, type Schemas } from "./client";
 import type { DecisionCreate } from "./types";
 
 // Request-body aliases used by mutation hooks below (one block; add new aliases here).
@@ -690,7 +690,7 @@ export function parseSseBuffer(buffer: string): { events: AskStreamEvent[]; rest
 /** POST a question to the SSE endpoint, calling `onEvent` per event (PAR-9). */
 export async function streamAsk(body: AskRequest, onEvent: (e: AskStreamEvent) => void): Promise<AskResponse> {
   const base = import.meta.env.VITE_API_BASE_URL ?? "";
-  const response = await fetch(`${base}/api/partner/ask/stream`, {
+  const response = await apiFetch(`${base}/api/partner/ask/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
     body: JSON.stringify(body),

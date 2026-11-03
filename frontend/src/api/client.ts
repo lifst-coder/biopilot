@@ -5,10 +5,18 @@
  * In dev, Vite proxies `/api` to the FastAPI server (see vite.config.ts).
  */
 import createClient from "openapi-fetch";
+import { demoFetch, isDemo } from "./demo";
 import type { components, paths } from "./schema";
+
+/**
+ * `fetch` used for every API call: the network normally, the static scenario file in the
+ * backend-less demo build (`VITE_DEMO=true`, see `demo.ts`).
+ */
+export const apiFetch: typeof fetch = isDemo ? demoFetch : (input, init) => fetch(input, init);
 
 export const api = createClient<paths>({
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? "",
+  ...(isDemo ? { fetch: (request: Request) => demoFetch(request) } : {}),
 });
 
 export type Schemas = components["schemas"];

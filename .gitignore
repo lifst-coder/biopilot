@@ -28,3 +28,6 @@ frontend/dist/
 backend/.e2e/
 frontend/test-results/
 frontend/playwright-report/
+
+# Demo scenario snapshots (generated: npm run demo:export)
+frontend/public/scenario*.json

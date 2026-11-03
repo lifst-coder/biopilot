@@ -4,6 +4,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  // GitHub Pages serves the demo under /<repo>/ — set VITE_BASE=/biopilot/ for that build.
+  base: process.env.VITE_BASE ?? "/",
   plugins: [react()],
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {

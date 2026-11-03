@@ -1,5 +1,6 @@
 import clsx from "clsx";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { demoProfile, isDemo, switchDemoProfile } from "@/api/demo";
 import { usePartnerMode } from "@/api/queries";
 import { Badge } from "@/components";
 import { PartnerPanel } from "@/features/partner-panel/PartnerPanel";
@@ -40,6 +41,7 @@ export function AppShell() {
         <div className="ml-auto flex min-w-0 items-center gap-3 text-xs text-ink-muted">
           {project && <span className="truncate">{project.name}</span>}
           {mode && <Badge tone="ai">{mode.mode === "claude" ? "Claude 모드" : "규칙 모드"}</Badge>}
+          {isDemo && <DemoSwitch />}
         </div>
       </header>
       <div className="flex min-h-0 flex-1">
@@ -51,5 +53,24 @@ export function AppShell() {
         </aside>
       </div>
     </div>
+  );
+}
+
+/** Demo build only: read-only notice + switch between the reference and lab scenarios. */
+function DemoSwitch() {
+  const current = demoProfile();
+  return (
+    <span className="flex items-center gap-1" title="백엔드 없이 저장된 시나리오(scenario.json)만 보여주는 읽기 전용 데모">
+      <Badge tone="warn">데모 · 읽기 전용</Badge>
+      <select
+        aria-label="데모 시나리오"
+        className="bp-input w-auto py-0.5 text-xs"
+        value={current}
+        onChange={(e) => switchDemoProfile(e.target.value === "lab" ? "lab" : "reference")}
+      >
+        <option value="reference">reference (7개 실험)</option>
+        <option value="lab">lab (2개 프로젝트 · 42개 실험)</option>
+      </select>
+    </span>
   );
 }
