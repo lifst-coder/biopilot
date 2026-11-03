@@ -370,6 +370,61 @@
         "title": "Attachment",
         "type": "object"
       },
+      "AttachmentFileOut": {
+        "description": "A stored attachment binary (content-addressed by sha256, immutable).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "download_url": {
+            "default": "",
+            "title": "Download Url",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "experiment_id",
+          "name",
+          "media_type",
+          "description",
+          "size_bytes",
+          "sha256",
+          "created_at"
+        ],
+        "title": "AttachmentFileOut",
+        "type": "object"
+      },
       "AuditEventOut": {
         "description": "Public representation of an audit event.",
         "properties": {
@@ -699,15 +754,85 @@
         "title": "ConditionChange",
         "type": "object"
       },
-      "ConditionField": {
-        "description": "Display metadata for a condition-block key.",
+      "ConditionCheck": {
+        "description": "Result of validating a condition block against the project template.",
         "properties": {
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "template_source": {
+            "enum": [
+              "project",
+              "default"
+            ],
+            "title": "Template Source",
+            "type": "string"
+          },
+          "template_version": {
+            "title": "Template Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "template_version",
+          "template_source",
+          "issues"
+        ],
+        "title": "ConditionCheck",
+        "type": "object"
+      },
+      "ConditionField": {
+        "description": "Display + input metadata for a condition-block key.",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
           "key": {
             "title": "Key",
             "type": "string"
           },
           "label": {
             "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value_type": {
+            "default": "text",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Value Type",
             "type": "string"
           }
         },
@@ -716,6 +841,245 @@
           "label"
         ],
         "title": "ConditionField",
+        "type": "object"
+      },
+      "ConditionIssue": {
+        "description": "One template finding for a condition block.",
+        "properties": {
+          "code": {
+            "enum": [
+              "required_missing",
+              "below_min",
+              "above_max",
+              "outside_usual",
+              "not_allowed"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "level",
+          "code",
+          "message"
+        ],
+        "title": "ConditionIssue",
+        "type": "object"
+      },
+      "ConditionRule": {
+        "description": "Validation rule for one condition key inside a project template.\n\n``min``/``max`` are hard limits (violations are errors → HTTP 400);\n``warn_min``/``warn_max`` describe the usual range (violations are warnings).",
+        "properties": {
+          "allowed": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed"
+          },
+          "key": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "required_level": {
+            "default": "warning",
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "title": "Required Level",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "warn_max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warn Max"
+          },
+          "warn_min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warn Min"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "ConditionRule",
+        "type": "object"
+      },
+      "ConditionTemplateCreate": {
+        "description": "New version of a project's condition template.",
+        "properties": {
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionRule"
+            },
+            "minItems": 1,
+            "title": "Rules",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules"
+        ],
+        "title": "ConditionTemplateCreate",
+        "type": "object"
+      },
+      "ConditionTemplateOut": {
+        "description": "Effective template of a project (stored version or the built-in default).",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionRule"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "project",
+              "default"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "version",
+          "source",
+          "rules",
+          "note",
+          "created_at"
+        ],
+        "title": "ConditionTemplateOut",
         "type": "object"
       },
       "CritiqueOut": {
@@ -824,6 +1188,56 @@
         "title": "CritiqueOut",
         "type": "object"
       },
+      "CsvIssue": {
+        "description": "One validation finding for a CSV upload. ``row`` is 1-based over data rows.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "column": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "level": {
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row"
+          }
+        },
+        "required": [
+          "level",
+          "code",
+          "message"
+        ],
+        "title": "CsvIssue",
+        "type": "object"
+      },
       "DatasetCreate": {
         "properties": {
           "content": {
@@ -843,10 +1257,36 @@
               "calibration",
               "recovery",
               "matrix_effect",
+              "ion_ratio",
               "other"
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Contract version (kind@version); latest when omitted",
+            "title": "Schema Version"
+          },
+          "supersedes_dataset_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Earlier dataset this upload replaces (re-upload)",
+            "title": "Supersedes Dataset Id"
           }
         },
         "required": [
@@ -865,6 +1305,7 @@
                 "calibration",
                 "recovery",
                 "matrix_effect",
+                "ion_ratio",
                 "other"
               ],
               "type": "string"
@@ -878,6 +1319,7 @@
                 "calibration",
                 "recovery",
                 "matrix_effect",
+                "ion_ratio",
                 "other"
               ],
               "type": "string"
@@ -891,6 +1333,7 @@
                 "calibration",
                 "recovery",
                 "matrix_effect",
+                "ion_ratio",
                 "other"
               ],
               "type": "string"
@@ -905,6 +1348,86 @@
           "both"
         ],
         "title": "DatasetDiff",
+        "type": "object"
+      },
+      "DatasetKindSpec": {
+        "description": "One version of a dataset kind's CSV contract (``kind@version``).",
+        "properties": {
+          "deprecated": {
+            "default": false,
+            "title": "Deprecated",
+            "type": "boolean"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "enum_columns": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "default": {},
+            "title": "Enum Columns",
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "calibration",
+              "recovery",
+              "matrix_effect",
+              "ion_ratio",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "numeric_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Numeric Columns",
+            "type": "array"
+          },
+          "optional_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Optional Columns",
+            "type": "array"
+          },
+          "required_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Columns",
+            "type": "array"
+          },
+          "unique_columns": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unique Columns",
+            "type": "array"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "version",
+          "description",
+          "required_columns"
+        ],
+        "title": "DatasetKindSpec",
         "type": "object"
       },
       "DatasetOut": {
@@ -938,6 +1461,7 @@
               "calibration",
               "recovery",
               "matrix_effect",
+              "ion_ratio",
               "other"
             ],
             "title": "Kind",
@@ -947,9 +1471,57 @@
             "title": "Row Count",
             "type": "integer"
           },
+          "schema_ref": {
+            "default": "",
+            "title": "Schema Ref",
+            "type": "string"
+          },
+          "schema_version": {
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
           "sha256": {
             "title": "Sha256",
             "type": "string"
+          },
+          "source_attachment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Attachment Id"
+          },
+          "source_encoding": {
+            "default": "utf-8",
+            "title": "Source Encoding",
+            "type": "string"
+          },
+          "superseded_by_dataset_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By Dataset Id"
+          },
+          "supersedes_dataset_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Dataset Id"
           }
         },
         "required": [
@@ -989,6 +1561,89 @@
           "truncated"
         ],
         "title": "DatasetPreview",
+        "type": "object"
+      },
+      "DatasetValidation": {
+        "description": "Dry-run result of parsing + validating a CSV against ``kind@version``.",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "encoding": {
+            "title": "Encoding",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/CsvIssue"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "calibration",
+              "recovery",
+              "matrix_effect",
+              "ion_ratio",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "preview_rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Preview Rows",
+            "type": "array"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "schema_ref": {
+            "title": "Schema Ref",
+            "type": "string"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          }
+        },
+        "required": [
+          "ok",
+          "kind",
+          "schema_ref",
+          "filename",
+          "encoding",
+          "sha256",
+          "row_count",
+          "columns",
+          "preview_rows",
+          "issues"
+        ],
+        "title": "DatasetValidation",
         "type": "object"
       },
       "DecisionCreate": {
@@ -1232,6 +1887,60 @@
         "title": "Evidence",
         "type": "object"
       },
+      "ExperimentAddendumCreate": {
+        "description": "Supplementary note appended to an experiment without touching the original.",
+        "properties": {
+          "author": {
+            "default": "",
+            "title": "Author",
+            "type": "string"
+          },
+          "note": {
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "ExperimentAddendumCreate",
+        "type": "object"
+      },
+      "ExperimentAddendumOut": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "experiment_id",
+          "note",
+          "author",
+          "created_at"
+        ],
+        "title": "ExperimentAddendumOut",
+        "type": "object"
+      },
       "ExperimentCreate": {
         "properties": {
           "attachments": {
@@ -1246,6 +1955,17 @@
             "default": "",
             "title": "Author",
             "type": "string"
+          },
+          "cloned_from_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloned From Experiment Id"
           },
           "code": {
             "examples": [
@@ -1274,6 +1994,17 @@
             "format": "date",
             "title": "Performed On",
             "type": "string"
+          },
+          "protocol_template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Template Id"
           },
           "raw_note": {
             "title": "Raw Note",
@@ -1363,6 +2094,98 @@
           "datasets"
         ],
         "title": "ExperimentDiff",
+        "type": "object"
+      },
+      "ExperimentDraft": {
+        "description": "Unsaved prefill for the experiment form (blank, clone or protocol template).",
+        "properties": {
+          "draft": {
+            "$ref": "#/components/schemas/ExperimentCreate"
+          },
+          "source": {
+            "enum": [
+              "blank",
+              "clone",
+              "template"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "suggested_code": {
+            "title": "Suggested Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "suggested_code",
+          "draft"
+        ],
+        "title": "ExperimentDraft",
+        "type": "object"
+      },
+      "ExperimentHistory": {
+        "properties": {
+          "current_revision": {
+            "title": "Current Revision",
+            "type": "integer"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "current_revision",
+          "entries"
+        ],
+        "title": "ExperimentHistory",
+        "type": "object"
+      },
+      "ExperimentMetadataUpdate": {
+        "additionalProperties": true,
+        "description": "Correction of mutable metadata. Any other field in the body → 409.",
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ExperimentMetadataUpdate",
         "type": "object"
       },
       "ExperimentMetrics": {
@@ -1507,6 +2330,22 @@
       "ExperimentOut": {
         "description": "Full experiment record including immutable originals.",
         "properties": {
+          "addenda": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExperimentAddendumOut"
+            },
+            "title": "Addenda",
+            "type": "array"
+          },
+          "attachment_files": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AttachmentFileOut"
+            },
+            "title": "Attachment Files",
+            "type": "array"
+          },
           "attachments": {
             "items": {
               "$ref": "#/components/schemas/Attachment"
@@ -1517,6 +2356,17 @@
           "author": {
             "title": "Author",
             "type": "string"
+          },
+          "cloned_from_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cloned From Experiment Id"
           },
           "code": {
             "title": "Code",
@@ -1537,6 +2387,7 @@
                 "calibration",
                 "recovery",
                 "matrix_effect",
+                "ion_ratio",
                 "other"
               ],
               "type": "string"
@@ -1568,13 +2419,37 @@
             "title": "Project Id",
             "type": "integer"
           },
+          "protocol_template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protocol Template Id"
+          },
           "raw_note": {
             "title": "Raw Note",
             "type": "string"
           },
+          "revision": {
+            "default": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
           "title": {
             "title": "Title",
             "type": "string"
+          },
+          "warnings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ConditionIssue"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -1611,6 +2486,7 @@
                 "calibration",
                 "recovery",
                 "matrix_effect",
+                "ion_ratio",
                 "other"
               ],
               "type": "string"
@@ -1785,6 +2661,72 @@
           "status"
         ],
         "title": "HealthOut",
+        "type": "object"
+      },
+      "HistoryEntry": {
+        "description": "One step in an experiment's version history.",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "changes": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "default": {},
+            "title": "Changes",
+            "type": "object"
+          },
+          "kind": {
+            "enum": [
+              "created",
+              "metadata",
+              "addendum",
+              "dataset",
+              "attachment"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "ref_id": {
+            "title": "Ref Id",
+            "type": "integer"
+          },
+          "ref_type": {
+            "title": "Ref Type",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "occurred_at",
+          "revision",
+          "summary",
+          "ref_type",
+          "ref_id",
+          "title",
+          "author"
+        ],
+        "title": "HistoryEntry",
         "type": "object"
       },
       "HypothesisCreate": {
@@ -1972,6 +2914,101 @@
           "flagged_count"
         ],
         "title": "ISResponseOutput",
+        "type": "object"
+      },
+      "ImportFormat": {
+        "description": "An instrument export layout the converter understands.",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "example_header": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Example Header",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "target_kinds": {
+            "items": {
+              "enum": [
+                "calibration",
+                "recovery",
+                "matrix_effect",
+                "ion_ratio",
+                "other"
+              ],
+              "type": "string"
+            },
+            "title": "Target Kinds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "description",
+          "target_kinds",
+          "example_header"
+        ],
+        "title": "ImportFormat",
+        "type": "object"
+      },
+      "ImportPreview": {
+        "description": "Vendor (wide) file converted to the long contract — not stored.",
+        "properties": {
+          "analytes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Analytes",
+            "type": "array"
+          },
+          "converted_csv": {
+            "title": "Converted Csv",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "calibration",
+              "recovery",
+              "matrix_effect",
+              "ion_ratio",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "source_rows": {
+            "title": "Source Rows",
+            "type": "integer"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/DatasetValidation"
+          }
+        },
+        "required": [
+          "format",
+          "kind",
+          "analytes",
+          "source_rows",
+          "converted_csv",
+          "validation"
+        ],
+        "title": "ImportPreview",
         "type": "object"
       },
       "MatrixEffectOut": {
@@ -2341,6 +3378,155 @@
           "created_at"
         ],
         "title": "ProposalOut",
+        "type": "object"
+      },
+      "ProtocolTemplateCreate": {
+        "description": "Reusable protocol. Saving an existing name creates a new version.",
+        "properties": {
+          "author": {
+            "default": "",
+            "title": "Author",
+            "type": "string"
+          },
+          "condition_block": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConditionBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "raw_note_template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Note Template"
+          },
+          "source_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Experiment Id"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProtocolTemplateCreate",
+        "type": "object"
+      },
+      "ProtocolTemplateList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolTemplateOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "total",
+          "items"
+        ],
+        "title": "ProtocolTemplateList",
+        "type": "object"
+      },
+      "ProtocolTemplateOut": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "condition_block": {
+            "$ref": "#/components/schemas/ConditionBlock"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "raw_note_template": {
+            "title": "Raw Note Template",
+            "type": "string"
+          },
+          "source_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Experiment Id"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "name",
+          "version",
+          "description",
+          "raw_note_template",
+          "condition_block",
+          "source_experiment_id",
+          "author",
+          "created_at"
+        ],
+        "title": "ProtocolTemplateOut",
         "type": "object"
       },
       "QCFlag": {
@@ -2732,6 +3918,7 @@
                 "calibration",
                 "recovery",
                 "matrix_effect",
+                "ion_ratio",
                 "other"
               ],
               "type": "string"
@@ -3623,6 +4810,218 @@
         ]
       }
     },
+    "/api/eln/dataset-kinds": {
+      "get": {
+        "operationId": "eln_list_dataset_kinds",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetKindSpec"
+                  },
+                  "title": "Response Eln List Dataset Kinds",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "List Dataset Kinds",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/datasets/validate": {
+      "post": {
+        "description": "Dry-run validation of CSV text (nothing stored).",
+        "operationId": "eln_validate_dataset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetValidation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Dataset",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/datasets/validate-upload": {
+      "post": {
+        "description": "Dry-run validation of an uploaded file: encoding, columns, numbers (nothing stored).",
+        "operationId": "eln_validate_dataset_upload",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "calibration",
+                      "recovery",
+                      "matrix_effect",
+                      "ion_ratio",
+                      "other"
+                    ],
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "file",
+                  "kind"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetValidation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Validate Dataset Upload",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
     "/api/eln/datasets/{dataset_id}": {
       "get": {
         "operationId": "eln_preview_dataset",
@@ -3852,6 +5251,272 @@
         ]
       }
     },
+    "/api/eln/experiments/{experiment_id}/addenda": {
+      "post": {
+        "operationId": "eln_add_addendum",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentAddendumCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentAddendumOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Addendum",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/experiments/{experiment_id}/attachment-files": {
+      "post": {
+        "description": "Store a binary attachment (max 20 MB, content-addressed; no delete route).",
+        "operationId": "eln_upload_attachment_file",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentFileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Attachment File",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/experiments/{experiment_id}/audit": {
+      "get": {
+        "description": "Audit events of the experiment and records derived from it (any module).",
+        "operationId": "eln_experiment_audit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEventOut"
+                  },
+                  "title": "Response Eln Experiment Audit",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Experiment Audit",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
     "/api/eln/experiments/{experiment_id}/datasets": {
       "get": {
         "operationId": "eln_list_datasets",
@@ -4003,6 +5668,521 @@
           }
         },
         "summary": "Create Dataset",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/experiments/{experiment_id}/datasets/import": {
+      "post": {
+        "description": "Convert an instrument (wide) export and store it; the original file is kept.",
+        "operationId": "eln_import_dataset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "calibration",
+                      "recovery",
+                      "matrix_effect",
+                      "ion_ratio",
+                      "other"
+                    ],
+                    "type": "string"
+                  },
+                  "supersedes_dataset_id": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "file",
+                  "kind",
+                  "format"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Dataset",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/experiments/{experiment_id}/datasets/upload": {
+      "post": {
+        "description": "Multipart CSV upload (UTF-8/CP949 auto-detected, max 5 MB). Re-upload via\n``supersedes_dataset_id`` creates a new dataset; the previous one is kept.",
+        "operationId": "eln_upload_dataset",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "calibration",
+                      "recovery",
+                      "matrix_effect",
+                      "ion_ratio",
+                      "other"
+                    ],
+                    "type": "string"
+                  },
+                  "schema_version": {
+                    "type": "integer"
+                  },
+                  "supersedes_dataset_id": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "file",
+                  "kind"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Dataset",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/experiments/{experiment_id}/history": {
+      "get": {
+        "operationId": "eln_experiment_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentHistory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Experiment History",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/experiments/{experiment_id}/metadata": {
+      "patch": {
+        "description": "Correct title/author only. Immutable fields in the body → 409 ``immutable_record``.",
+        "operationId": "eln_update_experiment_metadata",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperimentMetadataUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Metadata",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/import-formats": {
+      "get": {
+        "operationId": "eln_list_import_formats",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ImportFormat"
+                  },
+                  "title": "Response Eln List Import Formats",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "List Import Formats",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/import/preview": {
+      "post": {
+        "description": "Convert a vendor file to the long contract and validate it (nothing stored).",
+        "operationId": "eln_preview_import",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "file": {
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "format": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "enum": [
+                      "calibration",
+                      "recovery",
+                      "matrix_effect",
+                      "ion_ratio",
+                      "other"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file",
+                  "kind",
+                  "format"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "Preview Import",
         "tags": [
           "eln"
         ]
@@ -4204,8 +6384,352 @@
         ]
       }
     },
+    "/api/eln/projects/{project_id}/condition-check": {
+      "post": {
+        "description": "Validate a condition block against the project template without saving.",
+        "operationId": "eln_check_conditions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConditionBlock"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConditionCheck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Conditions",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/projects/{project_id}/condition-template": {
+      "get": {
+        "operationId": "eln_get_condition_template",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConditionTemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Condition Template",
+        "tags": [
+          "eln"
+        ]
+      },
+      "post": {
+        "operationId": "eln_create_condition_template",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConditionTemplateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConditionTemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Condition Template",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/projects/{project_id}/experiment-draft": {
+      "get": {
+        "operationId": "eln_experiment_draft",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "clone this experiment",
+            "in": "query",
+            "name": "source_experiment_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "clone this experiment",
+              "title": "Source Experiment Id"
+            }
+          },
+          {
+            "description": "prefill from template",
+            "in": "query",
+            "name": "protocol_template_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "prefill from template",
+              "title": "Protocol Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Experiment Draft",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
     "/api/eln/projects/{project_id}/experiments": {
       "get": {
+        "description": "List experiments. Total (before paging) is returned in ``X-Total-Count``.",
         "operationId": "eln_list_experiments",
         "parameters": [
           {
@@ -4215,6 +6739,109 @@
             "schema": {
               "title": "Project Id",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "performed_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Performed From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "performed_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Performed To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dataset_kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "calibration",
+                    "recovery",
+                    "matrix_effect",
+                    "ion_ratio",
+                    "other"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset Kind"
             }
           }
         ],
@@ -4355,6 +6982,168 @@
           }
         },
         "summary": "Create Experiment",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/projects/{project_id}/protocol-templates": {
+      "get": {
+        "operationId": "eln_list_protocol_templates",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "all_versions",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "All Versions",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolTemplateList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Protocol Templates",
+        "tags": [
+          "eln"
+        ]
+      },
+      "post": {
+        "operationId": "eln_create_protocol_template",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolTemplateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolTemplateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Protocol Template",
         "tags": [
           "eln"
         ]

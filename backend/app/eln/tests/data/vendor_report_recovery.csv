@@ -1,0 +1,5 @@
+Data File,Sample Name,Sample Type,Exp. Conc.,ISTD Area,azoxystrobin RT,azoxystrobin Area,carbendazim RT,carbendazim Area
+cal01.d,STD 1,Cal,1,51000,3.21,1520,1.85,1210
+rec01.d,S-01,Spike,10,49800,3.22,14100,1.86,8800
+rec02.d,S-02,Spike,10,50100,3.21,14500,1.85,9100
+blank.d,Blank,Blank,0,50000,,0,,0

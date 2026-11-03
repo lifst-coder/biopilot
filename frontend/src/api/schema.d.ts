@@ -157,6 +157,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/eln/dataset-kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Dataset Kinds */
+        get: operations["eln_list_dataset_kinds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/datasets/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Dataset
+         * @description Dry-run validation of CSV text (nothing stored).
+         */
+        post: operations["eln_validate_dataset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/datasets/validate-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Dataset Upload
+         * @description Dry-run validation of an uploaded file: encoding, columns, numbers (nothing stored).
+         */
+        post: operations["eln_validate_dataset_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/eln/datasets/{dataset_id}": {
         parameters: {
             query?: never;
@@ -208,6 +265,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/eln/experiments/{experiment_id}/addenda": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add Addendum */
+        post: operations["eln_add_addendum"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/experiments/{experiment_id}/attachment-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Attachment File
+         * @description Store a binary attachment (max 20 MB, content-addressed; no delete route).
+         */
+        post: operations["eln_upload_attachment_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/experiments/{experiment_id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Experiment Audit
+         * @description Audit events of the experiment and records derived from it (any module).
+         */
+        get: operations["eln_experiment_audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/eln/experiments/{experiment_id}/datasets": {
         parameters: {
             query?: never;
@@ -220,6 +334,121 @@ export interface paths {
         put?: never;
         /** Create Dataset */
         post: operations["eln_create_dataset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/experiments/{experiment_id}/datasets/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Dataset
+         * @description Convert an instrument (wide) export and store it; the original file is kept.
+         */
+        post: operations["eln_import_dataset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/experiments/{experiment_id}/datasets/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Dataset
+         * @description Multipart CSV upload (UTF-8/CP949 auto-detected, max 5 MB). Re-upload via
+         *     ``supersedes_dataset_id`` creates a new dataset; the previous one is kept.
+         */
+        post: operations["eln_upload_dataset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/experiments/{experiment_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Experiment History */
+        get: operations["eln_experiment_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/experiments/{experiment_id}/metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Metadata
+         * @description Correct title/author only. Immutable fields in the body → 409 ``immutable_record``.
+         */
+        patch: operations["eln_update_experiment_metadata"];
+        trace?: never;
+    };
+    "/api/eln/import-formats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Import Formats */
+        get: operations["eln_list_import_formats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/import/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Import
+         * @description Convert a vendor file to the long contract and validate it (nothing stored).
+         */
+        post: operations["eln_preview_import"];
         delete?: never;
         options?: never;
         head?: never;
@@ -261,6 +490,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/eln/projects/{project_id}/condition-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Conditions
+         * @description Validate a condition block against the project template without saving.
+         */
+        post: operations["eln_check_conditions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/projects/{project_id}/condition-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Condition Template */
+        get: operations["eln_get_condition_template"];
+        put?: never;
+        /** Create Condition Template */
+        post: operations["eln_create_condition_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/projects/{project_id}/experiment-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Experiment Draft */
+        get: operations["eln_experiment_draft"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/eln/projects/{project_id}/experiments": {
         parameters: {
             query?: never;
@@ -268,11 +552,32 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Experiments */
+        /**
+         * List Experiments
+         * @description List experiments. Total (before paging) is returned in ``X-Total-Count``.
+         */
         get: operations["eln_list_experiments"];
         put?: never;
         /** Create Experiment */
         post: operations["eln_create_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/projects/{project_id}/protocol-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Protocol Templates */
+        get: operations["eln_list_protocol_templates"];
+        put?: never;
+        /** Create Protocol Template */
+        post: operations["eln_create_protocol_template"];
         delete?: never;
         options?: never;
         head?: never;
@@ -733,6 +1038,36 @@ export interface components {
             name: string;
         };
         /**
+         * AttachmentFileOut
+         * @description A stored attachment binary (content-addressed by sha256, immutable).
+         */
+        AttachmentFileOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /**
+             * Download Url
+             * @default
+             */
+            download_url: string;
+            /** Experiment Id */
+            experiment_id: number;
+            /** Id */
+            id: number;
+            /** Media Type */
+            media_type: string;
+            /** Name */
+            name: string;
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /**
          * AuditEventOut
          * @description Public representation of an audit event.
          */
@@ -843,14 +1178,141 @@ export interface components {
             value_b?: unknown;
         };
         /**
+         * ConditionCheck
+         * @description Result of validating a condition block against the project template.
+         */
+        ConditionCheck: {
+            /** Issues */
+            issues: components["schemas"]["ConditionIssue"][];
+            /** Ok */
+            ok: boolean;
+            /**
+             * Template Source
+             * @enum {string}
+             */
+            template_source: "project" | "default";
+            /** Template Version */
+            template_version: number;
+        };
+        /**
          * ConditionField
-         * @description Display metadata for a condition-block key.
+         * @description Display + input metadata for a condition-block key.
          */
         ConditionField: {
+            /**
+             * Description
+             * @default
+             */
+            description: string;
             /** Key */
             key: string;
             /** Label */
             label: string;
+            /**
+             * Options
+             * @default []
+             */
+            options: string[];
+            /** Unit */
+            unit?: string | null;
+            /**
+             * Value Type
+             * @default text
+             * @enum {string}
+             */
+            value_type: "number" | "text" | "choice";
+        };
+        /**
+         * ConditionIssue
+         * @description One template finding for a condition block.
+         */
+        ConditionIssue: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "required_missing" | "below_min" | "above_max" | "outside_usual" | "not_allowed";
+            /** Key */
+            key: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "error" | "warning";
+            /** Message */
+            message: string;
+        };
+        /**
+         * ConditionRule
+         * @description Validation rule for one condition key inside a project template.
+         *
+         *     ``min``/``max`` are hard limits (violations are errors → HTTP 400);
+         *     ``warn_min``/``warn_max`` describe the usual range (violations are warnings).
+         */
+        ConditionRule: {
+            /** Allowed */
+            allowed?: string[] | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label?: string | null;
+            /** Max */
+            max?: number | null;
+            /** Min */
+            min?: number | null;
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Required Level
+             * @default warning
+             * @enum {string}
+             */
+            required_level: "error" | "warning";
+            /** Unit */
+            unit?: string | null;
+            /** Warn Max */
+            warn_max?: number | null;
+            /** Warn Min */
+            warn_min?: number | null;
+        };
+        /**
+         * ConditionTemplateCreate
+         * @description New version of a project's condition template.
+         */
+        ConditionTemplateCreate: {
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Rules */
+            rules: components["schemas"]["ConditionRule"][];
+        };
+        /**
+         * ConditionTemplateOut
+         * @description Effective template of a project (stored version or the built-in default).
+         */
+        ConditionTemplateOut: {
+            /** Created At */
+            created_at: string | null;
+            /** Id */
+            id: number | null;
+            /** Note */
+            note: string;
+            /** Project Id */
+            project_id: number;
+            /** Rules */
+            rules: components["schemas"]["ConditionRule"][];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "project" | "default";
+            /** Version */
+            version: number;
         };
         /** CritiqueOut */
         CritiqueOut: {
@@ -885,6 +1347,25 @@ export interface components {
             /** Summary */
             summary: string;
         };
+        /**
+         * CsvIssue
+         * @description One validation finding for a CSV upload. ``row`` is 1-based over data rows.
+         */
+        CsvIssue: {
+            /** Code */
+            code: string;
+            /** Column */
+            column?: string | null;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "error" | "warning";
+            /** Message */
+            message: string;
+            /** Row */
+            row?: number | null;
+        };
         /** DatasetCreate */
         DatasetCreate: {
             /**
@@ -898,16 +1379,70 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "calibration" | "recovery" | "matrix_effect" | "other";
+            kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+            /**
+             * Schema Version
+             * @description Contract version (kind@version); latest when omitted
+             */
+            schema_version?: number | null;
+            /**
+             * Supersedes Dataset Id
+             * @description Earlier dataset this upload replaces (re-upload)
+             */
+            supersedes_dataset_id?: number | null;
         };
         /** DatasetDiff */
         DatasetDiff: {
             /** Both */
-            both: ("calibration" | "recovery" | "matrix_effect" | "other")[];
+            both: ("calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other")[];
             /** Only A */
-            only_a: ("calibration" | "recovery" | "matrix_effect" | "other")[];
+            only_a: ("calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other")[];
             /** Only B */
-            only_b: ("calibration" | "recovery" | "matrix_effect" | "other")[];
+            only_b: ("calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other")[];
+        };
+        /**
+         * DatasetKindSpec
+         * @description One version of a dataset kind's CSV contract (``kind@version``).
+         */
+        DatasetKindSpec: {
+            /**
+             * Deprecated
+             * @default false
+             */
+            deprecated: boolean;
+            /** Description */
+            description: string;
+            /**
+             * Enum Columns
+             * @default {}
+             */
+            enum_columns: {
+                [key: string]: string[];
+            };
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+            /**
+             * Numeric Columns
+             * @default []
+             */
+            numeric_columns: string[];
+            /**
+             * Optional Columns
+             * @default []
+             */
+            optional_columns: string[];
+            /** Required Columns */
+            required_columns: string[];
+            /**
+             * Unique Columns
+             * @default []
+             */
+            unique_columns: string[];
+            /** Version */
+            version: number;
         };
         /** DatasetOut */
         DatasetOut: {
@@ -928,11 +1463,32 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "calibration" | "recovery" | "matrix_effect" | "other";
+            kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
             /** Row Count */
             row_count: number;
+            /**
+             * Schema Ref
+             * @default
+             */
+            schema_ref: string;
+            /**
+             * Schema Version
+             * @default 1
+             */
+            schema_version: number;
             /** Sha256 */
             sha256: string;
+            /** Source Attachment Id */
+            source_attachment_id?: number | null;
+            /**
+             * Source Encoding
+             * @default utf-8
+             */
+            source_encoding: string;
+            /** Superseded By Dataset Id */
+            superseded_by_dataset_id?: number | null;
+            /** Supersedes Dataset Id */
+            supersedes_dataset_id?: number | null;
         };
         /** DatasetPreview */
         DatasetPreview: {
@@ -943,6 +1499,37 @@ export interface components {
             }[];
             /** Truncated */
             truncated: boolean;
+        };
+        /**
+         * DatasetValidation
+         * @description Dry-run result of parsing + validating a CSV against ``kind@version``.
+         */
+        DatasetValidation: {
+            /** Columns */
+            columns: string[];
+            /** Encoding */
+            encoding: string;
+            /** Filename */
+            filename: string;
+            /** Issues */
+            issues: components["schemas"]["CsvIssue"][];
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+            /** Ok */
+            ok: boolean;
+            /** Preview Rows */
+            preview_rows: {
+                [key: string]: unknown;
+            }[];
+            /** Row Count */
+            row_count: number;
+            /** Schema Ref */
+            schema_ref: string;
+            /** Sha256 */
+            sha256: string | null;
         };
         /** DecisionCreate */
         DecisionCreate: {
@@ -1054,6 +1641,35 @@ export interface components {
             /** Value */
             value?: number | null;
         };
+        /**
+         * ExperimentAddendumCreate
+         * @description Supplementary note appended to an experiment without touching the original.
+         */
+        ExperimentAddendumCreate: {
+            /**
+             * Author
+             * @default
+             */
+            author: string;
+            /** Note */
+            note: string;
+        };
+        /** ExperimentAddendumOut */
+        ExperimentAddendumOut: {
+            /** Author */
+            author: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Experiment Id */
+            experiment_id: number;
+            /** Id */
+            id: number;
+            /** Note */
+            note: string;
+        };
         /** ExperimentCreate */
         ExperimentCreate: {
             /**
@@ -1066,6 +1682,8 @@ export interface components {
              * @default
              */
             author: string;
+            /** Cloned From Experiment Id */
+            cloned_from_experiment_id?: number | null;
             /**
              * Code
              * @example #025
@@ -1079,6 +1697,8 @@ export interface components {
              * Format: date
              */
             performed_on: string;
+            /** Protocol Template Id */
+            protocol_template_id?: number | null;
             /** Raw Note */
             raw_note: string;
             /** Title */
@@ -1105,6 +1725,46 @@ export interface components {
             relation: "same" | "a_is_ancestor" | "b_is_ancestor" | "siblings" | "unrelated";
             /** Unchanged Keys */
             unchanged_keys: string[];
+        };
+        /**
+         * ExperimentDraft
+         * @description Unsaved prefill for the experiment form (blank, clone or protocol template).
+         */
+        ExperimentDraft: {
+            draft: components["schemas"]["ExperimentCreate"];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "blank" | "clone" | "template";
+            /** Suggested Code */
+            suggested_code: string;
+        };
+        /** ExperimentHistory */
+        ExperimentHistory: {
+            /** Current Revision */
+            current_revision: number;
+            /** Entries */
+            entries: components["schemas"]["HistoryEntry"][];
+            /** Experiment Id */
+            experiment_id: number;
+        };
+        /**
+         * ExperimentMetadataUpdate
+         * @description Correction of mutable metadata. Any other field in the body → 409.
+         */
+        ExperimentMetadataUpdate: {
+            /** Author */
+            author?: string | null;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /** Title */
+            title?: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /**
          * ExperimentMetrics
@@ -1159,10 +1819,22 @@ export interface components {
          * @description Full experiment record including immutable originals.
          */
         ExperimentOut: {
+            /**
+             * Addenda
+             * @default []
+             */
+            addenda: components["schemas"]["ExperimentAddendumOut"][];
+            /**
+             * Attachment Files
+             * @default []
+             */
+            attachment_files: components["schemas"]["AttachmentFileOut"][];
             /** Attachments */
             attachments: components["schemas"]["Attachment"][];
             /** Author */
             author: string;
+            /** Cloned From Experiment Id */
+            cloned_from_experiment_id?: number | null;
             /** Code */
             code: string;
             condition_block: components["schemas"]["ConditionBlock"];
@@ -1175,7 +1847,7 @@ export interface components {
              * Dataset Kinds
              * @default []
              */
-            dataset_kinds: ("calibration" | "recovery" | "matrix_effect" | "other")[];
+            dataset_kinds: ("calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other")[];
             /** Id */
             id: number;
             /** Parent Experiment Id */
@@ -1187,10 +1859,22 @@ export interface components {
             performed_on: string;
             /** Project Id */
             project_id: number;
+            /** Protocol Template Id */
+            protocol_template_id?: number | null;
             /** Raw Note */
             raw_note: string;
+            /**
+             * Revision
+             * @default 1
+             */
+            revision: number;
             /** Title */
             title: string;
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: components["schemas"]["ConditionIssue"][];
         };
         /**
          * ExperimentSummary
@@ -1205,7 +1889,7 @@ export interface components {
              * Dataset Kinds
              * @default []
              */
-            dataset_kinds: ("calibration" | "recovery" | "matrix_effect" | "other")[];
+            dataset_kinds: ("calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other")[];
             /** Id */
             id: number;
             /** Parent Experiment Id */
@@ -1273,6 +1957,43 @@ export interface components {
         HealthOut: {
             /** Status */
             status: string;
+        };
+        /**
+         * HistoryEntry
+         * @description One step in an experiment's version history.
+         */
+        HistoryEntry: {
+            /** Author */
+            author: string;
+            /**
+             * Changes
+             * @default {}
+             */
+            changes: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "created" | "metadata" | "addendum" | "dataset" | "attachment";
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Ref Id */
+            ref_id: number;
+            /** Ref Type */
+            ref_type: string;
+            /** Revision */
+            revision: number;
+            /** Summary */
+            summary: string;
+            /** Title */
+            title: string;
         };
         /** HypothesisCreate */
         HypothesisCreate: {
@@ -1346,6 +2067,42 @@ export interface components {
             kind: "is_response";
             /** Reference Is Area */
             reference_is_area: number;
+        };
+        /**
+         * ImportFormat
+         * @description An instrument export layout the converter understands.
+         */
+        ImportFormat: {
+            /** Description */
+            description: string;
+            /** Example Header */
+            example_header: string[];
+            /** Label */
+            label: string;
+            /** Name */
+            name: string;
+            /** Target Kinds */
+            target_kinds: ("calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other")[];
+        };
+        /**
+         * ImportPreview
+         * @description Vendor (wide) file converted to the long contract — not stored.
+         */
+        ImportPreview: {
+            /** Analytes */
+            analytes: string[];
+            /** Converted Csv */
+            converted_csv: string;
+            /** Format */
+            format: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+            /** Source Rows */
+            source_rows: number;
+            validation: components["schemas"]["DatasetValidation"];
         };
         /** MatrixEffectOut */
         MatrixEffectOut: {
@@ -1489,6 +2246,63 @@ export interface components {
             status: "pending" | "accepted" | "modified" | "rejected";
             /** Title */
             title: string;
+        };
+        /**
+         * ProtocolTemplateCreate
+         * @description Reusable protocol. Saving an existing name creates a new version.
+         */
+        ProtocolTemplateCreate: {
+            /**
+             * Author
+             * @default
+             */
+            author: string;
+            condition_block?: components["schemas"]["ConditionBlock"] | null;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Name */
+            name: string;
+            /** Raw Note Template */
+            raw_note_template?: string | null;
+            /** Source Experiment Id */
+            source_experiment_id?: number | null;
+        };
+        /** ProtocolTemplateList */
+        ProtocolTemplateList: {
+            /** Items */
+            items: components["schemas"]["ProtocolTemplateOut"][];
+            /** Project Id */
+            project_id: number;
+            /** Total */
+            total: number;
+        };
+        /** ProtocolTemplateOut */
+        ProtocolTemplateOut: {
+            /** Author */
+            author: string;
+            condition_block: components["schemas"]["ConditionBlock"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description: string;
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Project Id */
+            project_id: number;
+            /** Raw Note Template */
+            raw_note_template: string;
+            /** Source Experiment Id */
+            source_experiment_id: number | null;
+            /** Version */
+            version: number;
         };
         /**
          * QCFlag
@@ -1637,7 +2451,7 @@ export interface components {
             /** Code */
             code: string;
             /** Dataset Kinds */
-            dataset_kinds: ("calibration" | "recovery" | "matrix_effect" | "other")[];
+            dataset_kinds: ("calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other")[];
             /** Experiment Id */
             experiment_id: number;
             /** Parent Experiment Id */
@@ -2206,6 +3020,170 @@ export interface operations {
             };
         };
     };
+    eln_list_dataset_kinds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetKindSpec"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    eln_validate_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetValidation"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_validate_dataset_upload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @enum {string} */
+                    kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+                    schema_version?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetValidation"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     eln_preview_dataset: {
         parameters: {
             query?: {
@@ -2383,6 +3361,194 @@ export interface operations {
             };
         };
     };
+    eln_add_addendum: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentAddendumCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentAddendumOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_upload_attachment_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    description?: string;
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentFileOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_experiment_audit: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventOut"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     eln_list_datasets: {
         parameters: {
             query?: never;
@@ -2499,6 +3665,368 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_import_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    format: string;
+                    /** @enum {string} */
+                    kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+                    supersedes_dataset_id?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_upload_dataset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @enum {string} */
+                    kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+                    schema_version?: number;
+                    supersedes_dataset_id?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_experiment_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentHistory"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_update_experiment_metadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExperimentMetadataUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_list_import_formats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportFormat"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    eln_preview_import: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    format: string;
+                    /** @enum {string} */
+                    kind: "calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other";
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportPreview"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -2668,9 +4196,261 @@ export interface operations {
             };
         };
     };
-    eln_list_experiments: {
+    eln_check_conditions: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConditionBlock"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConditionCheck"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_get_condition_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConditionTemplateOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_create_condition_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConditionTemplateCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConditionTemplateOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_experiment_draft: {
+        parameters: {
+            query?: {
+                /** @description clone this experiment */
+                source_experiment_id?: number | null;
+                /** @description prefill from template */
+                protocol_template_id?: number | null;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExperimentDraft"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_list_experiments: {
+        parameters: {
+            query?: {
+                limit?: number | null;
+                offset?: number;
+                performed_from?: string | null;
+                performed_to?: string | null;
+                author?: string | null;
+                dataset_kind?: ("calibration" | "recovery" | "matrix_effect" | "ion_ratio" | "other") | null;
+            };
             header?: never;
             path: {
                 project_id: number;
@@ -2748,6 +4528,128 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExperimentOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_list_protocol_templates: {
+        parameters: {
+            query?: {
+                all_versions?: boolean;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolTemplateList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_create_protocol_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProtocolTemplateCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolTemplateOut"];
                 };
             };
             /** @description Bad Request */
