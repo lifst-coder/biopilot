@@ -22,14 +22,14 @@ export function HypothesisItem({ hypothesis, resultIds }: { hypothesis: Hypothes
   const [rationale, setRationale] = useState("");
   const options = NEXT[hypothesis.status];
   return (
-    <li className="rounded-md border border-border p-3 text-xs">
-      <div className="mb-1 flex items-center gap-2">
+    <li className="rounded-md border border-border p-3 text-sm">
+      <div className="mb-1 flex flex-wrap items-center gap-2">
         <Badge tone={hypothesis.origin === "user" ? "neutral" : "ai"}>{hypothesis.origin}</Badge>
         <Badge>{LABEL[hypothesis.status]}</Badge>
         <span className="text-ink-faint">H{hypothesis.id}</span>
       </div>
-      <p className="font-medium">{hypothesis.statement}</p>
-      {hypothesis.rationale && <p className="mt-0.5 text-ink-muted">{hypothesis.rationale}</p>}
+      <p className="bp-prose font-medium">{hypothesis.statement}</p>
+      {hypothesis.rationale && <p className="bp-prose mt-0.5 text-ink-muted">{hypothesis.rationale}</p>}
       {hypothesis.transitions.map((t) => (
         <p key={t.id} className="mt-0.5 text-ink-faint">
           {LABEL[t.from_status]} → {LABEL[t.to_status]}: {t.rationale}

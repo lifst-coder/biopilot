@@ -92,7 +92,7 @@ export function ResearchAIPage() {
           </>
         }
       />
-      {run.isError && <p className="text-xs text-crit">{run.error.message}</p>}
+      {run.isError && <p className="text-sm text-crit">{run.error.message}</p>}
 
       <div id="critic" className="scroll-mt-4 space-y-4">
         <QueryState query={critiques}>
@@ -131,7 +131,7 @@ export function ResearchAIPage() {
               list.length === 0 ? (
                 <EmptyState>제안 없음</EmptyState>
               ) : (
-                <div className="grid gap-3 xl:grid-cols-2">
+                <div className="grid gap-4 xl:grid-cols-2">
                   {pendingFirst(list).map((p) => (
                     <ProposalCard key={p.id} proposal={p} codeOf={codeOf} />
                   ))}
@@ -143,7 +143,7 @@ export function ResearchAIPage() {
       </div>
 
       <div className="space-y-2">
-        <h2 className="px-1 pt-2 text-xs font-semibold text-ink-muted">자세히</h2>
+        <h2 className="px-1 pt-4 text-sm font-semibold text-ink-muted">자세히</h2>
         {latest && (
           <Disclosure
             title="비판적 검토 — 세부 지적"

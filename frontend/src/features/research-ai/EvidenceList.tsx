@@ -28,7 +28,7 @@ export function EvidenceList({
       {hidden > 0 && (
         <button
           type="button"
-          className="rounded border border-dashed border-border px-1.5 py-0.5 text-[11px] text-ink-muted hover:bg-subtle"
+          className="rounded border border-dashed border-border px-1.5 py-0.5 text-xs text-ink-muted hover:bg-subtle"
           onClick={() => setExpanded(true)}
         >
           근거 +{hidden}

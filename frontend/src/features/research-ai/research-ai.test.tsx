@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import type { ProposalOut } from "@/api/types";
-import { CriticAssessmentView } from "./CriticAssessmentView";
+import { CriticAssessmentView, splitReason } from "./CriticAssessmentView";
 import { DecisionHistoryCard } from "./DecisionHistoryCard";
 import { DesignDetails } from "./DesignDetails";
 import { ProposalCard } from "./ProposalCard";
@@ -102,6 +102,11 @@ describe("Research AI tab", () => {
     expect(screen.getByText(/결정 이력: P1 기각/)).toBeTruthy();
     expect(screen.getByText("추정")).toBeTruthy();
     expect(screen.getByText("도메인 지식")).toBeTruthy();
+  });
+
+  it("splits a verdict reason into conclusion and detail at the first em dash only", () => {
+    expect(splitReason("구분 불가 — 비교 A, B 데이터가 없다 — 추가")).toEqual(["구분 불가", "비교 A, B 데이터가 없다 — 추가"]);
+    expect(splitReason("근거가 충분하다")).toEqual(["근거가 충분하다", null]);
   });
 
   it("shows designer fields: variables, controls, replicates, power, basis experiments", () => {

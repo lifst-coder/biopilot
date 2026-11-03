@@ -17,7 +17,7 @@ const VISIBLE = 6;
 
 function StatementList({ statements }: { statements: Statement[] }) {
   return (
-    <ul className="space-y-1.5">
+    <ul className="space-y-2 leading-relaxed">
       {statements.map((s, i) => (
         <li key={`${i}-${s.text}`} className="flex items-start gap-1.5">
           <span className="shrink-0">
@@ -26,7 +26,7 @@ function StatementList({ statements }: { statements: Statement[] }) {
           <span>
             {s.text}
             {s.evidence_keys.length > 0 && (
-              <span className="ml-1 font-mono text-[10px] text-ink-faint">[{s.evidence_keys.join(", ")}]</span>
+              <span className="ml-1 font-mono text-xs text-ink-faint">[{s.evidence_keys.join(", ")}]</span>
             )}
           </span>
         </li>
@@ -42,7 +42,7 @@ function StatementList({ statements }: { statements: Statement[] }) {
 export function AnswerView({ answer }: { answer: AskResponse }) {
   const evidence = new Map(answer.evidence.map((e) => [e.key, e]));
   return (
-    <div className="space-y-2 rounded-md bg-ai-soft/60 p-3 text-xs">
+    <div className="space-y-2 rounded-md bg-ai-soft/60 p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <EngineBadge engine={answer.engine} />
         {answer.critique_id != null && <Badge tone="neutral">비판 #{answer.critique_id}</Badge>}
@@ -78,7 +78,7 @@ export function AnswerView({ answer }: { answer: AskResponse }) {
       {answer.sources.length > 0 && (
         <details>
           <summary className="cursor-pointer text-ink-muted">출처 ({answer.sources.length})</summary>
-          <ul className="mt-1 space-y-0.5 text-[11px] text-ink-muted">
+          <ul className="mt-1 space-y-0.5 text-sm text-ink-muted">
             {answer.sources.map((s) => (
               <li key={`${s.ref_type}-${s.ref_id}`}>
                 <span className="font-mono">

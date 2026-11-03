@@ -28,25 +28,25 @@ export function PartnerPanel() {
   };
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
+    <div className="flex h-full flex-col gap-5 p-4 sm:p-5">
       <header className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Research Partner</h2>
+        <h2 className="text-base font-semibold">Research Partner</h2>
         {mode && <EngineBadge engine={mode.mode} model={mode.model} />}
       </header>
-      <p className="text-xs text-ink-muted">
+      <p className="text-sm text-ink-muted">
         컨텍스트: {selected ? `${selected.code} · ${selected.title}` : "실험 미선택 (프로젝트 수준)"}
       </p>
 
       <section className="space-y-2">
-        <h3 className="text-xs font-semibold text-ink-muted">최근 비판</h3>
+        <h3 className="text-sm font-semibold text-ink-muted">최근 비판</h3>
         {latest ? (
           <>
             {latest.assessments[0] && (
-              <p className="rounded-md bg-warn-soft/60 p-2 text-xs">판정: {latest.assessments[0].verdict_reason}</p>
+              <p className="bp-prose rounded-md bg-warn-soft/60 px-3 py-2">판정: {latest.assessments[0].verdict_reason}</p>
             )}
-            <ul className="space-y-1.5">
+            <ul className="space-y-2">
               {latest.findings.slice(0, 4).map((f) => (
-                <li key={f.title} className="flex items-start gap-2 text-xs">
+                <li key={f.title} className="flex items-start gap-2 text-sm">
                   <span className="shrink-0">
                     <SeverityBadge severity={f.severity} />
                   </span>
@@ -56,18 +56,18 @@ export function PartnerPanel() {
             </ul>
           </>
         ) : (
-          <p className="text-xs text-ink-faint">이 실험에 저장된 비판이 없습니다.</p>
+          <p className="text-sm text-ink-faint">이 실험에 저장된 비판이 없습니다.</p>
         )}
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-xs font-semibold text-ink-muted">질문하기</h3>
+        <h3 className="text-sm font-semibold text-ink-muted">질문하기</h3>
         <div className="flex flex-wrap gap-1">
           {SUGGESTIONS.map((s) => (
             <button
               key={s}
               type="button"
-              className="rounded-full border border-border px-2 py-0.5 text-[11px] text-ink-muted hover:bg-subtle"
+              className="rounded-full border border-brand/40 bg-surface px-2.5 py-1 text-xs font-medium text-brand-strong hover:bg-brand-soft"
               onClick={() => {
                 setQuestion(s);
                 submit(s);
@@ -94,15 +94,15 @@ export function PartnerPanel() {
         >
           {ask.isPending ? "생각 중…" : "질문"}
         </button>
-        <p className="text-[11px] text-ink-faint">
+        <p className="text-sm text-ink-faint">
           답변의 각 문장은 사실·판단·추정으로 표시됩니다. 근거 없는 문장은 항상 &lsquo;추정&rsquo;입니다.
         </p>
-        {ask.isError && <p className="text-xs text-crit">{ask.error.message}</p>}
+        {ask.isError && <p className="text-sm text-crit">{ask.error.message}</p>}
         {ask.stream.replaced && (
-          <p className="text-xs text-warn">임시 답변을 검증하지 못해 규칙 모드 답변으로 교체했습니다.</p>
+          <p className="text-sm text-warn">임시 답변을 검증하지 못해 규칙 모드 답변으로 교체했습니다.</p>
         )}
         {ask.isPending && ask.stream.text && (
-          <p className="whitespace-pre-wrap rounded-md border border-dashed border-border p-2 text-xs text-ink-muted">
+          <p className="whitespace-pre-wrap rounded-md border border-dashed border-border p-2 text-sm text-ink-muted">
             {ask.stream.text}
           </p>
         )}
@@ -110,12 +110,12 @@ export function PartnerPanel() {
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-xs font-semibold text-ink-muted">대화 기록</h3>
+        <h3 className="text-sm font-semibold text-ink-muted">대화 기록</h3>
         {history && history.items.length > 0 ? (
           <ul className="space-y-1.5">
             {history.items.slice(0, 8).map((x) => (
               <li key={x.id}>
-                <details className="text-xs">
+                <details className="text-sm">
                   <summary className="cursor-pointer">
                     <span className="text-ink-faint">{formatDateTime(x.created_at)}</span> · {x.question}
                   </summary>
@@ -127,7 +127,7 @@ export function PartnerPanel() {
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-ink-faint">아직 대화가 없습니다.</p>
+          <p className="text-sm text-ink-faint">아직 대화가 없습니다.</p>
         )}
       </section>
     </div>

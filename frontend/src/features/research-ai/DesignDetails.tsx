@@ -6,7 +6,7 @@ export function DesignDetails({ design, codeOf }: { design: ExperimentDesign; co
   const varied = design.variables.filter((v) => v.role === "varied");
   const fixed = design.variables.filter((v) => v.role === "fixed");
   return (
-    <dl className="grid grid-cols-[6rem_1fr] gap-x-2 gap-y-1 rounded-md bg-subtle p-2 text-[11px]">
+    <dl className="grid grid-cols-1 gap-x-3 gap-y-1 rounded-md bg-subtle p-3 text-sm leading-relaxed sm:grid-cols-[6.5rem_minmax(0,1fr)] sm:gap-y-2 [&>dt]:pt-1 sm:[&>dt]:pt-0">
       <dt className="text-ink-muted">목적</dt>
       <dd>{design.objective}</dd>
       <dt className="text-ink-muted">변수</dt>

@@ -14,7 +14,7 @@ export function DecisionHistoryCard({ entries }: { entries: DecisionHistoryEntry
       ) : (
         <ul className="space-y-2">
           {entries.map((e) => (
-            <li key={e.decision.id} className="rounded-md border border-border p-2 text-xs">
+            <li key={e.decision.id} className="rounded-md border border-border p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={TONE[e.decision.action]}>{LABEL[e.decision.action]}</Badge>
                 <span className="text-ink-faint">
@@ -23,7 +23,7 @@ export function DecisionHistoryCard({ entries }: { entries: DecisionHistoryEntry
                 <Badge>{e.decision.reason_category}</Badge>
               </div>
               <p className="mt-1 font-medium">{e.proposal_title}</p>
-              <p className="text-ink-muted">사유: {e.decision.rationale}</p>
+              <p className="bp-prose text-ink-muted">사유: {e.decision.rationale}</p>
               <p className="text-ink-faint">
                 {e.reflected_in_critique_ids.length > 0
                   ? `반영된 비판: ${e.reflected_in_critique_ids.map((id) => `#${id}`).join(", ")}`
