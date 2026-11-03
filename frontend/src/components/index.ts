@@ -7,6 +7,7 @@ export { Disclosure } from "./Disclosure";
 export type { DisclosureTone } from "./Disclosure";
 export type { Column } from "./DataTable";
 export { EvidenceChip } from "./EvidenceChip";
+export { FlagMark } from "./FlagMark";
 export { ExperimentPicker } from "./ExperimentPicker";
 export { EmptyState, ErrorState, LoadingState, QueryState } from "./QueryState";
 export { PageHeader } from "./PageHeader";

@@ -27,17 +27,18 @@ export function DataTable<T>({
   onRowClick,
   empty = "데이터 없음",
 }: DataTableProps<T>) {
-  if (rows.length === 0) return <p className="py-4 text-center text-xs text-ink-faint">{empty}</p>;
+  if (rows.length === 0) return <p className="py-4 text-center text-sm text-ink-faint">{empty}</p>;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-xs">
+    // `relative`: absolutely positioned descendants (sr-only labels) stay inside the scroller.
+    <div className="relative overflow-x-auto">
+      <table className="w-full border-collapse text-sm">
         <thead>
-          <tr className="border-b border-border text-ink-muted">
+          <tr className="border-b border-border text-xs text-ink-muted">
             {columns.map((c) => (
               <th
                 key={c.key}
                 className={clsx(
-                  "px-2 py-1.5 font-medium",
+                  "whitespace-nowrap px-2.5 py-2 font-semibold",
                   c.align === "right" ? "text-right" : "text-left",
                 )}
               >
@@ -61,8 +62,8 @@ export function DataTable<T>({
                 <td
                   key={c.key}
                   className={clsx(
-                    "px-2 py-1.5",
-                    c.align === "right" && "text-right tabular-nums",
+                    "px-2.5 py-2 align-top",
+                    c.align === "right" && "whitespace-nowrap text-right tabular-nums",
                     c.className,
                   )}
                 >

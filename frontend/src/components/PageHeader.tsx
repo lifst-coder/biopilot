@@ -5,8 +5,8 @@ export function PageHeader({ title, question, actions }: { title: ReactNode; que
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-lg font-semibold">{title}</h1>
-        <p className="text-xs text-ink-faint">이 화면의 질문 · {question}</p>
+        <h1 className="text-xl font-semibold">{title}</h1>
+        <p className="mt-1 text-sm text-ink-muted">이 화면의 질문 · {question}</p>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

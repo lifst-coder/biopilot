@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { GLOSSARY } from "@/lib/glossary";
 import { DataTable } from "./DataTable";
 import { Disclosure } from "./Disclosure";
 import { EvidenceChip } from "./EvidenceChip";
+import { FlagMark } from "./FlagMark";
 import { StatTile } from "./StatTile";
 import { Term } from "./Term";
 
@@ -65,6 +66,55 @@ describe("hierarchy components", () => {
     lazy!.open = true;
     fireEvent(lazy!, new Event("toggle"));
     expect(screen.getByText("열면 렌더")).toBeTruthy();
+  });
+
+  it("Disclosure status is a glyph and a spoken label, not color alone", () => {
+    const { container } = render(
+      <>
+        <Disclosure title="회수율" tone="crit">
+          <p />
+        </Disclosure>
+        <Disclosure title="IS" tone="warn">
+          <p />
+        </Disclosure>
+        <Disclosure title="검량선" tone="ok">
+          <p />
+        </Disclosure>
+      </>,
+    );
+    const summaries = [...container.querySelectorAll("summary")].map((s) => s.textContent ?? "");
+    expect(summaries[0]).toContain("✕");
+    expect(summaries[0]).toContain("심각");
+    expect(summaries[1]).toContain("!");
+    expect(summaries[1]).toContain("주의");
+    expect(summaries[2]).toContain("✓");
+    expect(summaries[2]).toContain("정상");
+    // The title says it can be opened, and the hint flips when open (CSS group-open).
+    expect(within(container).getAllByText("펼치기")).toHaveLength(3);
+  });
+
+  it("FlagMark marks a flagged table value with a glyph and a screen-reader label", () => {
+    const { container } = render(<FlagMark tone="crit" label="허용 범위 밖" />);
+    const label = within(container).getByText("허용 범위 밖");
+    expect(label.className).toContain("sr-only");
+    expect(label.parentElement?.textContent).toContain("✕");
+    expect(label.parentElement?.getAttribute("title")).toBe("허용 범위 밖");
+  });
+
+  it("DataTable right-aligns numeric columns with tabular figures", () => {
+    const { container } = render(
+      <DataTable
+        rows={[{ a: "x", v: "62.0%" }]}
+        rowKey={(r) => r.a}
+        columns={[
+          { key: "a", header: "분석물", render: (r) => r.a },
+          { key: "v", header: "평균", align: "right", render: (r) => r.v },
+        ]}
+      />,
+    );
+    const cell = within(container).getByText("62.0%");
+    expect(cell.className).toContain("text-right");
+    expect(cell.className).toContain("tabular-nums");
   });
 
   it("Term keeps the visible text and explains it in a tooltip", () => {

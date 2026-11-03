@@ -6,7 +6,7 @@ export function EvidenceChip({ evidence }: { evidence: Evidence }) {
   return (
     <span
       title={`${evidence.ref_type} #${evidence.ref_id}${evidence.text ? ` · ${evidence.text}` : ""}`}
-      className="inline-flex items-center gap-1 rounded border border-border bg-subtle px-1.5 py-0.5 text-[11px]"
+      className="inline-flex items-center gap-1 rounded border border-border bg-subtle px-1.5 py-0.5 text-xs"
     >
       <span className="font-mono text-ink-faint">{evidence.key}</span>
       <span className="text-ink-muted">{evidence.label}</span>

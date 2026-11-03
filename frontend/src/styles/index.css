@@ -12,9 +12,46 @@
   body {
     @apply bg-canvas text-ink font-sans text-sm antialiased;
   }
+
+  /* Every collapsible title (<summary>) looks clickable the same way: a brand-colored
+   * chevron that turns when open, pointer, hover tint and a keyboard focus ring. */
+  summary {
+    @apply cursor-pointer list-none rounded-md;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary::before {
+    content: "";
+    @apply mr-2 inline-block h-[0.45em] w-[0.45em] shrink-0 -rotate-45 border-b-2 border-r-2 border-brand transition-transform;
+    vertical-align: 0.12em;
+  }
+  details[open] > summary::before {
+    @apply rotate-45;
+  }
+  summary:hover {
+    @apply bg-subtle text-brand-strong;
+  }
+  /* Placeholders carry instructions ("결정 사유 (필수)"), so they use the AA-safe faint ink. */
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-ink-faint;
+  }
+
+  summary:focus-visible,
+  a:focus-visible,
+  button:focus-visible {
+    @apply outline-none ring-2 ring-brand/50 ring-offset-1;
+  }
 }
 
 @layer components {
+  /* Narrative text (critic arguments, proposals, digests, answers): 14px, relaxed leading,
+   * line length capped at --bp-measure so long Korean prose stays readable. */
+  .bp-prose {
+    @apply text-sm leading-relaxed;
+    max-width: var(--bp-measure);
+  }
   .bp-input {
     @apply w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-ink
       focus:outline-none focus:ring-2 focus:ring-brand/40;

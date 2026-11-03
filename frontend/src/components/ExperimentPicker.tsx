@@ -16,10 +16,10 @@ export function ExperimentPicker({
   allowEmpty = false,
 }: ExperimentPickerProps) {
   return (
-    <label className="flex items-center gap-2 text-xs text-ink-muted">
+    <label className="flex w-full min-w-0 items-center gap-2 whitespace-nowrap text-sm text-ink-muted sm:w-auto">
       {label}
       <select
-        className="bp-input w-auto py-1"
+        className="bp-input min-w-0 flex-1 truncate py-1 sm:w-auto sm:flex-none"
         value={value ?? ""}
         onChange={(e) => onChange(Number(e.target.value))}
       >

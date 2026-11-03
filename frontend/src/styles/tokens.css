@@ -1,5 +1,9 @@
 /* BioPilot design tokens. Colors are RGB triplets consumed by Tailwind
- * (`bg-surface`, `text-ink-muted`, ...). Change tokens here only. */
+ * (`bg-surface`, `text-ink-muted`, ...). Change tokens here only.
+ *
+ * Contrast: every text color below is ≥ 4.5:1 (WCAG AA) on surface, canvas, subtle and
+ * every *-soft background (ink-faint is the lightest text color allowed). Status colors
+ * are never the only signal — components pair them with an icon or a word. */
 :root {
   --bp-canvas: 246 247 249;
   --bp-surface: 255 255 255;
@@ -7,16 +11,16 @@
   --bp-border: 224 228 234;
 
   --bp-ink: 23 30 41;
-  --bp-ink-muted: 82 94 112;
-  --bp-ink-faint: 140 151 168;
+  --bp-ink-muted: 68 79 96; /* 8.3:1 on surface */
+  --bp-ink-faint: 92 103 120; /* 5.7:1 on surface, ≥4.8:1 on soft backgrounds */
 
   --bp-brand: 13 116 144;
   --bp-brand-strong: 9 86 107;
   --bp-brand-soft: 224 242 246;
 
-  --bp-ok: 22 128 74;
+  --bp-ok: 18 118 68;
   --bp-ok-soft: 226 245 234;
-  --bp-warn: 181 110 8;
+  --bp-warn: 150 88 0; /* was 3.7:1 on warn-soft */
   --bp-warn-soft: 253 243 222;
   --bp-crit: 192 38 51;
   --bp-crit-soft: 252 231 233;
@@ -26,9 +30,12 @@
   /* chart series (hex for Recharts) */
   --bp-chart-1: #0d7490;
   --bp-chart-2: #6b46c1;
-  --bp-chart-3: #b56e08;
-  --bp-chart-4: #16804a;
+  --bp-chart-3: #965800;
+  --bp-chart-4: #127644;
   --bp-chart-5: #c02633;
+
+  /* Readable line length for narrative text (≈75 characters of mixed Korean/Latin at 14px). */
+  --bp-measure: 46rem;
 
   --bp-radius-card: 0.75rem;
   --bp-partner-width: 22rem;

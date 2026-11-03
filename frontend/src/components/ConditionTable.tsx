@@ -12,15 +12,15 @@ export function ConditionTable({ block, highlight }: { block: ConditionBlock; hi
   const labels = new Map(fields.map((f) => [f.key, f.label]));
   const entries = Object.entries(block).filter(([, v]) => v !== null && v !== undefined);
   return (
-    <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-xs">
+    <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm">
       {entries.map(([key, value]) => {
         const changed = highlight?.has(key) ?? false;
         return (
           <div key={key} className="contents">
             <dt className={clsx(changed ? "font-semibold text-warn" : "text-ink-muted")}>{labels.get(key) ?? key}</dt>
-            <dd className={clsx("font-mono", changed ? "font-semibold text-warn" : "text-ink")}>
+            <dd className={clsx("min-w-0 break-words font-mono tabular-nums", changed ? "font-semibold text-warn" : "text-ink")}>
               {formatConditionValue(value)}
-              {changed && <span className="ml-1 font-sans text-[10px]">· 기준과 다름</span>}
+              {changed && <span className="ml-1 font-sans text-xs">· 기준과 다름</span>}
             </dd>
           </div>
         );

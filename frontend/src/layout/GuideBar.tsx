@@ -94,13 +94,13 @@ export function GuideBar({ open, onClose }: { open: boolean; onClose: () => void
     <div
       role="region"
       aria-label="데모 안내"
-      className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-brand/20 bg-brand-soft/60 px-5 py-2 text-xs"
+      className="relative flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-brand/20 bg-brand-soft/60 py-2.5 pl-4 pr-12 text-sm sm:pl-5"
     >
-      <p className="text-ink">
+      <p className="min-w-0 text-ink">
         <span className="font-semibold text-brand-strong">이 데모에서 볼 것</span>
         <span className="text-ink-muted"> — 조건을 바꾼 {focus.code}의 결과가 왜 나빠졌는지, 기록 → 계산 → AI 비판 → 결정 순으로</span>
       </p>
-      <ol className="flex flex-wrap items-center gap-1" aria-label="권장 순서">
+      <ol className="flex flex-wrap items-center gap-x-1 gap-y-1.5" aria-label="권장 순서">
         {steps.map((s, i) => (
           <li key={s.key} className="flex items-center gap-1">
             {i > 0 && <span aria-hidden className="text-ink-faint">→</span>}
@@ -108,16 +108,17 @@ export function GuideBar({ open, onClose }: { open: boolean; onClose: () => void
               to={s.to}
               aria-current={s.active ? "step" : undefined}
               className={clsx(
-                "rounded-full border px-2.5 py-0.5 font-medium transition-colors",
+                "inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs font-semibold shadow-sm transition-colors",
                 s.active
                   ? "border-brand bg-brand text-white"
-                  : "border-brand/30 bg-surface text-brand-strong hover:bg-brand-soft",
+                  : "border-brand/50 bg-surface text-brand-strong hover:border-brand hover:bg-brand hover:text-white",
               )}
             >
               {"①②③④"[i]} {s.label}
+              <span aria-hidden>›</span>
             </Link>
             {s.key === "reject" && isDemo && (
-              <span className="text-[11px] text-ink-faint" title="데모는 읽기 전용입니다. 기각과 사유 기록은 로컬 실행에서 저장됩니다.">
+              <span className="text-xs text-ink-faint" title="데모는 읽기 전용입니다. 기각과 사유 기록은 로컬 실행에서 저장됩니다.">
                 (데모: 읽기 전용)
               </span>
             )}
@@ -127,7 +128,7 @@ export function GuideBar({ open, onClose }: { open: boolean; onClose: () => void
       <button
         type="button"
         onClick={onClose}
-        className="ml-auto rounded px-1.5 text-base leading-none text-ink-faint hover:bg-surface hover:text-ink"
+        className="absolute right-3 top-2 grid h-7 w-7 place-items-center rounded-md text-lg leading-none text-ink-muted hover:bg-surface hover:text-ink"
         aria-label="안내 닫기"
         title="안내 닫기 (헤더의 ‘안내’로 다시 열기)"
       >
