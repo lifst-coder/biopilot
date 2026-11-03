@@ -38,21 +38,25 @@
   (+ QC 플래그 `missing_values`, `METHOD_VERSIONS` 올림). 또는 ELN이 빈 숫자 칸을 400으로 거부 — 둘 중 하나는 필요.
 - 완료 기준: 빈 칸 CSV로 NaN이 저장되지 않는 테스트. 처리 후 시드에 빈 칸 결측을 추가할 수 있다.
 
-## [OPEN] partner — 기각된 제안 반복 금지 (결정 이력 인지 비판)
+## [DONE] partner — 기각된 제안 반복 금지 (결정 이력 인지 비판)
 - 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: Critic이 같은 프로젝트에서 이미 기각된 제안을 다시 낸다. lab 시드에서 #011의 "IS 억제 시료 재분석"을
-  [예산]으로 기각했는데 #024 비판이 같은 제안을 다시 냈고, 기각된 실험을 다시 비판해도 그대로 반복된다.
-- 제안: `build_context`에 프로젝트의 기각 결정(제안 changes + rationale)을 넣고, 규칙/Claude 엔진 모두 같은
-  changes 서명의 제안은 내지 않거나 `previously_rejected`(결정 id·사유 인용)로 표시. 근거는 Evidence(`ref_type=partner.Decision`).
-- 시드 지원: `load_seed_spec("lab").history.repeat_probes` (6개 프로브), `tests/test_seed_lab.py::test_critic_does_not_repeat_rejected_proposals` (현재 xfail).
-- 완료 기준: 위 테스트의 xfail 제거 후 통과.
+- 필요 이유: Critic이 같은 프로젝트에서 이미 기각된 제안을 다시 낸다.
+- 처리: feature/partner의 Decision History 피드백(`app/partner/feedback.py`, 설계 템플릿 선택 시 결정된
+  `proposal_signature` 제외·자원 제약·`supersedes_proposal_ids`).
+- 확인 (2026-11-03, seed-expansion + feature/partner 병합 상태): `load_seed_spec("lab").history.repeat_probes`
+  (8개 프로브, 기각 7건 전부)에서 다시 비판해도 기각된 서명이 나오지 않음. `tests/test_seed_lab.py::
+  test_critic_does_not_repeat_rejected_proposals`의 xfail 제거 — strict=False라 픽스처 오류까지 XFAIL로 가리고
+  있었다. 저장된 이력 자체도 검사(`test_later_critiques_never_reoffer_a_decided_proposal`).
 
 ## [OPEN] partner — 결정 기록의 actor·시점
-- 요청자: seed (seed-expansion) · 날짜: 2026-11-03
-- 필요 이유: `decide()`는 감사 actor를 `"user"`로 고정하고 `created_at`은 현재 시각뿐이다. 시드가 넣는 과거 결정이
-  사용자 행위·오늘 날짜로 기록된다(다른 시드 레코드는 actor=`seed`).
+- 요청자: seed (seed-expansion) · 날짜: 2026-11-03 (feature/partner 기준으로 재확인 2026-11-03)
+- 필요 이유: `decide()`는 감사 actor를 `"user"`로 고정하고(`decision.*`, `status.change` 이벤트 둘 다)
+  `created_at`은 현재 시각뿐이다. 시드가 넣는 과거 결정 14건이 사용자 행위·시드 실행일로 기록된다(다른 시드
+  레코드는 actor=`seed`). 시드는 이제 결정을 각 비판 직후에 기록하므로 순서는 맞지만(감사 id 순서로 검증)
+  날짜는 여전히 오늘이다.
 - 제안: `decide(..., *, actor: Actor = "user")` 키워드 인자, `DecisionCreate.decided_on: date | None`(과거 결정 이관용, 필드 추가만).
-- 완료 기준: 시드 결정의 감사 actor가 `seed`, `decided_on`이 실험 날짜 이후로 기록.
+- 완료 기준: 시드 결정의 감사 actor가 `seed`, `decided_on`이 실험 날짜 이후로 기록. (시드 쪽은 `loader._replay_history`
+  에서 인자만 넘기면 된다.)
 
 ## [OPEN] core — 시드 프로파일 설정
 - 요청자: seed (seed-expansion) · 날짜: 2026-11-03
@@ -95,4 +99,6 @@
 - 필요 이유: TASKS MEM-1 `tests_proposal` 엣지를 만들 때 검증할 정답이 필요하다.
 - 제공: `load_seed_spec("lab").history.decisions[*].followed_by` — 수락/수정 결정 7건의 후속 실험 코드
   (`SeedResult.decided_proposal_ids`로 제안 id 조회). 시드 쪽 변경은 필요 없음, 공지용.
+  (2026-11-03 갱신: 결정 id가 시간순 D01–D14로 바뀜 — feature/partner 엔진에 맞춰 이력을 다시 씀. 후속 실험 7건과
+  그 코드(#007 #017 #025 #026 #028 #OA07 #OA11)는 그대로. 결정은 `decision.proposal.template_id/signature`로 제안을 지정.)
 - 완료 기준: MEM-1 테스트가 lab 시드의 7개 엣지를 확인.
