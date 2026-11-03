@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCompare } from "@/api/queries";
 import type { ExperimentSummary } from "@/api/types";
-import { Badge, Card, DataTable, EmptyState, ExperimentPicker, QueryState } from "@/components";
+import { Badge, Card, DataTable, EmptyState, ExperimentPicker, QueryState, Term } from "@/components";
 import { formatNumber, formatPValue, formatWithUnit } from "@/lib/format";
 import { MethodNotes } from "./MethodNotes";
 
@@ -37,10 +37,10 @@ export function ComparePanel({ experiments, current, defaultBaseline }: Props) {
             return (
               <div className="space-y-3">
                 <dl className="grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
-                  <div><dt className="text-ink-muted">평균 회수율 차이 Δ</dt><dd className="text-base font-semibold">{formatWithUnit(c.recovery_delta_pct_points, "%p")}</dd></div>
+                  <div><dt className="text-ink-muted">평균 회수율 차이 Δ (<Term k="percentPoint">%p</Term>)</dt><dd className="text-base font-semibold">{formatWithUnit(c.recovery_delta_pct_points, "%p")}</dd></div>
                   <div><dt className="text-ink-muted">Δ의 {level} (Welch)</dt><dd className="font-mono">{ci(t?.ci_low, t?.ci_high)}</dd></div>
-                  <div><dt className="text-ink-muted">t (df)</dt><dd className="font-mono">{t ? `${formatNumber(t.t_statistic, 2)} (${formatNumber(t.df, 1)})` : "—"} · {formatPValue(t?.p_value)}</dd></div>
-                  <div><dt className="text-ink-muted">효과 크기 Hedges g</dt><dd className="font-mono">{formatNumber(t?.hedges_g, 2)} <span className="text-ink-faint">(d {formatNumber(t?.cohens_d, 2)})</span></dd></div>
+                  <div><dt className="text-ink-muted"><Term k="welch">t (df)</Term> · <Term k="pValue">p</Term></dt><dd className="font-mono">{t ? `${formatNumber(t.t_statistic, 2)} (${formatNumber(t.df, 1)})` : "—"} · {formatPValue(t?.p_value)}</dd></div>
+                  <div><dt className="text-ink-muted"><Term k="hedgesG">효과 크기 Hedges g</Term></dt><dd className="font-mono">{formatNumber(t?.hedges_g, 2)} <span className="text-ink-faint">(d {formatNumber(t?.cohens_d, 2)})</span></dd></div>
                 </dl>
                 <DataTable
                   rows={c.per_analyte}
@@ -53,9 +53,9 @@ export function ComparePanel({ experiments, current, defaultBaseline }: Props) {
                     { key: "mb", header: "현재", align: "right", render: (d) => formatWithUnit(d.mean_b_pct, "%") },
                     { key: "d", header: "Δ", align: "right", render: (d) => formatWithUnit(d.delta_pct_points, "%p") },
                     { key: "ci", header: level, align: "right", render: (d) => ci(d.ci_low, d.ci_high) },
-                    { key: "g", header: "g", align: "right", render: (d) => formatNumber(d.hedges_g, 2) },
-                    { key: "p", header: "p", align: "right", render: (d) => formatPValue(d.p_value) },
-                    { key: "ph", header: "p (Holm)", align: "right", render: (d) => formatPValue(d.p_holm) },
+                    { key: "g", header: <Term k="hedgesG">g</Term>, align: "right", render: (d) => formatNumber(d.hedges_g, 2) },
+                    { key: "p", header: <Term k="pValue">p</Term>, align: "right", render: (d) => formatPValue(d.p_value) },
+                    { key: "ph", header: <Term k="holm">p (Holm)</Term>, align: "right", render: (d) => formatPValue(d.p_holm) },
                     {
                       key: "s",
                       header: `α=${c.alpha}`,

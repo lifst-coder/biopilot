@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { AnalysisResultOut } from "@/api/types";
-import { Badge, Card, DataTable } from "@/components";
+import { Badge, Card, DataTable, Term } from "@/components";
 import { TOKEN_HEX } from "@/lib/chartColors";
 import { formatNumber, formatWithUnit } from "@/lib/format";
 import { MethodNotes } from "./MethodNotes";
@@ -62,11 +62,11 @@ export function RecoveryPanel({ result, output, criteria }: Props) {
             { key: "n", header: "n", align: "right", render: (g) => g.n },
             { key: "m", header: "평균", align: "right", render: (g) => formatWithUnit(g.mean_pct, "%") },
             { key: "sd", header: "SD", align: "right", render: (g) => formatNumber(g.sd_pct, 2) },
-            { key: "r", header: "RSD", align: "right", render: (g) => formatWithUnit(g.rsd_pct, "%") },
-            { key: "ni", header: "IS 미보정", align: "right", render: (g) => formatWithUnit(g.mean_no_is_pct, "%") },
+            { key: "r", header: <Term k="rsd">RSD</Term>, align: "right", render: (g) => formatWithUnit(g.rsd_pct, "%") },
+            { key: "ni", header: <Term k="isUncorrected">IS 미보정</Term>, align: "right", render: (g) => formatWithUnit(g.mean_no_is_pct, "%") },
             {
               key: "g",
-              header: "Grubbs G",
+              header: <Term k="grubbs">Grubbs G</Term>,
               align: "right",
               render: (g) =>
                 g.grubbs ? (
@@ -84,7 +84,7 @@ export function RecoveryPanel({ result, output, criteria }: Props) {
 
       {output.uncertainty.length > 0 && (
         <div className="mt-4">
-          <h3 className="mb-1 text-xs font-medium text-ink-muted">측정 불확도 (상대, %)</h3>
+          <h3 className="mb-1 text-xs font-medium text-ink-muted"><Term k="uncertainty">측정 불확도</Term> (상대, %)</h3>
           <DataTable
             rows={output.uncertainty}
             rowKey={(u) => u.analyte}
@@ -98,7 +98,7 @@ export function RecoveryPanel({ result, output, criteria }: Props) {
               { key: "ub", header: "u(bias)", align: "right", render: (u) => formatNumber(u.u_bias_pct, 1) },
               { key: "uc", header: "u_c", align: "right", render: (u) => formatNumber(u.u_combined_pct, 1) },
               { key: "k", header: "k", align: "right", render: (u) => formatNumber(u.coverage_factor, 0) },
-              { key: "U", header: "U", align: "right", render: (u) => <b>{formatNumber(u.expanded_pct, 1)}</b> },
+              { key: "U", header: <Term k="uncertainty">U</Term>, align: "right", render: (u) => <b>{formatNumber(u.expanded_pct, 1)}</b> },
             ]}
           />
         </div>

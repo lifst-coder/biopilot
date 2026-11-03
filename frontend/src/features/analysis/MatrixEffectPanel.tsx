@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { AnalysisResultOut } from "@/api/types";
-import { Card, DataTable } from "@/components";
+import { Card, DataTable, Term } from "@/components";
 import { TOKEN_HEX } from "@/lib/chartColors";
 import { formatNumber, formatWithUnit } from "@/lib/format";
 import { MethodNotes } from "./MethodNotes";
@@ -44,7 +44,7 @@ export function MatrixEffectPanel({ result, output, criteria }: Props) {
             { key: "a", header: "분석물", render: (a) => a.analyte },
             { key: "s", header: "기울기 (용매)", align: "right", render: (a) => formatNumber(a.slope_solvent, 0) },
             { key: "m", header: "기울기 (매트릭스)", align: "right", render: (a) => formatNumber(a.slope_matrix, 0) },
-            { key: "me", header: "ME", align: "right", render: (a) => formatWithUnit(a.matrix_effect_pct, "%") },
+            { key: "me", header: <Term k="matrixEffect">%ME</Term>, align: "right", render: (a) => formatWithUnit(a.matrix_effect_pct, "%") },
           ]}
         />
       </div>

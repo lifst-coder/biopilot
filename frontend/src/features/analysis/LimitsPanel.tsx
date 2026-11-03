@@ -1,5 +1,5 @@
 import type { AnalysisResultOut } from "@/api/types";
-import { Card, DataTable } from "@/components";
+import { Card, DataTable, Term } from "@/components";
 import { formatNumber } from "@/lib/format";
 import { LIMIT_METHOD_LABELS } from "./labels";
 import { MethodNotes } from "./MethodNotes";
@@ -29,8 +29,8 @@ export function LimitsPanel({ result, output }: Props) {
           { key: "m", header: "대표 방법", render: (a) => LIMIT_METHOD_LABELS[a.primary_method] ?? a.primary_method },
           { key: "lod", header: `LOD (${output.unit})`, align: "right", render: (a) => formatNumber(a.lod, 3) },
           { key: "loq", header: `LOQ (${output.unit})`, align: "right", render: (a) => formatNumber(a.loq, 3) },
-          { key: "lodg", header: "LOD (ng/g)", align: "right", render: (a) => formatNumber(a.lod_ng_g, 3) },
-          { key: "loqg", header: "LOQ (ng/g)", align: "right", render: (a) => formatNumber(a.loq_ng_g, 3) },
+          { key: "lodg", header: <><Term k="lod">LOD</Term> (ng/g)</>, align: "right", render: (a) => formatNumber(a.lod_ng_g, 3) },
+          { key: "loqg", header: <><Term k="loq">LOQ</Term> (ng/g)</>, align: "right", render: (a) => formatNumber(a.loq_ng_g, 3) },
           { key: "low", header: "최저 검량 수준", align: "right", render: (a) => formatNumber(a.lowest_level, 1) },
         ]}
       />
