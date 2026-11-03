@@ -35,6 +35,8 @@ jobs:
         run: pytest
       - name: OpenAPI contract is committed and current
         run: python -m app.scripts.export_openapi --check
+      - name: Dependency vulnerabilities (pip-audit)
+        run: pip-audit --skip-editable
       - name: Alembic migrations match the models
         env:
           BIOPILOT_DATABASE_URL: sqlite:///./ci-migrations.db
@@ -57,6 +59,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install
         run: npm ci
+      - name: Runtime dependency vulnerabilities (npm audit, high+)
+        run: npm audit --omit=dev --audit-level=high
       - name: Generated API types match openapi.json
         run: npm run check:api
       - name: Typecheck

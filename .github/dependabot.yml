@@ -1,0 +1,41 @@
+# Dependabot: weekly version updates + security updates for every ecosystem in the repo.
+# Minor/patch bumps are grouped into one PR per ecosystem; major bumps (vite 5→8,
+# vitest 2→5, react-router 6→7, …) arrive as separate PRs because they need code
+# changes — see SECURITY_REVIEW.md §2 for the ones currently known.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: scope
+    groups:
+      backend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+      include: scope
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns: ["*"]
