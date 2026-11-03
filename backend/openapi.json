@@ -684,6 +684,14 @@
             "title": "Label",
             "type": "string"
           },
+          "sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
           "value_a": {
             "title": "Value A"
           },
@@ -716,6 +724,107 @@
           "label"
         ],
         "title": "ConditionField",
+        "type": "object"
+      },
+      "ConditionHistoryEntry": {
+        "description": "Value of one condition key in one experiment (MEM-2).",
+        "properties": {
+          "changed_from_previous": {
+            "title": "Changed From Previous",
+            "type": "boolean"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "previous_value": {
+            "title": "Previous Value"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "code",
+          "performed_on",
+          "value",
+          "changed_from_previous",
+          "source"
+        ],
+        "title": "ConditionHistoryEntry",
+        "type": "object"
+      },
+      "ConditionMatrix": {
+        "description": "Key × experiment matrix of condition values (MEM-5).",
+        "properties": {
+          "experiments": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentSummary"
+            },
+            "title": "Experiments",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionMatrixRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "varying_only": {
+            "title": "Varying Only",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "experiments",
+          "rows",
+          "varying_only"
+        ],
+        "title": "ConditionMatrix",
+        "type": "object"
+      },
+      "ConditionMatrixRow": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "values": {
+            "description": "Aligned with ConditionMatrix.experiments",
+            "items": {},
+            "title": "Values",
+            "type": "array"
+          },
+          "varying": {
+            "title": "Varying",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "values",
+          "varying"
+        ],
+        "title": "ConditionMatrixRow",
         "type": "object"
       },
       "CritiqueOut": {
@@ -1100,9 +1209,31 @@
             "title": "Experiment Id",
             "type": "integer"
           },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "input_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Fingerprint"
           },
           "key_points": {
             "items": {
@@ -1121,6 +1252,11 @@
               }
             ],
             "title": "Model"
+          },
+          "stale": {
+            "default": false,
+            "title": "Stale",
+            "type": "boolean"
           },
           "summary": {
             "title": "Summary",
@@ -1232,6 +1368,39 @@
         "title": "Evidence",
         "type": "object"
       },
+      "EvidenceFragment": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "key": {
+            "description": "Stable key cited by answers, e.g. 'F1'",
+            "title": "Key",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "experiment_id",
+          "code",
+          "text",
+          "source"
+        ],
+        "title": "EvidenceFragment",
+        "type": "object"
+      },
       "ExperimentCreate": {
         "properties": {
           "attachments": {
@@ -1297,7 +1466,7 @@
         "type": "object"
       },
       "ExperimentDiff": {
-        "description": "Structural diff of two experiments' original records (no numbers computed here).",
+        "description": "Deterministic diff of two experiments: conditions, results, QC, note, datasets.\n\nEvery item carries ``sources`` (experiment id + field) so it can be traced back.\nResult values and deltas are read from Analysis via the fact port; Memory itself\nonly compares keys and sets.",
         "properties": {
           "a": {
             "$ref": "#/components/schemas/ExperimentSummary"
@@ -1333,6 +1502,14 @@
             "title": "Note Diff",
             "type": "array"
           },
+          "qc_changes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/QCChange"
+            },
+            "title": "Qc Changes",
+            "type": "array"
+          },
           "relation": {
             "enum": [
               "same",
@@ -1343,6 +1520,19 @@
             ],
             "title": "Relation",
             "type": "string"
+          },
+          "result_changes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ResultDelta"
+            },
+            "title": "Result Changes",
+            "type": "array"
+          },
+          "results_available": {
+            "default": false,
+            "title": "Results Available",
+            "type": "boolean"
           },
           "unchanged_keys": {
             "items": {
@@ -1704,10 +1894,36 @@
             "title": "Changed Keys",
             "type": "array"
           },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
           "relation": {
-            "const": "derived_from",
+            "enum": [
+              "derived_from",
+              "shares_conditions",
+              "tests_proposal"
+            ],
             "title": "Relation",
             "type": "string"
+          },
+          "similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similarity"
           },
           "source": {
             "title": "Source",
@@ -1759,6 +1975,35 @@
           "depth"
         ],
         "title": "GraphNode",
+        "type": "object"
+      },
+      "GraphRefresh": {
+        "description": "How the cached graph was brought up to date for this response.",
+        "properties": {
+          "applied_events": {
+            "title": "Applied Events",
+            "type": "integer"
+          },
+          "last_event_id": {
+            "title": "Last Event Id",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "full",
+              "incremental",
+              "cached"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "applied_events",
+          "last_event_id"
+        ],
+        "title": "GraphRefresh",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1974,6 +2219,310 @@
         "title": "ISResponseOutput",
         "type": "object"
       },
+      "KGEdge": {
+        "properties": {
+          "attrs": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Attrs",
+            "type": "object"
+          },
+          "relation": {
+            "enum": [
+              "derived_from",
+              "uses_condition",
+              "measures",
+              "uses_sample",
+              "uses_strain",
+              "has_result",
+              "flags",
+              "critiqued_by",
+              "raises_hypothesis",
+              "proposes",
+              "tests_hypothesis",
+              "decided",
+              "tests_proposal",
+              "shares_conditions",
+              "mentions"
+            ],
+            "title": "Relation",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "relation"
+        ],
+        "title": "KGEdge",
+        "type": "object"
+      },
+      "KGNode": {
+        "properties": {
+          "attrs": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Attrs",
+            "type": "object"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "id": {
+            "description": "'<type>:<key>', e.g. 'experiment:7', 'analyte:carbendazim'",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ref_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Id"
+          },
+          "ref_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Type"
+          },
+          "type": {
+            "enum": [
+              "experiment",
+              "condition",
+              "analyte",
+              "sample",
+              "strain",
+              "result",
+              "critique",
+              "hypothesis",
+              "proposal",
+              "decision",
+              "note"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "label"
+        ],
+        "title": "KGNode",
+        "type": "object"
+      },
+      "KnowledgeGraph": {
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/KGEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/KGNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "refresh": {
+            "$ref": "#/components/schemas/GraphRefresh"
+          }
+        },
+        "required": [
+          "project_id",
+          "nodes",
+          "edges",
+          "counts",
+          "refresh"
+        ],
+        "title": "KnowledgeGraph",
+        "type": "object"
+      },
+      "KnowledgeNoteCreate": {
+        "properties": {
+          "author": {
+            "default": "",
+            "title": "Author",
+            "type": "string"
+          },
+          "linked_experiment_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 1,
+            "title": "Linked Experiment Ids",
+            "type": "array"
+          },
+          "statement": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement",
+          "linked_experiment_ids"
+        ],
+        "title": "KnowledgeNoteCreate",
+        "type": "object"
+      },
+      "KnowledgeNoteList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeNoteOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "total",
+          "items"
+        ],
+        "title": "KnowledgeNoteList",
+        "type": "object"
+      },
+      "KnowledgeNoteOut": {
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "linked_experiment_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Linked Experiment Ids",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "statement",
+          "linked_experiment_ids",
+          "author",
+          "created_at"
+        ],
+        "title": "KnowledgeNoteOut",
+        "type": "object"
+      },
+      "MatchedTerm": {
+        "properties": {
+          "facet": {
+            "enum": [
+              "strain",
+              "sample",
+              "condition",
+              "analyte",
+              "keyword"
+            ],
+            "title": "Facet",
+            "type": "string"
+          },
+          "matches": {
+            "description": "Vocabulary entries the term matched",
+            "items": {
+              "type": "string"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          }
+        },
+        "required": [
+          "term",
+          "facet",
+          "matches"
+        ],
+        "title": "MatchedTerm",
+        "type": "object"
+      },
       "MatrixEffectOut": {
         "properties": {
           "analyte": {
@@ -2022,6 +2571,93 @@
           "analytes"
         ],
         "title": "MatrixEffectOutput",
+        "type": "object"
+      },
+      "MemoryAnswer": {
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "engine": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "fragment_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fragment Keys",
+            "type": "array"
+          },
+          "fragments": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceFragment"
+            },
+            "title": "Fragments",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question",
+          "answer",
+          "engine",
+          "fragment_keys",
+          "fragments"
+        ],
+        "title": "MemoryAnswer",
+        "type": "object"
+      },
+      "MemoryAskRequest": {
+        "properties": {
+          "limit": {
+            "default": 8,
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "question": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "MemoryAskRequest",
         "type": "object"
       },
       "MetricsComparison": {
@@ -2093,6 +2729,14 @@
             "title": "Op",
             "type": "string"
           },
+          "segments": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/NoteDiffSegment"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -2103,6 +2747,30 @@
           "text"
         ],
         "title": "NoteDiffLine",
+        "type": "object"
+      },
+      "NoteDiffSegment": {
+        "description": "Word-level piece of a changed line (MEM-4).",
+        "properties": {
+          "op": {
+            "enum": [
+              "equal",
+              "insert",
+              "delete"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "text"
+        ],
+        "title": "NoteDiffSegment",
         "type": "object"
       },
       "PartnerMode": {
@@ -2343,6 +3011,128 @@
         "title": "ProposalOut",
         "type": "object"
       },
+      "ProtocolGroup": {
+        "description": "Experiments sharing an identical condition block (one protocol variant).",
+        "properties": {
+          "codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Codes",
+            "type": "array"
+          },
+          "conditions": {
+            "additionalProperties": true,
+            "title": "Conditions",
+            "type": "object"
+          },
+          "differs_from_first": {
+            "description": "Keys whose value differs from the first protocol in this bundle",
+            "items": {
+              "type": "string"
+            },
+            "title": "Differs From First",
+            "type": "array"
+          },
+          "experiment_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Experiment Ids",
+            "type": "array"
+          },
+          "protocol_id": {
+            "description": "Short sha256 of the condition block",
+            "title": "Protocol Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protocol_id",
+          "experiment_ids",
+          "codes",
+          "conditions",
+          "differs_from_first"
+        ],
+        "title": "ProtocolGroup",
+        "type": "object"
+      },
+      "QCChange": {
+        "description": "A QC flag present in one or both experiments (set comparison, no arithmetic).",
+        "properties": {
+          "analyte": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyte"
+          },
+          "change": {
+            "enum": [
+              "appeared",
+              "resolved",
+              "persisting"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "context": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Context",
+            "type": "object"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          },
+          "sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "value_a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value A"
+          },
+          "value_b": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value B"
+          }
+        },
+        "required": [
+          "code",
+          "change",
+          "severity"
+        ],
+        "title": "QCChange",
+        "type": "object"
+      },
       "QCFlag": {
         "description": "Deterministic QC check outcome. ``value`` is always computed from stored data.",
         "properties": {
@@ -2418,6 +3208,76 @@
           "value"
         ],
         "title": "QCFlag",
+        "type": "object"
+      },
+      "RecallBundle": {
+        "properties": {
+          "experiments": {
+            "items": {
+              "$ref": "#/components/schemas/RecallExperiment"
+            },
+            "title": "Experiments",
+            "type": "array"
+          },
+          "protocols": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolGroup"
+            },
+            "title": "Protocols",
+            "type": "array"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ResultFact"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/MatchedTerm"
+            },
+            "title": "Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query",
+          "terms",
+          "experiments",
+          "protocols",
+          "results"
+        ],
+        "title": "RecallBundle",
+        "type": "object"
+      },
+      "RecallExperiment": {
+        "properties": {
+          "experiment": {
+            "$ref": "#/components/schemas/ExperimentSummary"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "experiment",
+          "score",
+          "reasons"
+        ],
+        "title": "RecallExperiment",
         "type": "object"
       },
       "RecoveryGroupOut": {
@@ -2606,6 +3466,156 @@
         "title": "ResearchGraph",
         "type": "object"
       },
+      "ResultDelta": {
+        "description": "One stored result metric of both experiments. Values/deltas come from Analysis.",
+        "properties": {
+          "analyte": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyte"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "b − a as computed by the Analysis layer (None if not given)",
+            "title": "Delta"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "p_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P Value"
+          },
+          "sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value_a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value A"
+          },
+          "value_b": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value B"
+          }
+        },
+        "required": [
+          "metric",
+          "label"
+        ],
+        "title": "ResultDelta",
+        "type": "object"
+      },
+      "ResultFact": {
+        "description": "A stored result value supplied by a higher layer (Analysis).",
+        "properties": {
+          "analyte": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyte"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceRef"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "metric",
+          "label",
+          "source"
+        ],
+        "title": "ResultFact",
+        "type": "object"
+      },
       "RunResponse": {
         "properties": {
           "created": {
@@ -2660,14 +3670,51 @@
               "title",
               "raw_note",
               "condition_block",
-              "digest"
+              "digest",
+              "critique",
+              "knowledge_note",
+              "dataset"
             ],
             "title": "Field",
             "type": "string"
           },
+          "highlights": {
+            "default": [],
+            "description": "[start, end) character offsets of matches inside snippet",
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "integer"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Highlights",
+            "type": "array"
+          },
+          "score": {
+            "default": 0.0,
+            "title": "Score",
+            "type": "number"
+          },
           "snippet": {
             "title": "Snippet",
             "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2677,6 +3724,77 @@
           "snippet"
         ],
         "title": "SearchHit",
+        "type": "object"
+      },
+      "SimilarExperiment": {
+        "properties": {
+          "differing": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionChange"
+            },
+            "title": "Differing",
+            "type": "array"
+          },
+          "experiment": {
+            "$ref": "#/components/schemas/ExperimentSummary"
+          },
+          "score": {
+            "description": "Condition-vector similarity in [0, 1]",
+            "title": "Score",
+            "type": "number"
+          },
+          "shared_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared Keys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment",
+          "score",
+          "shared_keys",
+          "differing"
+        ],
+        "title": "SimilarExperiment",
+        "type": "object"
+      },
+      "SourceRef": {
+        "description": "Pointer to the stored record (and field) a fact was read from.",
+        "properties": {
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "field": {
+            "description": "Field path inside the record, e.g. 'condition_block.ph'",
+            "title": "Field",
+            "type": "string"
+          },
+          "ref_id": {
+            "title": "Ref Id",
+            "type": "integer"
+          },
+          "ref_type": {
+            "description": "<module>.<Entity>, e.g. 'eln.Experiment'",
+            "title": "Ref Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ref_type",
+          "ref_id",
+          "field"
+        ],
+        "title": "SourceRef",
         "type": "object"
       },
       "SystemInfo": {
@@ -4411,8 +5529,94 @@
         ]
       }
     },
+    "/api/memory/compare-conditions": {
+      "get": {
+        "description": "Key × experiment condition matrix.",
+        "operationId": "memory_compare_conditions",
+        "parameters": [
+          {
+            "description": "Comma-separated experiment ids, e.g. 1,2,7",
+            "in": "query",
+            "name": "ids",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated experiment ids, e.g. 1,2,7",
+              "title": "Ids",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "varying_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Varying Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConditionMatrix"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Compare Conditions",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
     "/api/memory/diff": {
       "get": {
+        "description": "Condition, result, QC, note and dataset diff with sources.",
         "operationId": "memory_diff",
         "parameters": [
           {
@@ -4498,6 +5702,7 @@
     },
     "/api/memory/experiments/{experiment_id}/digests": {
       "get": {
+        "description": "Digests of an experiment, newest first (with staleness).",
         "operationId": "memory_list_digests",
         "parameters": [
           {
@@ -4572,6 +5777,7 @@
         ]
       },
       "post": {
+        "description": "Create a digest (rules or grounded Claude).",
         "operationId": "memory_create_digest",
         "parameters": [
           {
@@ -4644,6 +5850,7 @@
     },
     "/api/memory/experiments/{experiment_id}/lineage": {
       "get": {
+        "description": "Ancestors from root to the experiment.",
         "operationId": "memory_lineage",
         "parameters": [
           {
@@ -4718,8 +5925,267 @@
         ]
       }
     },
+    "/api/memory/experiments/{experiment_id}/similar": {
+      "get": {
+        "description": "Experiments ranked by condition-vector similarity.",
+        "operationId": "memory_similar",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SimilarExperiment"
+                  },
+                  "title": "Response Memory Similar",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Similar",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/projects/{project_id}/ask": {
+      "post": {
+        "description": "Question answering with evidence fragments (rules) or a grounded summary (Claude).",
+        "operationId": "memory_ask",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryAskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryAnswer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/projects/{project_id}/conditions/{key}/history": {
+      "get": {
+        "description": "Value of one condition key across the project's experiments.",
+        "operationId": "memory_condition_history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConditionHistoryEntry"
+                  },
+                  "title": "Response Memory Condition History",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Condition History",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
     "/api/memory/projects/{project_id}/graph": {
       "get": {
+        "description": "Experiment graph: lineage, condition similarity and proposal-test edges.",
         "operationId": "memory_graph",
         "parameters": [
           {
@@ -4729,6 +6195,32 @@
             "schema": {
               "title": "Project Id",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Edge relations to include (default: derived_from only)",
+            "in": "query",
+            "name": "relations",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "derived_from",
+                      "shares_conditions",
+                      "tests_proposal"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Edge relations to include (default: derived_from only)",
+              "title": "Relations"
             }
           }
         ],
@@ -4790,8 +6282,396 @@
         ]
       }
     },
+    "/api/memory/projects/{project_id}/knowledge-graph": {
+      "get": {
+        "description": "Experiment↔Condition↔Analyte/Sample↔Result↔Hypothesis↔Decision graph.",
+        "operationId": "memory_knowledge_graph",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Node types to include",
+            "in": "query",
+            "name": "types",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "experiment",
+                      "condition",
+                      "analyte",
+                      "sample",
+                      "strain",
+                      "result",
+                      "critique",
+                      "hypothesis",
+                      "proposal",
+                      "decision",
+                      "note"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Node types to include",
+              "title": "Types"
+            }
+          },
+          {
+            "description": "Node id to centre on, e.g. experiment:7",
+            "in": "query",
+            "name": "focus",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Node id to centre on, e.g. experiment:7",
+              "title": "Focus"
+            }
+          },
+          {
+            "in": "query",
+            "name": "radius",
+            "required": false,
+            "schema": {
+              "default": 2,
+              "maximum": 4,
+              "minimum": 1,
+              "title": "Radius",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Knowledge Graph",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/projects/{project_id}/knowledge-notes": {
+      "get": {
+        "description": "Researcher knowledge notes of a project.",
+        "operationId": "memory_list_knowledge_notes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeNoteList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Knowledge Notes",
+        "tags": [
+          "memory"
+        ]
+      },
+      "post": {
+        "description": "Create an immutable knowledge note (audited).",
+        "operationId": "memory_create_knowledge_note",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeNoteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeNoteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Knowledge Note",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
+    "/api/memory/projects/{project_id}/recall": {
+      "get": {
+        "description": "Experiments, protocols and stored results related to strain/sample/condition/analyte.",
+        "operationId": "memory_recall",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecallBundle"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recall",
+        "tags": [
+          "memory"
+        ]
+      }
+    },
     "/api/memory/projects/{project_id}/search": {
       "get": {
+        "description": "Ranked full-text search (FTS5 trigram) with highlights.",
         "operationId": "memory_search",
         "parameters": [
           {
@@ -4812,6 +6692,18 @@
               "minLength": 1,
               "title": "Q",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
             }
           }
         ],
@@ -4879,6 +6771,7 @@
     },
     "/api/memory/projects/{project_id}/timeline": {
       "get": {
+        "description": "Chronological experiments with changed keys versus parent.",
         "operationId": "memory_timeline",
         "parameters": [
           {

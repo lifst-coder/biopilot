@@ -296,6 +296,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/memory/compare-conditions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Conditions
+         * @description Key × experiment condition matrix.
+         */
+        get: operations["memory_compare_conditions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/memory/diff": {
         parameters: {
             query?: never;
@@ -303,7 +323,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Diff */
+        /**
+         * Diff
+         * @description Condition, result, QC, note and dataset diff with sources.
+         */
         get: operations["memory_diff"];
         put?: never;
         post?: never;
@@ -320,10 +343,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Digests */
+        /**
+         * List Digests
+         * @description Digests of an experiment, newest first (with staleness).
+         */
         get: operations["memory_list_digests"];
         put?: never;
-        /** Create Digest */
+        /**
+         * Create Digest
+         * @description Create a digest (rules or grounded Claude).
+         */
         post: operations["memory_create_digest"];
         delete?: never;
         options?: never;
@@ -338,8 +367,71 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lineage */
+        /**
+         * Lineage
+         * @description Ancestors from root to the experiment.
+         */
         get: operations["memory_lineage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memory/experiments/{experiment_id}/similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Similar
+         * @description Experiments ranked by condition-vector similarity.
+         */
+        get: operations["memory_similar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memory/projects/{project_id}/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask
+         * @description Question answering with evidence fragments (rules) or a grounded summary (Claude).
+         */
+        post: operations["memory_ask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memory/projects/{project_id}/conditions/{key}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Condition History
+         * @description Value of one condition key across the project's experiments.
+         */
+        get: operations["memory_condition_history"];
         put?: never;
         post?: never;
         delete?: never;
@@ -355,8 +447,75 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Graph */
+        /**
+         * Graph
+         * @description Experiment graph: lineage, condition similarity and proposal-test edges.
+         */
         get: operations["memory_graph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memory/projects/{project_id}/knowledge-graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Knowledge Graph
+         * @description Experiment↔Condition↔Analyte/Sample↔Result↔Hypothesis↔Decision graph.
+         */
+        get: operations["memory_knowledge_graph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memory/projects/{project_id}/knowledge-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Knowledge Notes
+         * @description Researcher knowledge notes of a project.
+         */
+        get: operations["memory_list_knowledge_notes"];
+        put?: never;
+        /**
+         * Create Knowledge Note
+         * @description Create an immutable knowledge note (audited).
+         */
+        post: operations["memory_create_knowledge_note"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/memory/projects/{project_id}/recall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recall
+         * @description Experiments, protocols and stored results related to strain/sample/condition/analyte.
+         */
+        get: operations["memory_recall"];
         put?: never;
         post?: never;
         delete?: never;
@@ -372,7 +531,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Search */
+        /**
+         * Search
+         * @description Ranked full-text search (FTS5 trigram) with highlights.
+         */
         get: operations["memory_search"];
         put?: never;
         post?: never;
@@ -389,7 +551,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Timeline */
+        /**
+         * Timeline
+         * @description Chronological experiments with changed keys versus parent.
+         */
         get: operations["memory_timeline"];
         put?: never;
         post?: never;
@@ -837,6 +1002,11 @@ export interface components {
             key: string;
             /** Label */
             label: string;
+            /**
+             * Sources
+             * @default []
+             */
+            sources: components["schemas"]["SourceRef"][];
             /** Value A */
             value_a?: unknown;
             /** Value B */
@@ -851,6 +1021,54 @@ export interface components {
             key: string;
             /** Label */
             label: string;
+        };
+        /**
+         * ConditionHistoryEntry
+         * @description Value of one condition key in one experiment (MEM-2).
+         */
+        ConditionHistoryEntry: {
+            /** Changed From Previous */
+            changed_from_previous: boolean;
+            /** Code */
+            code: string;
+            /** Experiment Id */
+            experiment_id: number;
+            /**
+             * Performed On
+             * Format: date
+             */
+            performed_on: string;
+            /** Previous Value */
+            previous_value?: unknown;
+            source: components["schemas"]["SourceRef"];
+            /** Value */
+            value: unknown;
+        };
+        /**
+         * ConditionMatrix
+         * @description Key × experiment matrix of condition values (MEM-5).
+         */
+        ConditionMatrix: {
+            /** Experiments */
+            experiments: components["schemas"]["ExperimentSummary"][];
+            /** Rows */
+            rows: components["schemas"]["ConditionMatrixRow"][];
+            /** Varying Only */
+            varying_only: boolean;
+        };
+        /** ConditionMatrixRow */
+        ConditionMatrixRow: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Values
+             * @description Aligned with ConditionMatrix.experiments
+             */
+            values: unknown[];
+            /** Varying */
+            varying: boolean;
         };
         /** CritiqueOut */
         CritiqueOut: {
@@ -1004,12 +1222,21 @@ export interface components {
             engine: "rules" | "claude";
             /** Experiment Id */
             experiment_id: number;
+            /** Fallback Reason */
+            fallback_reason?: string | null;
             /** Id */
             id: number;
+            /** Input Fingerprint */
+            input_fingerprint?: string | null;
             /** Key Points */
             key_points: string[];
             /** Model */
             model: string | null;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
             /** Summary */
             summary: string;
         };
@@ -1054,6 +1281,21 @@ export interface components {
             /** Value */
             value?: number | null;
         };
+        /** EvidenceFragment */
+        EvidenceFragment: {
+            /** Code */
+            code: string;
+            /** Experiment Id */
+            experiment_id: number;
+            /**
+             * Key
+             * @description Stable key cited by answers, e.g. 'F1'
+             */
+            key: string;
+            source: components["schemas"]["SourceRef"];
+            /** Text */
+            text: string;
+        };
         /** ExperimentCreate */
         ExperimentCreate: {
             /**
@@ -1086,7 +1328,11 @@ export interface components {
         };
         /**
          * ExperimentDiff
-         * @description Structural diff of two experiments' original records (no numbers computed here).
+         * @description Deterministic diff of two experiments: conditions, results, QC, note, datasets.
+         *
+         *     Every item carries ``sources`` (experiment id + field) so it can be traced back.
+         *     Result values and deltas are read from Analysis via the fact port; Memory itself
+         *     only compares keys and sets.
          */
         ExperimentDiff: {
             a: components["schemas"]["ExperimentSummary"];
@@ -1099,10 +1345,25 @@ export interface components {
             /** Note Diff */
             note_diff: components["schemas"]["NoteDiffLine"][];
             /**
+             * Qc Changes
+             * @default []
+             */
+            qc_changes: components["schemas"]["QCChange"][];
+            /**
              * Relation
              * @enum {string}
              */
             relation: "same" | "a_is_ancestor" | "b_is_ancestor" | "siblings" | "unrelated";
+            /**
+             * Result Changes
+             * @default []
+             */
+            result_changes: components["schemas"]["ResultDelta"][];
+            /**
+             * Results Available
+             * @default false
+             */
+            results_available: boolean;
             /** Unchanged Keys */
             unchanged_keys: string[];
         };
@@ -1238,11 +1499,15 @@ export interface components {
         GraphEdge: {
             /** Changed Keys */
             changed_keys: string[];
+            /** Proposal Id */
+            proposal_id?: number | null;
             /**
              * Relation
-             * @constant
+             * @enum {string}
              */
-            relation: "derived_from";
+            relation: "derived_from" | "shares_conditions" | "tests_proposal";
+            /** Similarity */
+            similarity?: number | null;
             /** Source */
             source: number;
             /** Target */
@@ -1263,6 +1528,21 @@ export interface components {
             performed_on: string;
             /** Title */
             title: string;
+        };
+        /**
+         * GraphRefresh
+         * @description How the cached graph was brought up to date for this response.
+         */
+        GraphRefresh: {
+            /** Applied Events */
+            applied_events: number;
+            /** Last Event Id */
+            last_event_id: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "full" | "incremental" | "cached";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1347,6 +1627,122 @@ export interface components {
             /** Reference Is Area */
             reference_is_area: number;
         };
+        /** KGEdge */
+        KGEdge: {
+            /**
+             * Attrs
+             * @default {}
+             */
+            attrs: {
+                [key: string]: unknown;
+            };
+            /**
+             * Relation
+             * @enum {string}
+             */
+            relation: "derived_from" | "uses_condition" | "measures" | "uses_sample" | "uses_strain" | "has_result" | "flags" | "critiqued_by" | "raises_hypothesis" | "proposes" | "tests_hypothesis" | "decided" | "tests_proposal" | "shares_conditions" | "mentions";
+            /** Source */
+            source: string;
+            source_ref?: components["schemas"]["SourceRef"] | null;
+            /** Target */
+            target: string;
+        };
+        /** KGNode */
+        KGNode: {
+            /**
+             * Attrs
+             * @default {}
+             */
+            attrs: {
+                [key: string]: unknown;
+            };
+            /** Experiment Id */
+            experiment_id?: number | null;
+            /**
+             * Id
+             * @description '<type>:<key>', e.g. 'experiment:7', 'analyte:carbendazim'
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Ref Id */
+            ref_id?: number | null;
+            /** Ref Type */
+            ref_type?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "experiment" | "condition" | "analyte" | "sample" | "strain" | "result" | "critique" | "hypothesis" | "proposal" | "decision" | "note";
+        };
+        /** KnowledgeGraph */
+        KnowledgeGraph: {
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /** Edges */
+            edges: components["schemas"]["KGEdge"][];
+            /** Nodes */
+            nodes: components["schemas"]["KGNode"][];
+            /** Project Id */
+            project_id: number;
+            refresh: components["schemas"]["GraphRefresh"];
+        };
+        /** KnowledgeNoteCreate */
+        KnowledgeNoteCreate: {
+            /**
+             * Author
+             * @default
+             */
+            author: string;
+            /** Linked Experiment Ids */
+            linked_experiment_ids: number[];
+            /** Statement */
+            statement: string;
+        };
+        /** KnowledgeNoteList */
+        KnowledgeNoteList: {
+            /** Items */
+            items: components["schemas"]["KnowledgeNoteOut"][];
+            /** Project Id */
+            project_id: number;
+            /** Total */
+            total: number;
+        };
+        /** KnowledgeNoteOut */
+        KnowledgeNoteOut: {
+            /** Author */
+            author: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: number;
+            /** Linked Experiment Ids */
+            linked_experiment_ids: number[];
+            /** Project Id */
+            project_id: number;
+            /** Statement */
+            statement: string;
+        };
+        /** MatchedTerm */
+        MatchedTerm: {
+            /**
+             * Facet
+             * @enum {string}
+             */
+            facet: "strain" | "sample" | "condition" | "analyte" | "keyword";
+            /**
+             * Matches
+             * @description Vocabulary entries the term matched
+             */
+            matches: string[];
+            /** Term */
+            term: string;
+        };
         /** MatrixEffectOut */
         MatrixEffectOut: {
             /** Analyte */
@@ -1368,6 +1764,36 @@ export interface components {
              */
             kind: "matrix_effect";
         };
+        /** MemoryAnswer */
+        MemoryAnswer: {
+            /** Answer */
+            answer: string;
+            /**
+             * Engine
+             * @enum {string}
+             */
+            engine: "rules" | "claude";
+            /** Fallback Reason */
+            fallback_reason?: string | null;
+            /** Fragment Keys */
+            fragment_keys: string[];
+            /** Fragments */
+            fragments: components["schemas"]["EvidenceFragment"][];
+            /** Model */
+            model?: string | null;
+            /** Question */
+            question: string;
+        };
+        /** MemoryAskRequest */
+        MemoryAskRequest: {
+            /**
+             * Limit
+             * @default 8
+             */
+            limit: number;
+            /** Question */
+            question: string;
+        };
         /**
          * MetricsComparison
          * @description Numerical comparison of two experiments (b relative to a).
@@ -1387,6 +1813,24 @@ export interface components {
         };
         /** NoteDiffLine */
         NoteDiffLine: {
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: "equal" | "insert" | "delete";
+            /**
+             * Segments
+             * @default []
+             */
+            segments: components["schemas"]["NoteDiffSegment"][];
+            /** Text */
+            text: string;
+        };
+        /**
+         * NoteDiffSegment
+         * @description Word-level piece of a changed line (MEM-4).
+         */
+        NoteDiffSegment: {
             /**
              * Op
              * @enum {string}
@@ -1491,6 +1935,63 @@ export interface components {
             title: string;
         };
         /**
+         * ProtocolGroup
+         * @description Experiments sharing an identical condition block (one protocol variant).
+         */
+        ProtocolGroup: {
+            /** Codes */
+            codes: string[];
+            /** Conditions */
+            conditions: {
+                [key: string]: unknown;
+            };
+            /**
+             * Differs From First
+             * @description Keys whose value differs from the first protocol in this bundle
+             */
+            differs_from_first: string[];
+            /** Experiment Ids */
+            experiment_ids: number[];
+            /**
+             * Protocol Id
+             * @description Short sha256 of the condition block
+             */
+            protocol_id: string;
+        };
+        /**
+         * QCChange
+         * @description A QC flag present in one or both experiments (set comparison, no arithmetic).
+         */
+        QCChange: {
+            /** Analyte */
+            analyte?: string | null;
+            /**
+             * Change
+             * @enum {string}
+             */
+            change: "appeared" | "resolved" | "persisting";
+            /** Code */
+            code: string;
+            /**
+             * Context
+             * @default {}
+             */
+            context: {
+                [key: string]: unknown;
+            };
+            /** Severity */
+            severity: string;
+            /**
+             * Sources
+             * @default []
+             */
+            sources: components["schemas"]["SourceRef"][];
+            /** Value A */
+            value_a?: number | null;
+            /** Value B */
+            value_b?: number | null;
+        };
+        /**
          * QCFlag
          * @description Deterministic QC check outcome. ``value`` is always computed from stored data.
          */
@@ -1520,6 +2021,27 @@ export interface components {
             threshold_low?: number | null;
             /** Value */
             value: number;
+        };
+        /** RecallBundle */
+        RecallBundle: {
+            /** Experiments */
+            experiments: components["schemas"]["RecallExperiment"][];
+            /** Protocols */
+            protocols: components["schemas"]["ProtocolGroup"][];
+            /** Query */
+            query: string;
+            /** Results */
+            results: components["schemas"]["ResultFact"][];
+            /** Terms */
+            terms: components["schemas"]["MatchedTerm"][];
+        };
+        /** RecallExperiment */
+        RecallExperiment: {
+            experiment: components["schemas"]["ExperimentSummary"];
+            /** Reasons */
+            reasons: components["schemas"]["SearchHit"][];
+            /** Score */
+            score: number;
         };
         /** RecoveryGroupOut */
         RecoveryGroupOut: {
@@ -1591,6 +2113,53 @@ export interface components {
             /** Roots */
             roots: number[];
         };
+        /**
+         * ResultDelta
+         * @description One stored result metric of both experiments. Values/deltas come from Analysis.
+         */
+        ResultDelta: {
+            /** Analyte */
+            analyte?: string | null;
+            /**
+             * Delta
+             * @description b − a as computed by the Analysis layer (None if not given)
+             */
+            delta?: number | null;
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            /** P Value */
+            p_value?: number | null;
+            /**
+             * Sources
+             * @default []
+             */
+            sources: components["schemas"]["SourceRef"][];
+            /** Unit */
+            unit?: string | null;
+            /** Value A */
+            value_a?: number | null;
+            /** Value B */
+            value_b?: number | null;
+        };
+        /**
+         * ResultFact
+         * @description A stored result value supplied by a higher layer (Analysis).
+         */
+        ResultFact: {
+            /** Analyte */
+            analyte?: string | null;
+            /** Label */
+            label: string;
+            /** Metric */
+            metric: string;
+            source: components["schemas"]["SourceRef"];
+            /** Unit */
+            unit?: string | null;
+            /** Value */
+            value?: number | null;
+        };
         /** RunResponse */
         RunResponse: {
             /** Created */
@@ -1614,9 +2183,57 @@ export interface components {
              * Field
              * @enum {string}
              */
-            field: "title" | "raw_note" | "condition_block" | "digest";
+            field: "title" | "raw_note" | "condition_block" | "digest" | "critique" | "knowledge_note" | "dataset";
+            /**
+             * Highlights
+             * @description [start, end) character offsets of matches inside snippet
+             * @default []
+             */
+            highlights: [
+                number,
+                number
+            ][];
+            /**
+             * Score
+             * @default 0
+             */
+            score: number;
             /** Snippet */
             snippet: string;
+            source?: components["schemas"]["SourceRef"] | null;
+        };
+        /** SimilarExperiment */
+        SimilarExperiment: {
+            /** Differing */
+            differing: components["schemas"]["ConditionChange"][];
+            experiment: components["schemas"]["ExperimentSummary"];
+            /**
+             * Score
+             * @description Condition-vector similarity in [0, 1]
+             */
+            score: number;
+            /** Shared Keys */
+            shared_keys: string[];
+        };
+        /**
+         * SourceRef
+         * @description Pointer to the stored record (and field) a fact was read from.
+         */
+        SourceRef: {
+            /** Experiment Id */
+            experiment_id?: number | null;
+            /**
+             * Field
+             * @description Field path inside the record, e.g. 'condition_block.ph'
+             */
+            field: string;
+            /** Ref Id */
+            ref_id: number;
+            /**
+             * Ref Type
+             * @description <module>.<Entity>, e.g. 'eln.Experiment'
+             */
+            ref_type: string;
         };
         /** SystemInfo */
         SystemInfo: {
@@ -2835,6 +3452,66 @@ export interface operations {
             };
         };
     };
+    memory_compare_conditions: {
+        parameters: {
+            query: {
+                /** @description Comma-separated experiment ids, e.g. 1,2,7 */
+                ids: string;
+                varying_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConditionMatrix"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     memory_diff: {
         parameters: {
             query: {
@@ -3070,9 +3747,193 @@ export interface operations {
             };
         };
     };
-    memory_graph: {
+    memory_similar: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimilarExperiment"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_ask: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemoryAskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemoryAnswer"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_condition_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConditionHistoryEntry"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_graph: {
+        parameters: {
+            query?: {
+                /** @description Edge relations to include (default: derived_from only) */
+                relations?: ("derived_from" | "shares_conditions" | "tests_proposal")[] | null;
+            };
             header?: never;
             path: {
                 project_id: number;
@@ -3128,10 +3989,256 @@ export interface operations {
             };
         };
     };
+    memory_knowledge_graph: {
+        parameters: {
+            query?: {
+                /** @description Node types to include */
+                types?: ("experiment" | "condition" | "analyte" | "sample" | "strain" | "result" | "critique" | "hypothesis" | "proposal" | "decision" | "note")[] | null;
+                /** @description Node id to centre on, e.g. experiment:7 */
+                focus?: string | null;
+                radius?: number;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeGraph"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_list_knowledge_notes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeNoteList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_create_knowledge_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeNoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeNoteOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    memory_recall: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecallBundle"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     memory_search: {
         parameters: {
             query: {
                 q: string;
+                limit?: number;
             };
             header?: never;
             path: {
