@@ -3,8 +3,11 @@
  * Query keys are namespaced by backend module so invalidation stays local.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, unwrap } from "./client";
+import { api, unwrap, type Schemas } from "./client";
 import type { DecisionCreate } from "./types";
+
+// Request-body aliases used by mutation hooks below (one block; add new aliases here).
+type CriteriaCreate = Schemas["CriteriaCreate"];
 
 const enabled = (...ids: Array<number | null | undefined>) => ids.every((v) => v != null);
 
@@ -116,11 +119,16 @@ export const useCreateDigest = () => {
 };
 
 // -------------------------------------------------------------- analysis
-export const useCriteria = () =>
+/** Default criteria, or the active criteria of `projectId` when given. */
+export const useCriteria = (projectId?: number | null) =>
   useQuery({
-    queryKey: ["analysis", "criteria"],
-    queryFn: () => unwrap(api.GET("/api/analysis/criteria")),
-    staleTime: Infinity,
+    queryKey: ["analysis", "criteria", projectId ?? null],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/analysis/criteria", {
+          params: { query: projectId != null ? { project_id: projectId } : {} },
+        }),
+      ),
   });
 
 export const useMetrics = (experimentId: number | null) =>
@@ -164,6 +172,45 @@ export const useTrend = (projectId: number | null) =>
         }),
       ),
   });
+
+export const useProjectCriteria = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["analysis", "project-criteria", projectId],
+    enabled: enabled(projectId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/analysis/projects/{project_id}/criteria", {
+          params: { path: { project_id: projectId! } },
+        }),
+      ),
+  });
+
+export const useCreateCriteria = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, body }: { projectId: number; body: CriteriaCreate }) =>
+      unwrap(
+        api.POST("/api/analysis/projects/{project_id}/criteria", {
+          params: { path: { project_id: projectId } },
+          body,
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["analysis"] }),
+  });
+};
+
+export const useRunAnalysis = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (experimentId: number) =>
+      unwrap(
+        api.POST("/api/analysis/experiments/{experiment_id}/run", {
+          params: { path: { experiment_id: experimentId } },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["analysis"] }),
+  });
+};
 
 // --------------------------------------------------------------- partner
 export const usePartnerMode = () =>

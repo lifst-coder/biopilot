@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Compare */
+        /**
+         * Compare
+         * @description Welch t-tests, effect sizes and Holm-adjusted per-analyte tests of b vs a.
+         */
         get: operations["analysis_compare"];
         put?: never;
         post?: never;
@@ -28,7 +31,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Criteria */
+        /**
+         * Get Criteria
+         * @description Default criteria, or the active criteria of ``project_id``.
+         */
         get: operations["analysis_get_criteria"];
         put?: never;
         post?: never;
@@ -45,8 +51,31 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Metrics */
+        /**
+         * Get Metrics
+         * @description Headline metrics from the latest stored results.
+         */
         get: operations["analysis_get_metrics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/experiments/{experiment_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Report
+         * @description Markdown or CSV export of the latest stored results (download).
+         */
+        get: operations["analysis_get_report"];
         put?: never;
         post?: never;
         delete?: never;
@@ -64,8 +93,55 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Run Experiment */
+        /**
+         * Run Experiment
+         * @description Run all applicable analyses (idempotent for identical inputs).
+         */
         post: operations["analysis_run_experiment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Methods
+         * @description Formula sheets (formulas, assumptions, references) of every current method.
+         */
+        get: operations["analysis_list_methods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/analysis/projects/{project_id}/criteria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Project Criteria
+         * @description Active criteria version and full history (version 0 = defaults).
+         */
+        get: operations["analysis_get_project_criteria"];
+        put?: never;
+        /**
+         * Create Project Criteria
+         * @description Append a new criteria version (existing results stay unchanged; re-run to apply).
+         */
+        post: operations["analysis_create_project_criteria"];
         delete?: never;
         options?: never;
         head?: never;
@@ -79,7 +155,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Project Trend */
+        /**
+         * Project Trend
+         * @description Recovery trend across a project's experiments.
+         */
         get: operations["analysis_project_trend"];
         put?: never;
         post?: never;
@@ -96,7 +175,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Results */
+        /**
+         * List Results
+         * @description Stored results filtered by experiment and kind.
+         */
         get: operations["analysis_list_results"];
         put?: never;
         post?: never;
@@ -113,7 +195,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Result */
+        /**
+         * Get Result
+         * @description One stored result.
+         */
         get: operations["analysis_get_result"];
         put?: never;
         post?: never;
@@ -560,7 +645,10 @@ export interface components {
     schemas: {
         /**
          * AcceptanceCriteria
-         * @description Thresholds used for QC flags. Exposed read-only via the API.
+         * @description Thresholds and method settings used for QC flags (SANTE/11312/2021 defaults).
+         *
+         *     Stored per project as immutable versions (see ``ProjectCriteria``); every flag
+         *     records the version it was judged against.
          */
         AcceptanceCriteria: {
             /**
@@ -568,6 +656,42 @@ export interface components {
              * @default 20
              */
             back_calc_tolerance_pct: number;
+            /**
+             * Comparison Alpha
+             * @description α for comparison tests (after Holm)
+             * @default 0.05
+             */
+            comparison_alpha: number;
+            /**
+             * Coverage Factor
+             * @description k for expanded U
+             * @default 2
+             */
+            coverage_factor: number;
+            /**
+             * Expanded Uncertainty Max Pct
+             * @description Max relative expanded uncertainty U (k·u_c), %
+             * @default 50
+             */
+            expanded_uncertainty_max_pct: number;
+            /**
+             * Grubbs Alpha
+             * @description Grubbs test α
+             * @default 0.05
+             */
+            grubbs_alpha: number;
+            /**
+             * Heteroscedasticity Alpha
+             * @description F-test α for variance homogeneity
+             * @default 0.01
+             */
+            heteroscedasticity_alpha: number;
+            /**
+             * Ion Ratio Tolerance Pct
+             * @description Max |ion-ratio deviation| from standards, %
+             * @default 30
+             */
+            ion_ratio_tolerance_pct: number;
             /**
              * Is Response Max Pct
              * @default 150
@@ -578,6 +702,24 @@ export interface components {
              * @default 50
              */
             is_response_min_pct: number;
+            /**
+             * Lod K
+             * @description LOD = k·σ/b (IUPAC 3; ICH 3.3)
+             * @default 3
+             */
+            lod_k: number;
+            /**
+             * Lod Range Factor
+             * @description LOD/LOQ regression uses levels ≤ factor × lowest level (min 3 levels)
+             * @default 10
+             */
+            lod_range_factor: number;
+            /**
+             * Loq K
+             * @description LOQ = k·σ/b (IUPAC/ICH 10)
+             * @default 10
+             */
+            loq_k: number;
             /**
              * Matrix Effect Abs Max Pct
              * @default 20
@@ -608,6 +750,12 @@ export interface components {
              * @default SANTE/11312/2021
              */
             source: string;
+            /**
+             * Spike Uncertainty Pct
+             * @description u(C_ref): relative standard uncertainty of spikes, %
+             * @default 0
+             */
+            spike_uncertainty_pct: number;
         };
         /**
          * AnalysisResultOut
@@ -633,11 +781,11 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "calibration" | "recovery" | "is_response" | "matrix_effect";
+            kind: "calibration" | "recovery" | "is_response" | "matrix_effect" | "limits" | "ion_ratio";
             /** Method Version */
             method_version: string;
             /** Output */
-            output: components["schemas"]["CalibrationOutput"] | components["schemas"]["RecoveryOutput"] | components["schemas"]["ISResponseOutput"] | components["schemas"]["MatrixEffectOutput"];
+            output: components["schemas"]["CalibrationOutput"] | components["schemas"]["RecoveryOutput"] | components["schemas"]["ISResponseOutput"] | components["schemas"]["MatrixEffectOutput"] | components["schemas"]["LimitsOutput"] | components["schemas"]["IonRatioOutput"];
             /** Parameters */
             parameters: {
                 [key: string]: unknown;
@@ -654,6 +802,13 @@ export interface components {
              * @description Fitted response ratio at each calibration level (for plotting)
              */
             fit_line: components["schemas"]["CalibrationPoint"][];
+            /**
+             * Fits
+             * @description Fits for every weighting scheme (none, 1/x, 1/x2)
+             * @default []
+             */
+            fits: components["schemas"]["CalibrationFitOut"][];
+            heteroscedasticity?: components["schemas"]["HeteroscedasticityOut"] | null;
             /** Intercept */
             intercept: number;
             /** Max Abs Back Calc Error Pct */
@@ -664,6 +819,17 @@ export interface components {
             points: components["schemas"]["CalibrationPoint"][];
             /** R Squared */
             r_squared: number;
+            /** Residual Sd */
+            residual_sd?: number | null;
+            /**
+             * Residuals
+             * @default []
+             */
+            residuals: components["schemas"]["ResidualOut"][];
+            /** Se Intercept */
+            se_intercept?: number | null;
+            /** Se Slope */
+            se_slope?: number | null;
             /** Slope */
             slope: number;
             /**
@@ -672,16 +838,82 @@ export interface components {
              */
             weighting: "none" | "1/x" | "1/x2";
         };
-        /** AnalyteDelta */
+        /**
+         * AnalyteDelta
+         * @description Per-analyte comparison; test fields are ``None`` when n < 2 on either side.
+         */
         AnalyteDelta: {
             /** Analyte */
             analyte: string;
+            /** Ci High */
+            ci_high?: number | null;
+            /** Ci Low */
+            ci_low?: number | null;
+            /** Cohens D */
+            cohens_d?: number | null;
             /** Delta Pct Points */
             delta_pct_points: number;
+            /** Df */
+            df?: number | null;
+            /** Hedges G */
+            hedges_g?: number | null;
             /** Mean A Pct */
             mean_a_pct: number;
             /** Mean B Pct */
             mean_b_pct: number;
+            /** N A */
+            n_a?: number | null;
+            /** N B */
+            n_b?: number | null;
+            /**
+             * P Holm
+             * @description Holm-adjusted p-value
+             */
+            p_holm?: number | null;
+            /** P Value */
+            p_value?: number | null;
+            /** Significant */
+            significant?: boolean | null;
+            /** T Statistic */
+            t_statistic?: number | null;
+        };
+        /**
+         * AnalyteLimitsOut
+         * @description LOD/LOQ of one analyte. ``lod``/``loq`` in ng/mL (extract), ``*_ng_g`` in sample.
+         */
+        AnalyteLimitsOut: {
+            /** Analyte */
+            analyte: string;
+            /** Estimates */
+            estimates: components["schemas"]["LimitEstimateOut"][];
+            /** Lod */
+            lod: number;
+            /** Lod Ng G */
+            lod_ng_g?: number | null;
+            /** Loq */
+            loq: number;
+            /** Loq Ng G */
+            loq_ng_g?: number | null;
+            /** Lowest Level */
+            lowest_level: number;
+            /**
+             * Primary Method
+             * @enum {string}
+             */
+            primary_method: "residual_sd" | "intercept_sd" | "low_level_replicates";
+        };
+        /** AnalyteLimitsSummary */
+        AnalyteLimitsSummary: {
+            /** Analyte */
+            analyte: string;
+            /** Lod */
+            lod: number;
+            /** Loq */
+            loq: number;
+            /** Method */
+            method: string;
+            /** Unit */
+            unit: string;
         };
         /** AnalyteRecoverySummary */
         AnalyteRecoverySummary: {
@@ -693,6 +925,29 @@ export interface components {
             n: number;
             /** Rsd Pct */
             rsd_pct: number;
+        };
+        /**
+         * AnalyteVerdict
+         * @description Deterministic pass/fail per analyte: fail = any critical flag, warning = any other.
+         */
+        AnalyteVerdict: {
+            /** Analyte */
+            analyte: string;
+            /**
+             * Failed Checks
+             * @default []
+             */
+            failed_checks: ("recovery_out_of_range" | "recovery_rsd_high" | "calibration_r2_low" | "calibration_back_calc_error" | "is_suppression" | "is_enhancement" | "matrix_effect_significant" | "outlier_suspected" | "uncertainty_high" | "ion_ratio_out_of_range" | "loq_above_lowest_level")[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pass" | "warning" | "fail";
+            /**
+             * Warning Checks
+             * @default []
+             */
+            warning_checks: ("recovery_out_of_range" | "recovery_rsd_high" | "calibration_r2_low" | "calibration_back_calc_error" | "is_suppression" | "is_enhancement" | "matrix_effect_significant" | "outlier_suspected" | "uncertainty_high" | "ion_ratio_out_of_range" | "loq_above_lowest_level")[];
         };
         /** AskRequest */
         AskRequest: {
@@ -768,15 +1023,66 @@ export interface components {
             /** Mean Back Calculated */
             mean_back_calculated: number;
         };
+        /**
+         * CalibrationFitOut
+         * @description The same calibration data fitted with one weighting (for the weighting toggle).
+         */
+        CalibrationFitOut: {
+            /** Back Calc */
+            back_calc: components["schemas"]["BackCalcLevelOut"][];
+            /** Fit Line */
+            fit_line: components["schemas"]["CalibrationPoint"][];
+            /** Intercept */
+            intercept: number;
+            /** Max Abs Back Calc Error Pct */
+            max_abs_back_calc_error_pct: number;
+            /** R Squared */
+            r_squared: number;
+            /** Residual Sd */
+            residual_sd?: number | null;
+            /** Residuals */
+            residuals: components["schemas"]["ResidualOut"][];
+            /** Se Intercept */
+            se_intercept?: number | null;
+            /** Se Slope */
+            se_slope?: number | null;
+            /** Slope */
+            slope: number;
+            /** Sum Abs Relative Error Pct */
+            sum_abs_relative_error_pct: number;
+            /**
+             * Weighting
+             * @enum {string}
+             */
+            weighting: "none" | "1/x" | "1/x2";
+        };
         /** CalibrationOutput */
         CalibrationOutput: {
             /** Analytes */
             analytes: components["schemas"]["AnalyteCalibrationOut"][];
             /**
+             * Calibration Type
+             * @default solvent
+             */
+            calibration_type: string;
+            /**
+             * Curve Used
+             * @description solvent | matrix rows of a `curve` column, or dataset
+             * @default dataset
+             */
+            curve_used: string;
+            /**
+             * Heteroscedastic Analytes
+             * @description Analytes whose F-test rejects constant variance
+             * @default []
+             */
+            heteroscedastic_analytes: string[];
+            /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
             kind: "calibration";
+            method?: components["schemas"]["MethodDoc"] | null;
             /**
              * Weighting
              * @enum {string}
@@ -851,6 +1157,40 @@ export interface components {
             key: string;
             /** Label */
             label: string;
+        };
+        /**
+         * CriteriaCreate
+         * @description Request body for a new criteria version.
+         */
+        CriteriaCreate: {
+            criteria: components["schemas"]["AcceptanceCriteria"];
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /**
+         * CriteriaVersionOut
+         * @description One immutable version of a project's criteria (version 0 = built-in defaults).
+         */
+        CriteriaVersionOut: {
+            /** Created At */
+            created_at?: string | null;
+            criteria: components["schemas"]["AcceptanceCriteria"];
+            /** Id */
+            id: number | null;
+            /** Label */
+            label: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Project Id */
+            project_id: number;
+            /** Version */
+            version: number;
         };
         /** CritiqueOut */
         CritiqueOut: {
@@ -1115,6 +1455,18 @@ export interface components {
             analyzed: boolean;
             /** Calibration Weighting */
             calibration_weighting?: string | null;
+            /**
+             * Criteria Versions
+             * @default []
+             */
+            criteria_versions: string[];
+            /**
+             * Expanded Uncertainty Pct
+             * @default {}
+             */
+            expanded_uncertainty_pct: {
+                [key: string]: number;
+            };
             /** Experiment Id */
             experiment_id: number;
             /**
@@ -1122,10 +1474,17 @@ export interface components {
              * @default []
              */
             flags: components["schemas"]["QCFlag"][];
+            /** Ion Ratio Injections Flagged */
+            ion_ratio_injections_flagged?: number | null;
             /** Is Injections Flagged */
             is_injections_flagged?: number | null;
             /** Is Injections Total */
             is_injections_total?: number | null;
+            /**
+             * Limits
+             * @default []
+             */
+            limits: components["schemas"]["AnalyteLimitsSummary"][];
             /**
              * Matrix Effect Pct
              * @default {}
@@ -1137,11 +1496,24 @@ export interface components {
             max_abs_back_calc_error_pct?: number | null;
             /** Min R Squared */
             min_r_squared?: number | null;
+            /** Outlier Count */
+            outlier_count?: number | null;
             /**
              * Per Analyte Recovery
              * @default []
              */
             per_analyte_recovery: components["schemas"]["AnalyteRecoverySummary"][];
+            /**
+             * Qc Status
+             * @default not_analyzed
+             * @enum {string}
+             */
+            qc_status: "pass" | "warning" | "fail" | "not_analyzed";
+            /**
+             * Qc Verdicts
+             * @default []
+             */
+            qc_verdicts: components["schemas"]["AnalyteVerdict"][];
             /** Recovery Mean Pct */
             recovery_mean_pct?: number | null;
             /** Recovery N */
@@ -1264,6 +1636,26 @@ export interface components {
             /** Title */
             title: string;
         };
+        /**
+         * GrubbsOut
+         * @description Two-sided Grubbs test of one replicate group (flag only, data never removed).
+         */
+        GrubbsOut: {
+            /** Alpha */
+            alpha: number;
+            /** G Critical */
+            g_critical: number;
+            /** G Statistic */
+            g_statistic: number;
+            /** Is Outlier */
+            is_outlier: boolean;
+            /** N */
+            n: number;
+            /** Suspect Injection Id */
+            suspect_injection_id: string;
+            /** Suspect Value */
+            suspect_value: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1273,6 +1665,34 @@ export interface components {
         HealthOut: {
             /** Status */
             status: string;
+        };
+        /**
+         * HeteroscedasticityOut
+         * @description F-test of response variance at the highest vs lowest calibration level (ANA-5).
+         */
+        HeteroscedasticityOut: {
+            /** Alpha */
+            alpha: number;
+            /** F Critical */
+            f_critical: number;
+            /** F Statistic */
+            f_statistic: number;
+            /** Level High */
+            level_high: number;
+            /** Level Low */
+            level_low: number;
+            /** N High */
+            n_high: number;
+            /** N Low */
+            n_low: number;
+            /** P Value */
+            p_value: number;
+            /** Significant */
+            significant: boolean;
+            /** Var High */
+            var_high: number;
+            /** Var Low */
+            var_low: number;
         };
         /** HypothesisCreate */
         HypothesisCreate: {
@@ -1330,11 +1750,23 @@ export interface components {
             is_area: number;
             /** Response Pct */
             response_pct: number;
+            /**
+             * Role
+             * @default sample
+             * @enum {string}
+             */
+            role: "calibration" | "sample";
             /** Sample Id */
             sample_id: string;
         };
         /** ISResponseOutput */
         ISResponseOutput: {
+            /**
+             * Calibration Injections
+             * @description Calibration injections in run order (IS trend)
+             * @default []
+             */
+            calibration_injections: components["schemas"]["ISInjectionOut"][];
             /** Flagged Count */
             flagged_count: number;
             /** Injections */
@@ -1344,8 +1776,90 @@ export interface components {
              * @enum {string}
              */
             kind: "is_response";
+            method?: components["schemas"]["MethodDoc"] | null;
             /** Reference Is Area */
             reference_is_area: number;
+            /**
+             * Reference Is Rsd Pct
+             * @description RSD of the calibration IS areas (reference precision)
+             */
+            reference_is_rsd_pct?: number | null;
+        };
+        /** IonRatioOutput */
+        IonRatioOutput: {
+            /** Flagged Count */
+            flagged_count: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ion_ratio";
+            method?: components["schemas"]["MethodDoc"] | null;
+            /** Rows */
+            rows: components["schemas"]["IonRatioRowOut"][];
+            /** Tolerance Pct */
+            tolerance_pct: number;
+        };
+        /** IonRatioRowOut */
+        IonRatioRowOut: {
+            /** Analyte */
+            analyte: string;
+            /** Deviation Pct */
+            deviation_pct: number;
+            /** Flagged */
+            flagged: boolean;
+            /** Injection Id */
+            injection_id: string;
+            /** Ion Ratio */
+            ion_ratio: number;
+            /** Reference Ratio */
+            reference_ratio: number;
+            /** Sample Type */
+            sample_type: string;
+        };
+        /** LimitEstimateOut */
+        LimitEstimateOut: {
+            /** Lod */
+            lod: number;
+            /** Loq */
+            loq: number;
+            /**
+             * Max Level
+             * @description Highest calibration level used for σ
+             * @default 0
+             */
+            max_level: number;
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "residual_sd" | "intercept_sd" | "low_level_replicates";
+            /** N */
+            n: number;
+            /** Sigma */
+            sigma: number;
+            /** Slope */
+            slope: number;
+        };
+        /** LimitsOutput */
+        LimitsOutput: {
+            /** Analytes */
+            analytes: components["schemas"]["AnalyteLimitsOut"][];
+            /** K Lod */
+            k_lod: number;
+            /** K Loq */
+            k_loq: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "limits";
+            method?: components["schemas"]["MethodDoc"] | null;
+            /**
+             * Unit
+             * @default ng/mL
+             */
+            unit: string;
         };
         /** MatrixEffectOut */
         MatrixEffectOut: {
@@ -1367,16 +1881,44 @@ export interface components {
              * @enum {string}
              */
             kind: "matrix_effect";
+            method?: components["schemas"]["MethodDoc"] | null;
+        };
+        /**
+         * MethodDoc
+         * @description Formulas, assumptions and references of one computation (stored with results).
+         */
+        MethodDoc: {
+            /** Assumptions */
+            assumptions: string[];
+            /** Formulas */
+            formulas: string[];
+            /** Kind */
+            kind: string;
+            /**
+             * References
+             * @default []
+             */
+            references: string[];
+            /** Title */
+            title: string;
+            /** Version */
+            version: string;
         };
         /**
          * MetricsComparison
          * @description Numerical comparison of two experiments (b relative to a).
          */
         MetricsComparison: {
+            /**
+             * Alpha
+             * @default 0.05
+             */
+            alpha: number;
             /** Experiment A */
             experiment_a: number;
             /** Experiment B */
             experiment_b: number;
+            method?: components["schemas"]["MethodDoc"] | null;
             metrics_a: components["schemas"]["ExperimentMetrics"];
             metrics_b: components["schemas"]["ExperimentMetrics"];
             /** Per Analyte */
@@ -1384,6 +1926,11 @@ export interface components {
             /** Recovery Delta Pct Points */
             recovery_delta_pct_points: number | null;
             recovery_t_test: components["schemas"]["RecoveryTTest"] | null;
+            /**
+             * Significant Analytes
+             * @default []
+             */
+            significant_analytes: string[];
         };
         /** NoteDiffLine */
         NoteDiffLine: {
@@ -1421,6 +1968,17 @@ export interface components {
              * @default
              */
             objective: string;
+        };
+        /**
+         * ProjectCriteria
+         * @description Active criteria of a project plus its full version history (oldest first).
+         */
+        ProjectCriteria: {
+            active: components["schemas"]["CriteriaVersionOut"];
+            /** History */
+            history: components["schemas"]["CriteriaVersionOut"][];
+            /** Project Id */
+            project_id: number;
         };
         /** ProjectOut */
         ProjectOut: {
@@ -1501,7 +2059,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "recovery_out_of_range" | "recovery_rsd_high" | "calibration_r2_low" | "calibration_back_calc_error" | "is_suppression" | "is_enhancement" | "matrix_effect_significant";
+            code: "recovery_out_of_range" | "recovery_rsd_high" | "calibration_r2_low" | "calibration_back_calc_error" | "is_suppression" | "is_enhancement" | "matrix_effect_significant" | "outlier_suspected" | "uncertainty_high" | "ion_ratio_out_of_range" | "loq_above_lowest_level";
             /**
              * Context
              * @default {}
@@ -1509,6 +2067,11 @@ export interface components {
             context: {
                 [key: string]: unknown;
             };
+            /**
+             * Criteria Version
+             * @description Label of the criteria version used for this judgement
+             */
+            criteria_version?: string | null;
             /**
              * Severity
              * @enum {string}
@@ -1525,6 +2088,9 @@ export interface components {
         RecoveryGroupOut: {
             /** Analyte */
             analyte: string;
+            grubbs?: components["schemas"]["GrubbsOut"] | null;
+            /** Mean No Is Pct */
+            mean_no_is_pct?: number | null;
             /** Mean Pct */
             mean_pct: number;
             /** N */
@@ -1545,6 +2111,7 @@ export interface components {
              * @enum {string}
              */
             kind: "recovery";
+            method?: components["schemas"]["MethodDoc"] | null;
             /** N */
             n: number;
             /** Overall Mean Pct */
@@ -1553,6 +2120,11 @@ export interface components {
             overall_rsd_pct: number;
             /** Rows */
             rows: components["schemas"]["RecoveryRowOut"][];
+            /**
+             * Uncertainty
+             * @default []
+             */
+            uncertainty: components["schemas"]["UncertaintyOut"][];
         };
         /** RecoveryRowOut */
         RecoveryRowOut: {
@@ -1562,6 +2134,11 @@ export interface components {
             injection_id: string;
             /** Measured Ng G */
             measured_ng_g: number;
+            /**
+             * Recovery No Is Pct
+             * @description Recovery from an absolute-area calibration (no IS)
+             */
+            recovery_no_is_pct?: number | null;
             /** Recovery Pct */
             recovery_pct: number;
             /** Sample Id */
@@ -1569,14 +2146,41 @@ export interface components {
             /** Spike Ng G */
             spike_ng_g: number;
         };
-        /** RecoveryTTest */
+        /**
+         * RecoveryTTest
+         * @description Welch t-test on all recoveries. ``t = (x̄_a − x̄_b)/SE``; difference/CI/d are b − a.
+         */
         RecoveryTTest: {
+            /** Ci High */
+            ci_high?: number | null;
+            /** Ci Low */
+            ci_low?: number | null;
+            /** Cohens D */
+            cohens_d?: number | null;
+            /** Confidence */
+            confidence?: number | null;
+            /** Df */
+            df?: number | null;
+            /** Hedges G */
+            hedges_g?: number | null;
+            /** Mean A */
+            mean_a?: number | null;
+            /** Mean B */
+            mean_b?: number | null;
+            /** Mean Difference */
+            mean_difference?: number | null;
             /** N A */
             n_a: number;
             /** N B */
             n_b: number;
             /** P Value */
             p_value: number;
+            /** Sd A */
+            sd_a?: number | null;
+            /** Sd B */
+            sd_b?: number | null;
+            /** Standard Error */
+            standard_error?: number | null;
             /** T Statistic */
             t_statistic: number;
         };
@@ -1590,6 +2194,34 @@ export interface components {
             project_id: number;
             /** Roots */
             roots: number[];
+        };
+        /**
+         * ResidualOut
+         * @description One calibration injection and its residuals (all computed in the backend).
+         */
+        ResidualOut: {
+            /** Back Calculated */
+            back_calculated: number;
+            /** Injection Id */
+            injection_id: string;
+            /** Level */
+            level: number;
+            /** Predicted */
+            predicted: number;
+            /**
+             * Relative Error Pct
+             * @description %RE = (x̂ − x)/x × 100
+             */
+            relative_error_pct: number;
+            /** Residual */
+            residual: number;
+            /** Response Ratio */
+            response_ratio: number;
+            /**
+             * Standardized Residual
+             * @description √w·(y − ŷ)/s (weighted standardized residual)
+             */
+            standardized_residual?: number | null;
         };
         /** RunResponse */
         RunResponse: {
@@ -1666,6 +2298,30 @@ export interface components {
             recovery_rsd_pct: number | null;
             /** Source Result Ids */
             source_result_ids: number[];
+        };
+        /**
+         * UncertaintyOut
+         * @description Relative expanded measurement uncertainty of one analyte (ANA-4), %.
+         */
+        UncertaintyOut: {
+            /** Analyte */
+            analyte: string;
+            /** Coverage Factor */
+            coverage_factor: number;
+            /** Expanded Pct */
+            expanded_pct: number;
+            /** Levels */
+            levels: number;
+            /** Rms Bias Pct */
+            rms_bias_pct: number;
+            /** U Bias Pct */
+            u_bias_pct: number;
+            /** U Combined Pct */
+            u_combined_pct: number;
+            /** U Cref Pct */
+            u_cref_pct: number;
+            /** U Rw Pct */
+            u_rw_pct: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1762,7 +2418,10 @@ export interface operations {
     };
     analysis_get_criteria: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Return this project's active criteria instead of defaults */
+                project_id?: number | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1803,6 +2462,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1865,6 +2533,68 @@ export interface operations {
             };
         };
     };
+    analysis_get_report: {
+        parameters: {
+            query?: {
+                format?: "markdown" | "csv";
+            };
+            header?: never;
+            path: {
+                experiment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                    "text/markdown": unknown;
+                    "text/plain": string;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     analysis_run_experiment: {
         parameters: {
             query?: never;
@@ -1883,6 +2613,173 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analysis_list_methods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MethodDoc"][];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    analysis_get_project_criteria: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCriteria"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analysis_create_project_criteria: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CriteriaCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CriteriaVersionOut"];
                 };
             };
             /** @description Bad Request */
@@ -1985,7 +2882,7 @@ export interface operations {
         parameters: {
             query?: {
                 experiment_id?: number | null;
-                kind?: ("calibration" | "recovery" | "is_response" | "matrix_effect") | null;
+                kind?: ("calibration" | "recovery" | "is_response" | "matrix_effect" | "limits" | "ion_ratio") | null;
             };
             header?: never;
             path?: never;

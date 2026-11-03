@@ -66,33 +66,42 @@ API 변경 시 `openapi.json`/`schema.d.ts` 재생성, 새 쓰기 경로는 Audi
 
 ## Analysis (`backend/app/analysis/**`, `frontend/src/features/analysis/**`)
 
-- [ ] **ANA-1 LOD/LOQ 추정**
+- [x] **ANA-1 LOD/LOQ 추정**
   검량선 절편 표준편차 기반(3.3σ/S, 10σ/S) + 저농도 반복 기반 옵션. 새 result kind `limits`.
   완료 기준: 손계산 가능한 단위 테스트, `METHOD_VERSIONS` 등록, 시드 #023에서 값 생성.
-- [ ] **ANA-2 매트릭스 매칭 검량선 정량**
+  → `limits@1`: residual_sd(저농도 구간 OLS) · intercept_sd · low_level_replicates(n≥3이면 대표), k는 기준값(IUPAC 3/10, ICH 3.3 설정 가능).
+- [x] **ANA-2 매트릭스 매칭 검량선 정량**
   조건 블록 `calibration_type=matrix-matched`일 때 해당 곡선으로 회수율 계산.
   완료 기준: 용매/매트릭스 곡선 선택 로직 테스트, 파라미터가 fingerprint에 포함.
-- [ ] **ANA-3 이상치 검정(Grubbs)**
+  → 조건 블록 `calibration_type`(extra 키) + 검량 CSV 선택 컬럼 `curve`. ELN 라벨/필드 등록은 CHANGES_REQUESTED.
+- [x] **ANA-3 이상치 검정(Grubbs)**
   반복 측정 그룹별 Grubbs 검정 결과를 플래그로만 제공(데이터 제거 금지).
   완료 기준: 알려진 이상치 데이터 단위 테스트, `QCFlag.code="outlier_suspected"`.
-- [ ] **ANA-4 측정 불확도**
+  → `RecoveryGroupOut.grubbs`, 플래그 `outlier_suspected`(데이터 제거 없음).
+- [x] **ANA-4 측정 불확도**
   반복성 RSD + 회수율 편향으로 확장 불확도(k=2) 계산.
   완료 기준: 수식 docstring + 단위 테스트, `ExperimentMetrics`에 필드 추가.
-- [ ] **ANA-5 가중 선택 근거 강화**
+  → Nordtest 방식 u(Rw)·u(bias)·U(k) — `RecoveryOutput.uncertainty`, `ExperimentMetrics.expanded_uncertainty_pct`, 플래그 `uncertainty_high`.
+- [x] **ANA-5 가중 선택 근거 강화**
   Σ|%RE| 외에 잔차 이분산성 F-검정 결과 제공.
   완료 기준: #023에서 무가중 대비 1/x 선택 근거가 F-검정으로도 지지되는 테스트.
-- [ ] **ANA-6 프로젝트별 허용 기준 저장**
+  → `AnalyteCalibrationOut.heteroscedasticity`(최고/최저 수준 분산 F-검정), #023 전 분석물 유의.
+- [x] **ANA-6 프로젝트별 허용 기준 저장**
   `AcceptanceCriteria`를 프로젝트별 버전 레코드로 저장, 결과 플래그에 사용 기준 버전 기록.
   완료 기준: 기준 변경 시 기존 결과 불변, 재분석 시 새 결과 생성.
-- [ ] **ANA-7 분석물별 비교 + 다중비교 보정**
+  → `analysis_criteria_versions`(불변) + `GET/POST /api/analysis/projects/{id}/criteria`, 플래그 `criteria_version`, fingerprint에 기준 포함.
+- [x] **ANA-7 분석물별 비교 + 다중비교 보정**
   `compare`에 분석물별 Welch t-test + Holm 보정 p-value.
   완료 기준: 시드 #018 vs #024에서 carbendazim/thiabendazole 유의 테스트.
-- [ ] **ANA-8 이온비(qualifier/quantifier) QC**
+  → `AnalyteDelta`에 Welch t·df·CI·Cohen d·Hedges g·`p_holm`·`significant`, 공식/가정 `MetricsComparison.method`.
+- [x] **ANA-8 이온비(qualifier/quantifier) QC**
   ELN-7의 `ion_ratio` kind 소비, 기준 ±30% 플래그.
   완료 기준: ELN-7 완료 후 진행, 결과 kind `ion_ratio`.
-- [ ] **ANA-9 Analysis 탭: 잔차 플롯·원시 행 테이블**
+  → `ion_ratio@1` 계산·플래그 완료. ELN-7 전까지는 같은 컬럼의 `other` 데이터셋을 소비(계약은 CHANGES_REQUESTED).
+- [x] **ANA-9 Analysis 탭: 잔차 플롯·원시 행 테이블**
   검량선 잔차(%RE) 차트, 회수율 rows 테이블(주입 ID 필터).
   완료 기준: 모든 값은 API 필드 그대로 표시, 프론트 계산 없음.
+  → 가중치 토글 검량선/잔차(%RE·표준화), 원시 행 필터, IS 추세, LOD/LOQ·불확도·판정 표, 기준 편집, MD/CSV 리포트.
 
 ## Partner (`backend/app/partner/**`, `frontend/src/features/{research-ai,partner-panel}/**`)
 

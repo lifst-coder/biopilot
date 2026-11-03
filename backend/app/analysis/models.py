@@ -1,11 +1,11 @@
-"""ORM model for stored analysis results (immutable; re-runs create new rows)."""
+"""ORM models of the Analysis layer: stored results and project criteria versions (immutable)."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, utcnow
@@ -30,4 +30,24 @@ class AnalysisResult(ImmutableMixin, Base):
     parameters: Mapped[dict[str, Any]] = mapped_column(JSON)
     output: Mapped[dict[str, Any]] = mapped_column(JSON)
     flags: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class AnalysisCriteriaVersion(ImmutableMixin, Base):
+    """One immutable version of a project's acceptance criteria (ANA-6).
+
+    Changing criteria appends a new version; results judged against an older version
+    keep their flags (and the ``criteria_version`` label on each flag).
+    """
+
+    __tablename__ = "analysis_criteria_versions"
+    __table_args__ = (
+        UniqueConstraint("project_id", "version", name="uq_analysis_criteria_version"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("eln_projects.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    criteria: Mapped[dict[str, Any]] = mapped_column(JSON)
+    note: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
