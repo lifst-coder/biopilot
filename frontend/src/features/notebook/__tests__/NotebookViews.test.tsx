@@ -132,6 +132,47 @@ describe("CompareModal — unanalysed current experiment", () => {
   });
 });
 
+describe("CompareModal — QC flag count", () => {
+  it("counts warning/critical flags only (info flags are not QC findings)", async () => {
+    const flag = (code: string, severity: string) => ({ code, severity, analyte: "x", value: 1, context: {} });
+    mockApi({
+      "GET /api/memory/diff": () => ({
+        a: SUMMARY(1, "#018"),
+        b: SUMMARY(7, "#024", 1),
+        relation: "a_is_ancestor",
+        common_ancestor_id: 1,
+        condition_changes: [],
+        unchanged_keys: [],
+        note_diff: [],
+        datasets: { only_a: [], only_b: [], both: [] },
+      }),
+      "GET /api/analysis/compare": () => ({
+        experiment_a: 1,
+        experiment_b: 7,
+        metrics_a: { ...METRICS(1, 89.1), flags: [flag("loq_above_lowest_level", "info")] },
+        metrics_b: {
+          ...METRICS(7, 62.0),
+          flags: [
+            flag("loq_above_lowest_level", "info"),
+            flag("recovery_out_of_range", "critical"),
+            flag("is_suppression", "warning"),
+          ],
+        },
+        recovery_delta_pct_points: -27.1,
+        per_analyte: [],
+        recovery_t_test: null,
+      }),
+    });
+    renderWithProviders(
+      <CompareModal experiments={[SUMMARY(1, "#018"), SUMMARY(7, "#024", 1)]} current={7} defaultBaseline={1} onClose={() => {}} />,
+    );
+    const dialog = await screen.findByRole("dialog");
+    const label = await within(dialog).findByText("QC 플래그");
+    const cells = Array.from(label.closest("tr")!.querySelectorAll("td")).map((td) => td.textContent);
+    expect(cells).toEqual(["QC 플래그", "0", "2", "—"]);
+  });
+});
+
 describe("HistoryPanel", () => {
   it("renders version history and a filterable audit log", async () => {
     mockApi({

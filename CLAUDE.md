@@ -33,6 +33,8 @@ backend/app/
   analysis/   L3 결정론적 계산: 검량선, 회수율, IS 응답, 매트릭스 효과, 비교, AnalysisResult
   partner/    L4 해석: Critique, Hypothesis, Proposal, Decision, Q&A
   seed/       시드 데이터(CSV는 generate.py로 재현 가능) + 로더
+  wiring.py   composition root(core 소유): 상위 모듈 서비스를 하위 모듈 포트(Memory FactProvider)에 연결.
+              `app.<module>.service/schemas`만 import, 기능 모듈은 wiring을 import하지 않는다
 ```
 
 - 각 모듈은 `models.py · schemas.py · service.py · router.py · tests/`를 자기 폴더에 가진다.
@@ -55,7 +57,7 @@ backend/app/
 | Partner | `backend/app/partner/**`, `frontend/src/features/research-ai/**`, `frontend/src/features/partner-panel/**` |
 | Frontend Shell | `frontend/src/{layout,components,lib,styles}/**`, `frontend/src/App.tsx`, Overview 탭 `frontend/src/features/overview/**` |
 
-- 공유 파일(`app/core/**`, `app/main.py`, `app/models_registry.py`, `app/seed/**`, `frontend/src/api/queries.ts`,
+- 공유 파일(`app/core/**`, `app/main.py`, `app/models_registry.py`, `app/wiring.py`, `app/seed/**`, `frontend/src/api/queries.ts`,
   `frontend/src/api/types.ts`, CI, 이 문서)은 **직접 고치지 말고** CHANGES_REQUESTED.md에 요청을 적는다.
   예외: 자기 모듈의 새 라우터/모델을 등록하는 **한 줄 추가**는 허용 (`main.py`, `models_registry.py`),
   자기 모듈 엔드포인트용 훅을 `queries.ts`의 자기 섹션 끝에 추가하는 것은 허용.

@@ -5,6 +5,10 @@
 * Cross-module imports must target ``app.<module>.service`` or ``app.<module>.schemas``.
 * ``app.core`` must not import feature modules (``app.models_registry`` is the
   composition root and is exempt).
+* ``app/wiring.py`` is the core-owned composition root that connects higher-layer
+  services to lower-layer ports (e.g. Memory's fact providers). It may import feature
+  modules only through ``app.<module>.service`` / ``app.<module>.schemas`` (plus
+  ``app.core``), and no feature module may import it (only ``app.main`` does).
 """
 
 from __future__ import annotations
@@ -82,3 +86,29 @@ def test_tables_are_prefixed_by_owning_module() -> None:
 
     for table in Base.metadata.tables:
         assert table.split("_")[0] in {*MODULES, "core"}, table
+
+
+WIRING = APP / "wiring.py"
+
+
+def test_wiring_imports_only_service_and_schemas() -> None:
+    """The composition root reaches feature modules only through their public API."""
+    violations: list[str] = []
+    for name in _imports(WIRING):
+        parts = name.split(".")
+        if parts[1] == "core":
+            continue
+        if parts[1] not in MODULES or len(parts) < 3 or parts[2] not in PUBLIC:
+            violations.append(f"wiring.py imports {name} (only app.<module>.service/schemas)")
+    assert violations == []
+
+
+def test_feature_modules_do_not_import_wiring() -> None:
+    """Wiring is installed by ``app.main``; feature code must not depend on it."""
+    violations = [
+        f"{p.relative_to(APP)} imports app.wiring"
+        for module in MODULES
+        for p in _sources(module)
+        if any(n == "app.wiring" or n.startswith("app.wiring.") for n in _imports(p))
+    ]
+    assert violations == []

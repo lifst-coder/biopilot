@@ -15,11 +15,14 @@ PATH_PARAMS = {
     "result_id": "1",
     "critique_id": "1",
     "proposal_id": "1",
+    "key": "extraction_time_min",
 }
 QUERY_PARAMS: dict[str, dict[str, str | int]] = {
     "/api/analysis/compare": {"a": 1, "b": 7},
     "/api/memory/diff": {"a": 1, "b": 7},
     "/api/memory/projects/{project_id}/search": {"q": "GCB"},
+    "/api/memory/projects/{project_id}/recall": {"q": "GCB carbendazim"},
+    "/api/memory/compare-conditions": {"ids": "1,2,7"},
     "/api/partner/hypotheses": {"project_id": 1},
     "/api/partner/proposals": {"project_id": 1},
 }

@@ -1,8 +1,18 @@
 import { Link, useLocation } from "react-router-dom";
-import { useAudit, useCompare, useCriteria, useProposals, useTimeline, useTrend } from "@/api/queries";
+import {
+  useAudit,
+  useCompare,
+  useCriteria,
+  useKnowledgeGraph,
+  useProposals,
+  useTimeline,
+  useTrend,
+} from "@/api/queries";
 import { Badge, Card, DataTable, QueryState, StatTile } from "@/components";
 import { formatDate, formatDateTime, formatPValue, formatWithUnit } from "@/lib/format";
 import { useActiveProject } from "@/lib/selection";
+import { GlobalSearchBar } from "./GlobalSearchBar";
+import { KnowledgeGraphView } from "./KnowledgeGraphView";
 import { RecoveryTrendChart } from "./RecoveryTrendChart";
 
 /** Project status at a glance. Every number comes from an API response. */
@@ -15,6 +25,7 @@ export function OverviewPage() {
   const { data: criteria } = useCriteria();
   const { data: proposals = [] } = useProposals(projectId);
   const { search } = useLocation();
+  const knowledge = useKnowledgeGraph(projectId);
 
   const points = trend.data ?? [];
   const withRecovery = points.filter((p) => p.recovery_mean_pct !== null);
@@ -35,6 +46,8 @@ export function OverviewPage() {
         <h1 className="text-lg font-semibold">{project.name}</h1>
         <p className="mt-1 max-w-3xl text-xs text-ink-muted">{project.objective}</p>
       </div>
+
+      <GlobalSearchBar projectId={projectId} />
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatTile label="기록된 실험" value={project.experiment_count} />
@@ -57,6 +70,13 @@ export function OverviewPage() {
         <QueryState query={trend}>
           {(data) => <RecoveryTrendChart points={data} criteria={criteria ?? null} />}
         </QueryState>
+      </Card>
+
+      <Card
+        title="연구 지식 그래프"
+        subtitle="실험 · 조건 · 분석물/시료 · 결과 · 가설 · 결정 (Memory, 감사 로그 기반 증분 갱신). 실험 노드를 누르면 열립니다."
+      >
+        <QueryState query={knowledge}>{(g) => <KnowledgeGraphView graph={g} />}</QueryState>
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">

@@ -19,6 +19,7 @@ from app.core.router import router as system_router
 from app.eln.router import router as eln_router
 from app.memory.router import router as memory_router
 from app.partner.router import router as partner_router
+from app.wiring import install as install_memory_fact_providers
 
 
 class ErrorBody(BaseModel):
@@ -52,6 +53,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         responses={400: {"model": ErrorBody}, 404: {"model": ErrorBody}, 409: {"model": ErrorBody}},
     )
     app.state.db = db
+    install_memory_fact_providers()
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

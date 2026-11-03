@@ -188,6 +188,11 @@ function AnalysisStatus({ sides }: { sides: Side[] }) {
   );
 }
 
+/** Number of warning/critical flags; `severity: "info"` flags are not counted as QC flags. */
+function qcFlagCount(m: MetricsComparison["metrics_a"]): number {
+  return m.flags.filter((f) => f.severity !== "info").length;
+}
+
 function ResultDiff({ c }: { c: MetricsComparison }) {
   const a = c.metrics_a;
   const b = c.metrics_b;
@@ -218,7 +223,8 @@ function ResultDiff({ c }: { c: MetricsComparison }) {
       b: b.is_injections_total != null ? `${b.is_injections_flagged ?? 0}/${b.is_injections_total}` : "—",
       d: "—",
     },
-    { key: "flags", label: "QC 플래그", a: a.flags.length, b: b.flags.length, d: "—" },
+    // Informational flags (severity "info", e.g. loq_above_lowest_level) are context, not QC findings.
+    { key: "flags", label: "QC 플래그", a: qcFlagCount(a), b: qcFlagCount(b), d: "—" },
   ];
   return (
     <div className="space-y-3">
