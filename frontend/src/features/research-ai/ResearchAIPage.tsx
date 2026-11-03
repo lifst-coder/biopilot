@@ -3,6 +3,7 @@ import {
   useDecisionHistory,
   useHypotheses,
   useMetrics,
+  usePrecedents,
   usePrioritizedProposals,
   useProjectCritiques,
   useRunCritique,
@@ -17,6 +18,7 @@ import { CriticAssessmentView } from "./CriticAssessmentView";
 import { CritiqueView } from "./CritiqueView";
 import { DecisionHistoryCard } from "./DecisionHistoryCard";
 import { HypothesisItem } from "./HypothesisItem";
+import { PrecedentCard } from "./PrecedentCard";
 import { ProposalCard } from "./ProposalCard";
 
 const QUESTION = TABS.find((t) => t.path === "/research-ai")?.question ?? "";
@@ -36,8 +38,9 @@ function useHashScroll(ready: boolean) {
 }
 
 /**
- * Partner layer UI, ordered by practical value: Research Critic (verdict → why it cannot
- * be settled → missing controls) → Next Experiment Designer (decide with a reason) →
+ * Partner layer UI, ordered by practical value: precedents from the records ("과거에 같은
+ * 증상이 있었고 그때 이렇게 결론 내렸다", only when there are any) → Research Critic
+ * (verdict → why it cannot be settled → missing controls) → Next Experiment Designer (decide with a reason) →
  * findings, decision history, hypotheses and the project review collapsed below.
  */
 export function ResearchAIPage() {
@@ -50,6 +53,7 @@ export function ResearchAIPage() {
   const history = useDecisionHistory(projectId);
   const projectCritiques = useProjectCritiques(projectId, "project");
   const metrics = useMetrics(selectedId);
+  const precedents = usePrecedents(selectedId);
   const run = useRunCritique();
   const runProject = useRunProjectCritique();
   const codeOf = (id: number) => experiments.find((e) => e.id === id)?.code ?? `#${id}`;
@@ -95,6 +99,7 @@ export function ResearchAIPage() {
       {run.isError && <p className="text-sm text-crit">{run.error.message}</p>}
 
       <div id="critic" className="scroll-mt-4 space-y-4">
+        {precedents.data && <PrecedentCard data={precedents.data} currentProjectId={projectId} />}
         <QueryState query={critiques}>
           {(list) => {
             const head = list[0];
