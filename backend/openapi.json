@@ -2863,6 +2863,19 @@
             "title": "Decided By",
             "type": "string"
           },
+          "decided_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Day of the decision (back-filled history); default today. Not before the proposal's experiment and not in the future.",
+            "title": "Decided On"
+          },
           "modifications": {
             "default": [],
             "items": {
@@ -3116,6 +3129,18 @@
           "decided_by": {
             "title": "Decided By",
             "type": "string"
+          },
+          "decided_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided On"
           },
           "id": {
             "title": "Id",
@@ -7287,6 +7312,15 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "implementing_changes": {
+            "default": [],
+            "description": "Condition-block changes a follow-up experiment would carry: the modify decision's modifications, else the changes, without design descriptors and values still to be chosen (Memory matches follow-ups with these)",
+            "items": {
+              "$ref": "#/components/schemas/ProposalChange"
+            },
+            "title": "Implementing Changes",
+            "type": "array"
           },
           "origin": {
             "enum": [

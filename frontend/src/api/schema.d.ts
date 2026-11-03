@@ -2597,6 +2597,11 @@ export interface components {
              */
             decided_by: string;
             /**
+             * Decided On
+             * @description Day of the decision (back-filled history); default today. Not before the proposal's experiment and not in the future.
+             */
+            decided_on?: string | null;
+            /**
              * Modifications
              * @default []
              */
@@ -2710,6 +2715,8 @@ export interface components {
             created_at: string;
             /** Decided By */
             decided_by: string;
+            /** Decided On */
+            decided_on?: string | null;
             /** Id */
             id: number;
             /** Modifications */
@@ -4483,6 +4490,12 @@ export interface components {
             hypothesis_id: number | null;
             /** Id */
             id: number;
+            /**
+             * Implementing Changes
+             * @description Condition-block changes a follow-up experiment would carry: the modify decision's modifications, else the changes, without design descriptors and values still to be chosen (Memory matches follow-ups with these)
+             * @default []
+             */
+            implementing_changes: components["schemas"]["ProposalChange"][];
             /**
              * Origin
              * @enum {string}

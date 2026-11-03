@@ -71,6 +71,37 @@ MATRIX_MATCHED_VALUES: frozenset[str] = frozenset(
     {"matrix-matched", "matrix_matched", "standard-addition"}
 )
 
+#: Proposal change keys that describe a *design*, not a condition-block value: a
+#: follow-up experiment never carries them in its condition block.
+DESIGN_META_KEYS: frozenset[str] = frozenset({"design", "curves_compared"})
+DESIGN_META_PREFIXES: tuple[str, ...] = ("factor_",)
+#: Values the researcher still has to choose (no experiment can "equal" them).
+PLACEHOLDER_MARKERS: tuple[str, ...] = ("researcher-defined", "연구자 정의", " | ")
+
+
+def implementing_changes(
+    changes: Iterable[ProposalChange], modifications: Iterable[ProposalChange] = ()
+) -> list[ProposalChange]:
+    """Condition-block changes a follow-up experiment would carry (ISSUES P1-10).
+
+    A ``modify`` decision's modifications are the researcher's version of the proposal,
+    so when given they replace the proposed changes. Design descriptors (``design``,
+    ``factor_<key>``, ``curves_compared``) and values still to be chosen
+    (``researcher-defined``, ``a | b`` levels) are dropped. Memory links a later
+    experiment to the proposal when its condition block applies all of these.
+    """
+    chosen = list(modifications) or list(changes)
+    out: list[ProposalChange] = []
+    for c in chosen:
+        key = c.key.strip()
+        if key.lower() in DESIGN_META_KEYS or key.lower().startswith(DESIGN_META_PREFIXES):
+            continue
+        if isinstance(c.value, str) and any(m in c.value for m in PLACEHOLDER_MARKERS):
+            continue
+        out.append(ProposalChange(key=key, value=c.value))
+    return out
+
+
 #: Condition keys whose proposed values must stay inside a closed contract domain.
 #: ``calibration_type`` is decided by integration and owned by Analysis
 #: (``app.analysis.schemas.CALIBRATION_TYPE_VALUES``); a value outside it would make the

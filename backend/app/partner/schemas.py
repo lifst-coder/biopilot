@@ -8,7 +8,7 @@ keep their names and meaning (CLAUDE.md §3, shared contracts).
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -301,6 +301,11 @@ class DecisionCreate(BaseModel):
     rationale: str = Field(min_length=1, description="Why — required for every decision")
     modifications: list[ProposalChange] = []
     decided_by: str = "researcher"
+    decided_on: date | None = Field(
+        default=None,
+        description="Day of the decision (back-filled history); default today. "
+        "Not before the proposal's experiment and not in the future.",
+    )
 
     @model_validator(mode="after")
     def _modify_needs_changes(self) -> DecisionCreate:
@@ -320,6 +325,7 @@ class DecisionOut(BaseModel):
     rationale: str
     modifications: list[ProposalChange]
     decided_by: str
+    decided_on: date | None = None
     reason_category: str = "other"
     constraints: list[str] = []
     created_at: datetime
@@ -353,6 +359,12 @@ class ProposalOut(BaseModel):
     priority_factors: list[PriorityFactor] = []
     signature: str | None = None
     supersedes_proposal_ids: list[int] = []
+    implementing_changes: list[ProposalChange] = Field(
+        default=[],
+        description="Condition-block changes a follow-up experiment would carry: the "
+        "modify decision's modifications, else the changes, without design descriptors "
+        "and values still to be chosen (Memory matches follow-ups with these)",
+    )
     created_at: datetime
 
 

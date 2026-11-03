@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, ClassVar
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base, utcnow
@@ -136,6 +136,9 @@ class Decision(ImmutableMixin, Base):
     rationale: Mapped[str] = mapped_column(Text)
     modifications: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     decided_by: Mapped[str] = mapped_column(String(100))
+    #: The day the researcher decided (may precede ``created_at`` for a back-filled
+    #: lab history); ``None`` = the day the record was written.
+    decided_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 

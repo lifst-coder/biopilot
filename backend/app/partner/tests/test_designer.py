@@ -301,3 +301,64 @@ def test_scientific_dismissal_is_scoped_to_its_experiment(
     }
     # the rejected change set itself is not repeated; the control is still addressed
     assert "pre_post_spike" not in templates and "standard_addition" in templates
+
+
+# ------------------------------------------- ISSUES P1-9 / P1-10: decision records
+
+
+def test_decision_actor_and_day(session: Session, seeded: dict[str, int]) -> None:
+    from datetime import date, timedelta
+
+    from app.core.audit import list_events
+    from app.eln import service as eln
+
+    pre = _by_template(session, seeded)["pre_post_spike"]
+    performed = eln.get_experiment(session, seeded["#024"]).performed_on
+    with pytest.raises(ValidationFailedError, match="before the experiment"):
+        service.decide(
+            session,
+            pre.id,
+            DecisionCreate(action="accept", rationale="r", decided_on=performed - timedelta(1)),
+        )
+    with pytest.raises(ValidationFailedError, match="in the future"):
+        service.decide(
+            session,
+            pre.id,
+            DecisionCreate(action="accept", rationale="r", decided_on=date.today() + timedelta(1)),
+        )
+    out = service.decide(
+        session,
+        pre.id,
+        DecisionCreate(action="accept", rationale="r", decided_by="김연구", decided_on=performed),
+        actor="seed",
+    )
+    assert out.decision is not None and out.decision.decided_on == performed
+    (event,) = list_events(session, entity_type="partner.Decision", entity_id=out.decision.id)
+    assert event.actor == "seed"
+    assert event.payload["decided_by"] == "김연구"
+    assert event.payload["decided_on"] == performed.isoformat()
+
+
+def test_implementing_changes_drop_design_descriptors(
+    session: Session, seeded: dict[str, int]
+) -> None:
+    by = _by_template(session, seeded)
+    pre = {c.key: c.value for c in by["pre_post_spike"].implementing_changes}
+    assert pre == {"spike_stage": "pre-extraction + post-extraction"} | {
+        "calibration_type": "matrix-matched"
+    }
+    factorial = by["factorial_pretreatment"]
+    assert any(c.key == "design" for c in factorial.changes)
+    assert factorial.implementing_changes == []  # factors are levels still to be run
+    dil = by["dilution_reinjection"]
+    assert {c.key for c in dil.implementing_changes} == {"calibration_type"}  # dilution TBD
+    modified = service.decide(
+        session,
+        dil.id,
+        DecisionCreate(
+            action="modify",
+            rationale="주입량만 줄인다",
+            modifications=[ProposalChange(key="injection_volume_ul", value=1)],
+        ),
+    )
+    assert [(c.key, c.value) for c in modified.implementing_changes] == [("injection_volume_ul", 1)]

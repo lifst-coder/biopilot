@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useDecideProposal, useProposalExperimentDraft } from "@/api/queries";
 import type { DecisionCreate, ProposalOut } from "@/api/types";
 import { Badge, EngineBadge } from "@/components";
-import { formatConditionValue, formatDateTime } from "@/lib/format";
+import { formatConditionValue, formatDate, formatDateTime } from "@/lib/format";
 import { DesignDetails } from "./DesignDetails";
 
 const STATUS_TONE = { pending: "warn", accepted: "ok", modified: "brand", rejected: "neutral" } as const;
@@ -110,7 +110,9 @@ export function ProposalCard({ proposal, codeOf }: { proposal: ProposalOut; code
       {proposal.decision ? (
         <div className="rounded-md bg-subtle p-3">
           <b>{ACTION_LABEL[proposal.decision.action]}</b> · {proposal.decision.decided_by} ·{" "}
-          {formatDateTime(proposal.decision.created_at)}
+          {proposal.decision.decided_on
+            ? `${formatDate(proposal.decision.decided_on)} 결정`
+            : formatDateTime(proposal.decision.created_at)}
           <p className="bp-prose mt-1 text-ink-muted">사유: {proposal.decision.rationale}</p>
           {proposal.decision.constraints.length > 0 && (
             <p className="text-ink-faint">인식된 제약: {proposal.decision.constraints.join(", ")}</p>

@@ -38,7 +38,7 @@ from app.partner.engines.claude import ClaudeCritiqueEngine
 from app.partner.engines.project import ProjectRulesEngine
 from app.partner.engines.rules import RulesCritiqueEngine
 from app.partner.feedback import classify_rationale, proposal_signature
-from app.partner.knowledge import out_of_domain_changes
+from app.partner.knowledge import implementing_changes, out_of_domain_changes
 from app.partner.models import (
     Critique,
     Decision,
@@ -596,6 +596,12 @@ def _proposal_out(session: Session, row: Proposal) -> ProposalOut:
         priority_factors=[PriorityFactor.model_validate(f) for f in row.priority_factors or []],
         signature=row.signature,
         supersedes_proposal_ids=list(row.supersedes_proposal_ids or []),
+        implementing_changes=implementing_changes(
+            _changes(row),
+            [ProposalChange.model_validate(m) for m in decision.modifications]
+            if decision is not None and decision.action == "modify"
+            else [],
+        ),
         created_at=row.created_at,
     )
 
@@ -633,11 +639,15 @@ def get_proposal(session: Session, proposal_id: int) -> ProposalOut:
 _STATUS_BY_ACTION = {"accept": "accepted", "modify": "modified", "reject": "rejected"}
 
 
-def decide(session: Session, proposal_id: int, data: DecisionCreate) -> ProposalOut:
+def decide(
+    session: Session, proposal_id: int, data: DecisionCreate, *, actor: Actor = "user"
+) -> ProposalOut:
     """Record the researcher's decision (once per proposal) and update proposal status.
 
     The rationale is classified (resource constraint / scientific / priority …) and
     becomes evidence for every later critique of the project (Decision History).
+    ``actor`` is the audit actor (``seed`` for a replayed lab history); ``decided_on``
+    dates the decision itself and must lie between the experiment and today.
     """
     row = session.get(Proposal, proposal_id)
     if row is None:
@@ -648,12 +658,21 @@ def decide(session: Session, proposal_id: int, data: DecisionCreate) -> Proposal
         raise ValidationFailedError(
             "modification outside contract domain: " + ", ".join(out_of_domain)
         )
+    if data.decided_on is not None:
+        performed_on = eln.get_experiment(session, row.experiment_id).performed_on
+        if data.decided_on < performed_on:
+            raise ValidationFailedError(
+                f"decided_on {data.decided_on} is before the experiment ({performed_on})"
+            )
+        if data.decided_on > date.today():
+            raise ValidationFailedError(f"decided_on {data.decided_on} is in the future")
     decision = Decision(
         proposal_id=proposal_id,
         action=data.action,
         rationale=data.rationale,
         modifications=[m.model_dump(mode="json") for m in data.modifications],
         decided_by=data.decided_by,
+        decided_on=data.decided_on,
     )
     session.add(decision)
     previous = row.status
@@ -662,7 +681,7 @@ def decide(session: Session, proposal_id: int, data: DecisionCreate) -> Proposal
     category, constraints = classify_rationale(data.rationale)
     record_event(
         session,
-        actor="user",
+        actor=actor,
         action=f"decision.{data.action}",
         entity_type="partner.Decision",
         entity_id=decision.id,
@@ -673,11 +692,13 @@ def decide(session: Session, proposal_id: int, data: DecisionCreate) -> Proposal
             "reason_category": category,
             "constraints": constraints,
             "signature": row.signature,
+            "decided_by": data.decided_by,
+            "decided_on": data.decided_on.isoformat() if data.decided_on else None,
         },
     )
     record_event(
         session,
-        actor="user",
+        actor=actor,
         action="status.change",
         entity_type="partner.Proposal",
         entity_id=row.id,

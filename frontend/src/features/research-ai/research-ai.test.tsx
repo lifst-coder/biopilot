@@ -175,6 +175,7 @@ describe("Research AI tab", () => {
       priority_factors: [{ name: "판별력", points: 2, detail: "medium", evidence_keys: [] }],
       signature: "abc",
       supersedes_proposal_ids: [1],
+      implementing_changes: [],
       created_at: "2026-11-03T00:00:00Z",
     };
     render(wrap(<ProposalCard proposal={proposal} codeOf={codeOf} />));
