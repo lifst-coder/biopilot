@@ -1,174 +1,156 @@
-import clsx from "clsx";
 import { useState } from "react";
-import { useCreateDigest, useDatasets, useDigests, useExperiment } from "@/api/queries";
-import {
-  Badge,
-  Card,
-  ConditionTable,
-  EngineBadge,
-  EmptyState,
-  OriginalBadge,
-  QueryState,
-} from "@/components";
-import { formatDate, formatDateTime } from "@/lib/format";
-import { useSelectedExperiment } from "@/lib/selection";
-import { DatasetPreviewTable } from "./DatasetPreviewTable";
-import { ExperimentDiffView } from "./ExperimentDiffView";
+import { useExperiment } from "@/api/queries";
+import { Badge, Card, EmptyState, QueryState } from "@/components";
+import { formatDate } from "@/lib/format";
+import { useActiveProject, useSelectedExperiment } from "@/lib/selection";
+import { AttachmentsPanel } from "./AttachmentsPanel";
+import { CompareModal } from "./CompareModal";
+import { DatasetsPanel } from "./DatasetsPanel";
+import { ExperimentComposer, type ComposerResult, type ComposerSource } from "./ExperimentComposer";
+import { ExperimentList } from "./ExperimentList";
+import { HistoryPanel } from "./HistoryPanel";
+import { IssueList } from "./IssueList";
+import { MetadataDialog } from "./MetadataDialog";
+import { OriginalVsDigest } from "./OriginalVsDigest";
+import { ProtocolTemplateDialog } from "./ProtocolTemplateDialog";
 
-/** ELN view: immutable originals, AI digests (separate records) and experiment diff. */
+type Dialog = "metadata" | "compare" | "template" | null;
+
+/**
+ * ELN view: authoring (new / clone / from template), immutable originals next to AI
+ * digests, datasets with validation and re-upload, attachments, version history and
+ * audit log, and comparison with past experiments.
+ */
 export function NotebookPage() {
-  const { experiments, selected, selectedId, select } = useSelectedExperiment();
+  const { project } = useActiveProject();
+  const { experiments, selectedId, select } = useSelectedExperiment();
   const experiment = useExperiment(selectedId);
-  const datasets = useDatasets(selectedId);
-  const digests = useDigests(selectedId);
-  const createDigest = useCreateDigest();
-  const [datasetId, setDatasetId] = useState<number | null>(null);
+  const [composer, setComposer] = useState<ComposerSource | null>(null);
+  const [dialog, setDialog] = useState<Dialog>(null);
+  const [notice, setNotice] = useState<ComposerResult | null>(null);
+
+  const onCreated = (result: ComposerResult) => {
+    setComposer(null);
+    setNotice(result);
+    select(result.experimentId);
+  };
 
   return (
     <div className="grid gap-4 lg:grid-cols-[16rem_1fr]">
-      <Card title="실험 목록" className="h-fit">
-        <ul className="space-y-1">
-          {experiments.map((e) => (
-            <li key={e.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  select(e.id);
-                  setDatasetId(null);
-                }}
-                className={clsx(
-                  "w-full rounded-md px-2 py-1.5 text-left text-xs",
-                  e.id === selected?.id ? "bg-brand-soft text-brand-strong" : "hover:bg-subtle",
-                )}
-              >
-                <div className="font-medium">{e.code}</div>
-                <div className="truncate text-ink-muted">{e.title}</div>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <ExperimentList
+        experiments={experiments}
+        selectedId={composer ? null : selectedId}
+        onSelect={(id) => {
+          setComposer(null);
+          setNotice(null);
+          select(id);
+        }}
+        onNew={() => setComposer({ kind: "blank" })}
+      />
 
       <div className="min-w-0 space-y-4">
-        <QueryState query={experiment}>
-          {(exp) => (
-            <>
-              <Card
-                title={`${exp.code} · ${exp.title}`}
-                subtitle={`${formatDate(exp.performed_on)} · ${exp.author || "작성자 미기재"}${
-                  exp.parent_experiment_id
-                    ? ` · 부모 ${experiments.find((e) => e.id === exp.parent_experiment_id)?.code ?? ""}`
-                    : ""
-                }`}
-                actions={<OriginalBadge />}
-              >
-                <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
-                  <div>
-                    <h3 className="mb-1 text-xs font-semibold text-ink-muted">원본 메모</h3>
-                    <pre className="whitespace-pre-wrap rounded-md bg-subtle p-3 font-sans text-xs leading-relaxed">
-                      {exp.raw_note}
-                    </pre>
-                  </div>
-                  <div>
-                    <h3 className="mb-1 text-xs font-semibold text-ink-muted">조건 블록</h3>
-                    <ConditionTable block={exp.condition_block} />
-                    {exp.attachments.length > 0 && (
+        {composer && project ? (
+          <ExperimentComposer
+            key={JSON.stringify(composer)}
+            projectId={project.id}
+            experiments={experiments}
+            source={composer}
+            onCancel={() => setComposer(null)}
+            onCreated={onCreated}
+          />
+        ) : selectedId === null ? (
+          <Card>
+            <EmptyState>실험이 없습니다. “+ 새 실험”으로 시작하세요.</EmptyState>
+          </Card>
+        ) : (
+          <QueryState query={experiment}>
+            {(exp) => (
+              <>
+                {notice && notice.experimentId === exp.id && (
+                  <Card title="실험이 저장되었습니다" actions={<button type="button" className="bp-btn-ghost px-2 py-0.5 text-xs" onClick={() => setNotice(null)}>닫기</button>}>
+                    {notice.warnings.length > 0 && (
                       <>
-                        <h3 className="mb-1 mt-3 text-xs font-semibold text-ink-muted">첨부</h3>
-                        <ul className="space-y-0.5 text-xs">
-                          {exp.attachments.map((a) => (
-                            <li key={a.name}>
-                              <span className="font-mono">{a.name}</span>{" "}
-                              <span className="text-ink-faint">{a.description}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        <p className="mb-1 text-xs text-ink-muted">조건 템플릿 경고 (저장은 완료):</p>
+                        <IssueList issues={notice.warnings} />
                       </>
                     )}
-                  </div>
-                </div>
-              </Card>
-
-              <Card title="데이터셋 (CSV)" subtitle="업로드 원본 · sha256으로 식별" actions={<OriginalBadge />}>
-                <QueryState query={datasets}>
-                  {(list) =>
-                    list.length === 0 ? (
-                      <EmptyState>데이터셋 없음</EmptyState>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap gap-2">
-                          {list.map((d) => (
-                            <button
-                              key={d.id}
-                              type="button"
-                              onClick={() => setDatasetId(d.id)}
-                              className={clsx(
-                                "rounded-md border px-2 py-1 text-xs",
-                                datasetId === d.id ? "border-brand bg-brand-soft" : "border-border",
-                              )}
-                            >
-                              <Badge tone="brand">{d.kind}</Badge> <span className="font-mono">{d.filename}</span>{" "}
-                              <span className="text-ink-faint">{d.row_count}행</span>
-                            </button>
-                          ))}
-                        </div>
-                        {datasetId !== null && <DatasetPreviewTable datasetId={datasetId} />}
-                      </div>
-                    )
-                  }
-                </QueryState>
-              </Card>
-
-              <Card
-                title="AI 정리본"
-                subtitle="원본과 분리된 별도 레코드"
-                actions={
-                  <button
-                    type="button"
-                    className="bp-btn-ghost"
-                    disabled={createDigest.isPending}
-                    onClick={() => createDigest.mutate(exp.id)}
-                  >
-                    새 정리본 생성
-                  </button>
-                }
-              >
-                <QueryState query={digests}>
-                  {(list) =>
-                    list.length === 0 ? (
-                      <EmptyState>정리본 없음</EmptyState>
-                    ) : (
-                      <ul className="space-y-3">
-                        {list.map((d) => (
-                          <li key={d.id} className="rounded-md border border-ai/20 bg-ai-soft/40 p-3">
-                            <div className="mb-1 flex items-center gap-2">
-                              <EngineBadge engine={d.engine} model={d.model} />
-                              <span className="text-[11px] text-ink-faint">{formatDateTime(d.created_at)}</span>
-                            </div>
-                            <p className="text-xs">{d.summary}</p>
-                            {d.key_points.length > 0 && (
-                              <ul className="mt-1 list-disc pl-4 text-xs text-ink-muted">
-                                {d.key_points.map((k) => (
-                                  <li key={k}>{k}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </li>
+                    {notice.failures.length > 0 ? (
+                      <ul className="mt-2 space-y-0.5 text-xs text-crit">
+                        {notice.failures.map((f) => (
+                          <li key={f}>업로드 실패 — {f} (아래 데이터셋/첨부에서 다시 올리세요)</li>
                         ))}
                       </ul>
-                    )
+                    ) : (
+                      <p className="text-xs text-ok">모든 파일이 업로드되었습니다.</p>
+                    )}
+                  </Card>
+                )}
+                <Card
+                  title={
+                    <span className="flex items-center gap-2">
+                      {exp.code} · {exp.title}
+                      {(exp.revision ?? 1) > 1 && <Badge tone="warn">메타데이터 v{exp.revision}</Badge>}
+                    </span>
                   }
-                </QueryState>
-              </Card>
+                  subtitle={[
+                    formatDate(exp.performed_on),
+                    exp.author || "작성자 미기재",
+                    exp.parent_experiment_id
+                      ? `부모 ${experiments.find((e) => e.id === exp.parent_experiment_id)?.code ?? ""}`
+                      : "루트 실험",
+                    exp.cloned_from_experiment_id
+                      ? `복제 원본 ${experiments.find((e) => e.id === exp.cloned_from_experiment_id)?.code ?? ""}`
+                      : null,
+                    exp.protocol_template_id ? `템플릿 #${exp.protocol_template_id}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  actions={
+                    <div className="flex flex-wrap gap-1">
+                      <button type="button" className="bp-btn-ghost px-2 py-1 text-xs" onClick={() => setDialog("compare")}>
+                        과거 실험과 비교
+                      </button>
+                      <button
+                        type="button"
+                        className="bp-btn-ghost px-2 py-1 text-xs"
+                        onClick={() => setComposer({ kind: "clone", experimentId: exp.id })}
+                      >
+                        복제
+                      </button>
+                      <button type="button" className="bp-btn-ghost px-2 py-1 text-xs" onClick={() => setDialog("template")}>
+                        프로토콜로 저장
+                      </button>
+                      <button type="button" className="bp-btn-ghost px-2 py-1 text-xs" onClick={() => setDialog("metadata")}>
+                        메타데이터 수정
+                      </button>
+                    </div>
+                  }
+                >
+                  <p className="text-xs text-ink-muted">
+                    원본 메모·조건 블록·CSV는 저장 후 변경되지 않습니다. 정정은 보충 기록·재업로드·메타데이터 수정(제목/작성자)으로
+                    새 레코드를 남깁니다.
+                  </p>
+                </Card>
 
-              <ExperimentDiffView
-                experiments={experiments}
-                current={exp.id}
-                defaultBaseline={exp.parent_experiment_id ?? null}
-              />
-            </>
-          )}
-        </QueryState>
+                <OriginalVsDigest exp={exp} />
+                <DatasetsPanel experimentId={exp.id} />
+                <AttachmentsPanel exp={exp} />
+                <HistoryPanel experimentId={exp.id} />
+
+                {dialog === "metadata" && <MetadataDialog exp={exp} onClose={() => setDialog(null)} />}
+                {dialog === "template" && <ProtocolTemplateDialog exp={exp} onClose={() => setDialog(null)} />}
+                {dialog === "compare" && (
+                  <CompareModal
+                    experiments={experiments}
+                    current={exp.id}
+                    defaultBaseline={exp.parent_experiment_id ?? null}
+                    onClose={() => setDialog(null)}
+                  />
+                )}
+              </>
+            )}
+          </QueryState>
+        )}
       </div>
     </div>
   );
