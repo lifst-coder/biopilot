@@ -1,20 +1,44 @@
 import { useState } from "react";
-import { useExperiment } from "@/api/queries";
-import { Badge, Card, EmptyState, QueryState } from "@/components";
+import { useSearchParams } from "react-router-dom";
+import { useDiff, useExperiment } from "@/api/queries";
+import { Badge, Card, Disclosure, EmptyState, QueryState } from "@/components";
+import { TABS } from "@/layout/tabs";
 import { formatDate } from "@/lib/format";
 import { useActiveProject, useSelectedExperiment } from "@/lib/selection";
 import { AttachmentsPanel } from "./AttachmentsPanel";
 import { CompareModal } from "./CompareModal";
 import { DatasetsPanel } from "./DatasetsPanel";
 import { ExperimentComposer, type ComposerResult, type ComposerSource } from "./ExperimentComposer";
+import { ExperimentHeadline } from "./ExperimentHeadline";
 import { ExperimentList } from "./ExperimentList";
 import { HistoryPanel } from "./HistoryPanel";
 import { IssueList } from "./IssueList";
 import { MetadataDialog } from "./MetadataDialog";
 import { OriginalVsDigest } from "./OriginalVsDigest";
 import { ProtocolTemplateDialog } from "./ProtocolTemplateDialog";
+import type { ExperimentOut } from "./types";
 
 type Dialog = "metadata" | "compare" | "template" | null;
+
+const QUESTION = TABS.find((t) => t.path === "/notebook")?.question ?? "";
+
+/** Collapsed "원본 파일 · 이력" group: datasets, attachments, version history and audit log. */
+function RecordDetails({ exp }: { exp: ExperimentOut }) {
+  return (
+    <div className="space-y-2">
+      <h2 className="px-1 pt-2 text-xs font-semibold text-ink-muted">자세히</h2>
+      <Disclosure title="데이터셋 (CSV)" summary={exp.dataset_kinds.length ? exp.dataset_kinds.join(" · ") : "없음"}>
+        <DatasetsPanel experimentId={exp.id} />
+      </Disclosure>
+      <Disclosure title="첨부" summary={`${exp.attachment_files.length + exp.attachments.length}개`}>
+        <AttachmentsPanel exp={exp} />
+      </Disclosure>
+      <Disclosure title="버전 이력 · 감사 로그" summary={`메타데이터 v${exp.revision ?? 1}`}>
+        <HistoryPanel experimentId={exp.id} />
+      </Disclosure>
+    </div>
+  );
+}
 
 /**
  * ELN view: authoring (new / clone / from template), immutable originals next to AI
@@ -26,8 +50,28 @@ export function NotebookPage() {
   const { experiments, selectedId, select } = useSelectedExperiment();
   const experiment = useExperiment(selectedId);
   const [composer, setComposer] = useState<ComposerSource | null>(null);
-  const [dialog, setDialog] = useState<Dialog>(null);
+  const [dialog, setDialogState] = useState<Dialog>(null);
   const [notice, setNotice] = useState<ComposerResult | null>(null);
+  const [params, setParams] = useSearchParams();
+  // `?compare=<id>` (guide bar "② 비교" step) opens the comparison with that baseline.
+  const compareParam = Number(params.get("compare")) || null;
+  const current = experiments.find((e) => e.id === selectedId) ?? null;
+  const { data: diff } = useDiff(current?.parent_experiment_id ?? null, selectedId);
+  const changedKeys = new Set((diff?.condition_changes ?? []).map((c) => c.key));
+  const activeDialog: Dialog = compareParam !== null && compareParam !== selectedId ? "compare" : dialog;
+  const setDialog = (next: Dialog) => {
+    setDialogState(next);
+    if (next === null && params.has("compare")) {
+      setParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          p.delete("compare");
+          return p;
+        },
+        { replace: true },
+      );
+    }
+  };
 
   const onCreated = (result: ComposerResult) => {
     setComposer(null);
@@ -126,24 +170,24 @@ export function NotebookPage() {
                     </div>
                   }
                 >
-                  <p className="text-xs text-ink-muted">
+                  <p className="-mt-1 mb-3 text-[11px] text-ink-faint">이 화면의 질문 · {QUESTION}</p>
+                  <ExperimentHeadline exp={exp} experiments={experiments} onCompare={() => setDialog("compare")} />
+                  <p className="mt-3 text-[11px] text-ink-faint">
                     원본 메모·조건 블록·CSV는 저장 후 변경되지 않습니다. 정정은 보충 기록·재업로드·메타데이터 수정(제목/작성자)으로
                     새 레코드를 남깁니다.
                   </p>
                 </Card>
 
-                <OriginalVsDigest exp={exp} />
-                <DatasetsPanel experimentId={exp.id} />
-                <AttachmentsPanel exp={exp} />
-                <HistoryPanel experimentId={exp.id} />
+                <OriginalVsDigest exp={exp} changedKeys={changedKeys} />
+                <RecordDetails exp={exp} />
 
-                {dialog === "metadata" && <MetadataDialog exp={exp} onClose={() => setDialog(null)} />}
-                {dialog === "template" && <ProtocolTemplateDialog exp={exp} onClose={() => setDialog(null)} />}
-                {dialog === "compare" && (
+                {activeDialog === "metadata" && <MetadataDialog exp={exp} onClose={() => setDialog(null)} />}
+                {activeDialog === "template" && <ProtocolTemplateDialog exp={exp} onClose={() => setDialog(null)} />}
+                {activeDialog === "compare" && (
                   <CompareModal
                     experiments={experiments}
                     current={exp.id}
-                    defaultBaseline={exp.parent_experiment_id ?? null}
+                    defaultBaseline={compareParam ?? exp.parent_experiment_id ?? null}
                     onClose={() => setDialog(null)}
                   />
                 )}

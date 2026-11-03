@@ -8,10 +8,11 @@ import type { ExperimentOut } from "./types";
 
 /**
  * Original record (left, immutable) next to the AI digest (right, separate record).
+ * The full condition block is collapsed; keys that differ from the baseline are highlighted.
  * Regeneration creates a new digest: offline rules template by default, Claude when
  * the server has an API key (mode shown from `/api/system/info`).
  */
-export function OriginalVsDigest({ exp }: { exp: ExperimentOut }) {
+export function OriginalVsDigest({ exp, changedKeys }: { exp: ExperimentOut; changedKeys?: ReadonlySet<string> }) {
   const digests = useDigests(exp.id);
   const create = useCreateDigest();
   const { data: info } = useSystemInfo();
@@ -35,8 +36,17 @@ export function OriginalVsDigest({ exp }: { exp: ExperimentOut }) {
           <OriginalBadge />
         </header>
         <pre className="whitespace-pre-wrap rounded-md bg-subtle p-3 font-sans text-xs leading-relaxed">{exp.raw_note}</pre>
-        <h3 className="mb-1 mt-3 text-xs font-semibold text-ink-muted">조건 블록</h3>
-        <ConditionTable block={exp.condition_block} />
+        <details className="mt-3 text-xs">
+          <summary className="cursor-pointer select-none font-semibold text-ink-muted">
+            조건 블록 전체 ({Object.values(exp.condition_block).filter((v) => v !== null && v !== undefined).length}개)
+            {changedKeys && changedKeys.size > 0 && (
+              <span className="font-normal text-warn"> · 기준과 다른 {changedKeys.size}개 강조</span>
+            )}
+          </summary>
+          <div className="mt-2">
+            <ConditionTable block={exp.condition_block} highlight={changedKeys} />
+          </div>
+        </details>
         <AddendumSection exp={exp} />
       </section>
 
