@@ -161,24 +161,54 @@ def _value_matches(actual: Any, proposed: Any) -> bool:
     return _norm_text(actual) == _norm_text(proposed)
 
 
+def _after_proposal(e: ExperimentOut, p: ProposalFact) -> bool:
+    """``e`` was performed after the proposal was made (or decided).
+
+    The proposal's day is its decision day when given (a back-filled lab history is
+    written long after the fact), else the day it was created. A same-day experiment
+    counts only when it was recorded after the proposal.
+    """
+    since = p.decided_on or p.created_at.date()
+    if e.performed_on != since:
+        return e.performed_on > since
+    return _naive(e.created_at) > _naive(p.created_at)
+
+
+def _applies(cond: dict[str, Any], changes: dict[str, Any]) -> bool:
+    return all(
+        (v is None and k not in cond) or (k in cond and _value_matches(cond[k], v))
+        for k, v in changes.items()
+    )
+
+
 def proposal_tests(
     experiments: Sequence[ExperimentOut], proposals: Sequence[ProposalFact]
 ) -> list[tuple[int, int]]:
-    """``(proposal_id, experiment_id)`` where a later child of the proposal's base
-    experiment applies every proposed condition change (MEM-1 ``tests_proposal``)."""
+    """``(proposal_id, experiment_id)`` for experiments that carried a proposal out
+    (MEM-1 ``tests_proposal``).
+
+    An experiment tests a proposal when it was performed after the proposal (or its
+    decision), its condition block applies every implementing change, and it *made*
+    at least one of those changes relative to its own parent — inheriting a value
+    from the parent is not testing it. The experiment may sit anywhere in the
+    project's lineage: a single-variable change of #024 is usually run from the
+    baseline (#018), and an accepted change may be adopted later in a new SOP branch.
+    Rejected proposals are never "tested"; ``changes`` are Partner's implementing
+    changes (design descriptors and values still to be chosen already removed).
+    """
+    by_id = {e.id: e for e in experiments}
     links: list[tuple[int, int]] = []
     for p in proposals:
-        if not p.changes:
+        if not p.changes or p.status == "rejected":
             continue
         for e in experiments:
-            if e.parent_experiment_id != p.experiment_id:
-                continue
-            if _naive(e.created_at) < _naive(p.created_at):
+            parent = by_id.get(e.parent_experiment_id) if e.parent_experiment_id else None
+            if parent is None or e.id == p.experiment_id or not _after_proposal(e, p):
                 continue
             cond = conditions(e)
-            if all(
-                (v is None and k not in cond) or (k in cond and _value_matches(cond[k], v))
-                for k, v in p.changes.items()
-            ):
+            if not _applies(cond, p.changes):
+                continue
+            before = conditions(parent)
+            if any(not _applies(before, {k: v}) for k, v in p.changes.items()):
                 links.append((p.id, e.id))
     return links

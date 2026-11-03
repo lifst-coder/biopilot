@@ -111,8 +111,13 @@ def test_decision_status_and_tests_proposal_are_tracked(
         if p.changes
         and not any(c.key == "design" or c.key.startswith("factor_") for c in p.changes)
     )
+    # decided on the base experiment's day, so the follow-up (performed 2026-11-01)
+    # comes after the decision whatever day the test runs
+    decided_on = eln.get_experiment(session, proposal.experiment_id).performed_on
     partner.decide(
-        session, proposal.id, DecisionCreate(action="accept", rationale="단일 변수 확인")
+        session,
+        proposal.id,
+        DecisionCreate(action="accept", rationale="단일 변수 확인", decided_on=decided_on),
     )
     g = service.get_knowledge_graph(session, pid)
     assert g.refresh.mode == "incremental"
@@ -122,7 +127,7 @@ def test_decision_status_and_tests_proposal_are_tracked(
     prop_node = next(n for n in g.nodes if n.id == f"proposal:{proposal.id}")
     assert prop_node.attrs["status"] == "accepted"
 
-    applied = {c.key: c.value for c in proposal.changes}
+    applied = {c.key: c.value for c in proposal.implementing_changes}
     follow = make_child(session, proposal.experiment_id, "#027", **applied)
     g2 = service.get_knowledge_graph(session, pid)
     assert (f"proposal:{proposal.id}", f"experiment:{follow.id}", "tests_proposal") in _edges(g2)

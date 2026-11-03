@@ -454,12 +454,18 @@ class EntityFacts(BaseModel):
 
 
 class ProposalFact(BaseModel):
-    """A proposed next experiment: base experiment + condition changes."""
+    """A proposed next experiment: base experiment + condition changes.
+
+    ``changes`` are the condition-block changes a follow-up would carry (Partner's
+    ``implementing_changes``); ``decided_on`` is the decision day once decided.
+    """
 
     id: int
     experiment_id: int
     created_at: datetime
     changes: dict[str, Any]
+    status: str = "pending"
+    decided_on: date | None = None
 
 
 class QCFact(BaseModel):

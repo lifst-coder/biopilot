@@ -155,3 +155,28 @@ def test_024_precedents_include_the_organic_acid_sorbent_failure(
     assert any(m.kind == "same_change" and m.key == "cleanup_sorbent" for m in case.matches)
     assert any(d.action == "reject" and "PSA" in d.rationale for d in case.decisions)
     assert len(out.cases) <= failures.MAX_PRECEDENTS
+
+
+def test_tests_proposal_edges_are_the_seven_follow_ups(
+    lab_session: Session, lab: SeedResult
+) -> None:
+    """ISSUES P1-10: MEM-1 ``tests_proposal`` links each accepted/modified decision to
+    the experiment that carried it out (ground truth: ``followed_by`` in the history).
+
+    The links come from Partner's ``implementing_changes``, the decision day and the
+    rule that the follow-up itself made the change (not inherited from its parent).
+    """
+    from app.seed.spec import load_seed_spec
+
+    spec = load_seed_spec("lab")
+    expected = {
+        (lab.decided_proposal_ids[d.id], _id(lab, d.project, d.followed_by))
+        for d in spec.history.decisions
+        if d.followed_by
+    }
+    assert len(expected) == 7
+    found = set()
+    for pid in lab.project_ids.values():
+        graph = memory.get_graph(lab_session, pid, ["tests_proposal"])
+        found |= {(e.proposal_id, e.target) for e in graph.edges}
+    assert found == expected

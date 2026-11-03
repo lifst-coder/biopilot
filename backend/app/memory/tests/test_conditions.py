@@ -96,13 +96,43 @@ def test_lineage_graph_mem1_edges(session: Session, seeded: dict[str, int]) -> N
 def test_proposal_tests_matching(session: Session, seeded: dict[str, int]) -> None:
     exps = eln.list_experiments_full(session, seeded["project"])
     base = next(e for e in exps if e.code == "#018")
-    later = base.created_at.replace(tzinfo=UTC) - timedelta(days=1)
-    p = ProposalFact(id=9, experiment_id=base.id, created_at=later, changes={"ph": "6.5"})
+    # proposed on #018's day; #019 (performed later, pH changed vs #018) tests it
+    made = datetime.combine(base.performed_on, datetime.min.time(), tzinfo=UTC)
+    p = ProposalFact(id=9, experiment_id=base.id, created_at=made, changes={"ph": "6.5"})
     assert proposal_tests(exps, [p]) == [(9, seeded["#019"])]
     future = p.model_copy(update={"created_at": datetime.now(UTC) + timedelta(days=1)})
     assert proposal_tests(exps, [future]) == []
+    # a key absent everywhere is "applied" by every child but changed by none of them:
+    # inheriting the parent's state is not testing the proposal
     removed = p.model_copy(update={"changes": {"strain": None}})
-    assert len(proposal_tests(exps, [removed])) == 6
+    assert proposal_tests(exps, [removed]) == []
     assert proposal_tests(exps, [p.model_copy(update={"changes": {}})]) == []
     bad = p.model_copy(update={"changes": {"ph": "abc"}})
     assert proposal_tests(exps, [bad]) == []
+    assert proposal_tests(exps, [p.model_copy(update={"status": "rejected"})]) == []
+
+
+def test_proposal_tests_uses_decision_day_and_any_parent(
+    session: Session, seeded: dict[str, int]
+) -> None:
+    """ISSUES P1-10: a back-filled decision dates the proposal; lineage is not required.
+
+    #019 changes pH relative to #018. A proposal *on #024* (not #019's parent) decided
+    the day before #019 is tested by it; decided the same day or later it is not, even
+    though the proposal row was written today.
+    """
+    exps = eln.list_experiments_full(session, seeded["project"])
+    by_code = {e.code: e for e in exps}
+    now = datetime.now(UTC)
+    p = ProposalFact(
+        id=7,
+        experiment_id=by_code["#024"].id,
+        created_at=now,
+        changes={"ph": "6.5"},
+        status="accepted",
+        decided_on=by_code["#019"].performed_on - timedelta(days=1),
+    )
+    assert proposal_tests(exps, [p]) == [(7, seeded["#019"])]
+    same_day = p.model_copy(update={"decided_on": by_code["#019"].performed_on})
+    assert proposal_tests(exps, [same_day]) == []
+    assert proposal_tests(exps, [p.model_copy(update={"decided_on": None})]) == []

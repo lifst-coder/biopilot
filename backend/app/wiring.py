@@ -334,15 +334,19 @@ class PartnerFactProvider(FactProvider):
         return None
 
     def proposals(self, session: Session, project_id: int) -> list[ProposalFact]:
-        """Proposals with their effective changes (``modify`` decisions override)."""
+        """Proposals with the changes a follow-up implements (Partner's
+        ``implementing_changes``: a modify decision's modifications, design descriptors
+        and to-be-chosen values removed), status and decision day."""
         out: list[ProposalFact] = []
         for p in partner.list_proposals(session, project_id):
-            changes = {c.key: c.value for c in p.changes}
-            if p.decision is not None and p.decision.action == "modify":
-                changes.update({c.key: c.value for c in p.decision.modifications})
             out.append(
                 ProposalFact(
-                    id=p.id, experiment_id=p.experiment_id, created_at=p.created_at, changes=changes
+                    id=p.id,
+                    experiment_id=p.experiment_id,
+                    created_at=p.created_at,
+                    changes={c.key: c.value for c in p.implementing_changes},
+                    status=p.status,
+                    decided_on=p.decision.decided_on if p.decision else None,
                 )
             )
         return out
