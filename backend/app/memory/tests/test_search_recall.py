@@ -157,7 +157,7 @@ def test_ask_claude_grounded_and_fallbacks(
         return MemoryAnswerDraft(answer="회수율은 12.345%이다 [F1]", fragment_keys=["F1"])
 
     bad = service.ask(session, pid, req, gateway=fake_gateway_factory(invented))
-    assert bad.engine == "rules" and bad.fallback_reason == "ungrounded_numbers: 12.345"
+    assert bad.engine == "rules" and bad.fallback_reason == "ungrounded_numbers: 12.345%"
 
     def unknown(schema: type[BaseModel], _p: str) -> BaseModel:
         return MemoryAnswerDraft(answer="근거 없음", fragment_keys=["F99"])

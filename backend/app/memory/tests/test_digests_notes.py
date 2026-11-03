@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.core.audit import list_events
 from app.core.errors import ImmutableRecordError, NotFoundError, ValidationFailedError
+from app.core.grounding import ungrounded_numbers
 from app.eln import service as eln
 from app.eln.schemas import DatasetCreate, ProjectCreate
 from app.memory import service
-from app.memory.grounding import numbers, ungrounded_numbers
+from app.memory.conditions import conditions
 from app.memory.models import KnowledgeNote
 from app.memory.schemas import DigestDraft, KnowledgeNoteCreate
 
@@ -21,7 +22,30 @@ def test_grounding_allows_rounding_and_rejects_invented() -> None:
     assert ungrounded_numbers("평균 62.0% 이고 61.98 %", src) == []
     assert ungrounded_numbers("10분 → 5분 [F3]", src) == ["5"]
     assert ungrounded_numbers("#024 기준", src) == []
-    assert numbers("1,5 와 2.25") == ["1.5", "2.25"]
+
+
+def test_grounding_keeps_sign_and_thousands_separator() -> None:
+    """Regression (ISSUES P1-1): Memory ignored signs and read ``"1,000"`` as 1.0."""
+    src = ["회수율 변화 −27.1%p", "면적 1,000", "희석 1.0배"]
+    assert ungrounded_numbers("회수율 27.1%p 감소 (-27.1%p)", src) == []
+    assert ungrounded_numbers("회수율 +27.1%p 증가", src) == ["+27.1%p"]
+    assert ungrounded_numbers("면적 1,000", src) == []
+    assert ungrounded_numbers("면적 2,000", ["면적 2.0"]) == ["2,000"]
+
+
+def test_claude_digest_with_flipped_sign_falls_back(
+    session: Session, seeded: dict[str, int], fake_gateway_factory
+) -> None:
+    """A digest that flips a number's sign is replaced by the rules digest."""
+    exp = eln.get_experiment(session, seeded["#024"])
+    value = next(v for v in conditions(exp).values() if isinstance(v, int | float) and v > 0)
+
+    def flipped(schema: type[BaseModel], _prompt: str) -> BaseModel:
+        return DigestDraft(summary=f"조건값이 -{value:g}로 바뀌었다", key_points=[])
+
+    out = service.create_digest(session, seeded["#024"], gateway=fake_gateway_factory(flipped))
+    assert out.engine == "rules"
+    assert out.fallback_reason == f"ungrounded_numbers: -{value:g}"
 
 
 def test_rules_digest_stored_audited_and_fresh(session: Session, seeded: dict[str, int]) -> None:
@@ -49,7 +73,7 @@ def test_claude_digest_grounded_and_fallbacks(
 
     replaced = service.create_digest(session, seeded["#024"], gateway=fake_gateway_factory(lie))
     assert replaced.engine == "rules" and replaced.model is None
-    assert replaced.fallback_reason == "ungrounded_numbers: 97.5, 77"
+    assert replaced.fallback_reason == "ungrounded_numbers: 97.5%, 77"
 
     failing = fake_gateway_factory(lambda _s, _p: None)
     fallback = service.create_digest(session, seeded["#018"], gateway=failing)

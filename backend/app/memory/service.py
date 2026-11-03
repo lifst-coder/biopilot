@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.core.audit import Actor, record_event
 from app.core.errors import NotFoundError, ValidationFailedError
+from app.core.grounding import ungrounded_numbers
 from app.core.llm import LLMGateway, get_gateway
 from app.eln import service as eln
 from app.eln.schemas import CONDITION_FIELD_LABELS, ExperimentOut, ExperimentSummary
@@ -39,7 +40,6 @@ from app.memory.conditions import (
     similarity,
 )
 from app.memory.facts import ExperimentVocab, experiment_vocab
-from app.memory.grounding import ungrounded_numbers
 from app.memory.models import ExperimentDigest, KnowledgeNote
 from app.memory.schemas import (
     ConditionHistoryEntry,
