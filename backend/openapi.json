@@ -2,45 +2,120 @@
   "components": {
     "schemas": {
       "AcceptanceCriteria": {
-        "description": "Thresholds used for QC flags. Exposed read-only via the API.",
+        "description": "Thresholds and method settings used for QC flags (SANTE/11312/2021 defaults).\n\nStored per project as immutable versions (see ``ProjectCriteria``); every flag\nrecords the version it was judged against.",
         "properties": {
           "back_calc_tolerance_pct": {
             "default": 20.0,
+            "exclusiveMinimum": 0.0,
             "title": "Back Calc Tolerance Pct",
+            "type": "number"
+          },
+          "comparison_alpha": {
+            "default": 0.05,
+            "description": "α for comparison tests (after Holm)",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Comparison Alpha",
+            "type": "number"
+          },
+          "coverage_factor": {
+            "default": 2.0,
+            "description": "k for expanded U",
+            "exclusiveMinimum": 0.0,
+            "title": "Coverage Factor",
+            "type": "number"
+          },
+          "expanded_uncertainty_max_pct": {
+            "default": 50.0,
+            "description": "Max relative expanded uncertainty U (k·u_c), %",
+            "exclusiveMinimum": 0.0,
+            "title": "Expanded Uncertainty Max Pct",
+            "type": "number"
+          },
+          "grubbs_alpha": {
+            "default": 0.05,
+            "description": "Grubbs test α",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Grubbs Alpha",
+            "type": "number"
+          },
+          "heteroscedasticity_alpha": {
+            "default": 0.01,
+            "description": "F-test α for variance homogeneity",
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Heteroscedasticity Alpha",
+            "type": "number"
+          },
+          "ion_ratio_tolerance_pct": {
+            "default": 30.0,
+            "description": "Max |ion-ratio deviation| from standards, %",
+            "exclusiveMinimum": 0.0,
+            "title": "Ion Ratio Tolerance Pct",
             "type": "number"
           },
           "is_response_max_pct": {
             "default": 150.0,
+            "exclusiveMinimum": 0.0,
             "title": "Is Response Max Pct",
             "type": "number"
           },
           "is_response_min_pct": {
             "default": 50.0,
+            "minimum": 0.0,
             "title": "Is Response Min Pct",
+            "type": "number"
+          },
+          "lod_k": {
+            "default": 3.0,
+            "description": "LOD = k·σ/b (IUPAC 3; ICH 3.3)",
+            "exclusiveMinimum": 0.0,
+            "title": "Lod K",
+            "type": "number"
+          },
+          "lod_range_factor": {
+            "default": 10.0,
+            "description": "LOD/LOQ regression uses levels ≤ factor × lowest level (min 3 levels)",
+            "minimum": 1.0,
+            "title": "Lod Range Factor",
+            "type": "number"
+          },
+          "loq_k": {
+            "default": 10.0,
+            "description": "LOQ = k·σ/b (IUPAC/ICH 10)",
+            "exclusiveMinimum": 0.0,
+            "title": "Loq K",
             "type": "number"
           },
           "matrix_effect_abs_max_pct": {
             "default": 20.0,
+            "exclusiveMinimum": 0.0,
             "title": "Matrix Effect Abs Max Pct",
             "type": "number"
           },
           "r_squared_min": {
             "default": 0.99,
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
             "title": "R Squared Min",
             "type": "number"
           },
           "recovery_max_pct": {
             "default": 120.0,
+            "exclusiveMinimum": 0.0,
             "title": "Recovery Max Pct",
             "type": "number"
           },
           "recovery_min_pct": {
             "default": 70.0,
+            "minimum": 0.0,
             "title": "Recovery Min Pct",
             "type": "number"
           },
           "rsd_max_pct": {
             "default": 20.0,
+            "exclusiveMinimum": 0.0,
             "title": "Rsd Max Pct",
             "type": "number"
           },
@@ -48,6 +123,13 @@
             "default": "SANTE/11312/2021",
             "title": "Source",
             "type": "string"
+          },
+          "spike_uncertainty_pct": {
+            "default": 0.0,
+            "description": "u(C_ref): relative standard uncertainty of spikes, %",
+            "minimum": 0.0,
+            "title": "Spike Uncertainty Pct",
+            "type": "number"
           }
         },
         "title": "AcceptanceCriteria",
@@ -92,7 +174,9 @@
               "calibration",
               "recovery",
               "is_response",
-              "matrix_effect"
+              "matrix_effect",
+              "limits",
+              "ion_ratio"
             ],
             "title": "Kind",
             "type": "string"
@@ -105,7 +189,9 @@
             "discriminator": {
               "mapping": {
                 "calibration": "#/components/schemas/CalibrationOutput",
+                "ion_ratio": "#/components/schemas/IonRatioOutput",
                 "is_response": "#/components/schemas/ISResponseOutput",
+                "limits": "#/components/schemas/LimitsOutput",
                 "matrix_effect": "#/components/schemas/MatrixEffectOutput",
                 "recovery": "#/components/schemas/RecoveryOutput"
               },
@@ -123,6 +209,12 @@
               },
               {
                 "$ref": "#/components/schemas/MatrixEffectOutput"
+              },
+              {
+                "$ref": "#/components/schemas/LimitsOutput"
+              },
+              {
+                "$ref": "#/components/schemas/IonRatioOutput"
               }
             ],
             "title": "Output"
@@ -169,6 +261,25 @@
             "title": "Fit Line",
             "type": "array"
           },
+          "fits": {
+            "default": [],
+            "description": "Fits for every weighting scheme (none, 1/x, 1/x2)",
+            "items": {
+              "$ref": "#/components/schemas/CalibrationFitOut"
+            },
+            "title": "Fits",
+            "type": "array"
+          },
+          "heteroscedasticity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeteroscedasticityOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "intercept": {
             "title": "Intercept",
             "type": "number"
@@ -191,6 +302,47 @@
           "r_squared": {
             "title": "R Squared",
             "type": "number"
+          },
+          "residual_sd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Sd"
+          },
+          "residuals": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ResidualOut"
+            },
+            "title": "Residuals",
+            "type": "array"
+          },
+          "se_intercept": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Se Intercept"
+          },
+          "se_slope": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Se Slope"
           },
           "slope": {
             "title": "Slope",
@@ -222,14 +374,70 @@
         "type": "object"
       },
       "AnalyteDelta": {
+        "description": "Per-analyte comparison; test fields are ``None`` when n < 2 on either side.",
         "properties": {
           "analyte": {
             "title": "Analyte",
             "type": "string"
           },
+          "ci_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci High"
+          },
+          "ci_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci Low"
+          },
+          "cohens_d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohens D"
+          },
           "delta_pct_points": {
             "title": "Delta Pct Points",
             "type": "number"
+          },
+          "df": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Df"
+          },
+          "hedges_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hedges G"
           },
           "mean_a_pct": {
             "title": "Mean A Pct",
@@ -238,6 +446,73 @@
           "mean_b_pct": {
             "title": "Mean B Pct",
             "type": "number"
+          },
+          "n_a": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N A"
+          },
+          "n_b": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N B"
+          },
+          "p_holm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Holm-adjusted p-value",
+            "title": "P Holm"
+          },
+          "p_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P Value"
+          },
+          "significant": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Significant"
+          },
+          "t_statistic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T Statistic"
           }
         },
         "required": [
@@ -247,6 +522,108 @@
           "delta_pct_points"
         ],
         "title": "AnalyteDelta",
+        "type": "object"
+      },
+      "AnalyteLimitsOut": {
+        "description": "LOD/LOQ of one analyte. ``lod``/``loq`` in ng/mL (extract), ``*_ng_g`` in sample.",
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "estimates": {
+            "items": {
+              "$ref": "#/components/schemas/LimitEstimateOut"
+            },
+            "title": "Estimates",
+            "type": "array"
+          },
+          "lod": {
+            "title": "Lod",
+            "type": "number"
+          },
+          "lod_ng_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lod Ng G"
+          },
+          "loq": {
+            "title": "Loq",
+            "type": "number"
+          },
+          "loq_ng_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loq Ng G"
+          },
+          "lowest_level": {
+            "title": "Lowest Level",
+            "type": "number"
+          },
+          "primary_method": {
+            "enum": [
+              "residual_sd",
+              "intercept_sd",
+              "low_level_replicates"
+            ],
+            "title": "Primary Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analyte",
+          "primary_method",
+          "lod",
+          "loq",
+          "lowest_level",
+          "estimates"
+        ],
+        "title": "AnalyteLimitsOut",
+        "type": "object"
+      },
+      "AnalyteLimitsSummary": {
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "lod": {
+            "title": "Lod",
+            "type": "number"
+          },
+          "loq": {
+            "title": "Loq",
+            "type": "number"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "analyte",
+          "lod",
+          "loq",
+          "unit",
+          "method"
+        ],
+        "title": "AnalyteLimitsSummary",
         "type": "object"
       },
       "AnalyteRecoverySummary": {
@@ -275,6 +652,72 @@
           "n"
         ],
         "title": "AnalyteRecoverySummary",
+        "type": "object"
+      },
+      "AnalyteVerdict": {
+        "description": "Deterministic pass/fail per analyte: fail = any critical flag, warning = any other.",
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "failed_checks": {
+            "default": [],
+            "items": {
+              "enum": [
+                "recovery_out_of_range",
+                "recovery_rsd_high",
+                "calibration_r2_low",
+                "calibration_back_calc_error",
+                "is_suppression",
+                "is_enhancement",
+                "matrix_effect_significant",
+                "outlier_suspected",
+                "uncertainty_high",
+                "ion_ratio_out_of_range",
+                "loq_above_lowest_level"
+              ],
+              "type": "string"
+            },
+            "title": "Failed Checks",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "warning",
+              "fail"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warning_checks": {
+            "default": [],
+            "items": {
+              "enum": [
+                "recovery_out_of_range",
+                "recovery_rsd_high",
+                "calibration_r2_low",
+                "calibration_back_calc_error",
+                "is_suppression",
+                "is_enhancement",
+                "matrix_effect_significant",
+                "outlier_suspected",
+                "uncertainty_high",
+                "ion_ratio_out_of_range",
+                "loq_above_lowest_level"
+              ],
+              "type": "string"
+            },
+            "title": "Warning Checks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "analyte",
+          "status"
+        ],
+        "title": "AnalyteVerdict",
         "type": "object"
       },
       "AskRequest": {
@@ -451,6 +894,107 @@
         "title": "BackCalcLevelOut",
         "type": "object"
       },
+      "CalibrationFitOut": {
+        "description": "The same calibration data fitted with one weighting (for the weighting toggle).",
+        "properties": {
+          "back_calc": {
+            "items": {
+              "$ref": "#/components/schemas/BackCalcLevelOut"
+            },
+            "title": "Back Calc",
+            "type": "array"
+          },
+          "fit_line": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationPoint"
+            },
+            "title": "Fit Line",
+            "type": "array"
+          },
+          "intercept": {
+            "title": "Intercept",
+            "type": "number"
+          },
+          "max_abs_back_calc_error_pct": {
+            "title": "Max Abs Back Calc Error Pct",
+            "type": "number"
+          },
+          "r_squared": {
+            "title": "R Squared",
+            "type": "number"
+          },
+          "residual_sd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Sd"
+          },
+          "residuals": {
+            "items": {
+              "$ref": "#/components/schemas/ResidualOut"
+            },
+            "title": "Residuals",
+            "type": "array"
+          },
+          "se_intercept": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Se Intercept"
+          },
+          "se_slope": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Se Slope"
+          },
+          "slope": {
+            "title": "Slope",
+            "type": "number"
+          },
+          "sum_abs_relative_error_pct": {
+            "title": "Sum Abs Relative Error Pct",
+            "type": "number"
+          },
+          "weighting": {
+            "enum": [
+              "none",
+              "1/x",
+              "1/x2"
+            ],
+            "title": "Weighting",
+            "type": "string"
+          }
+        },
+        "required": [
+          "weighting",
+          "slope",
+          "intercept",
+          "r_squared",
+          "max_abs_back_calc_error_pct",
+          "sum_abs_relative_error_pct",
+          "back_calc",
+          "fit_line",
+          "residuals"
+        ],
+        "title": "CalibrationFitOut",
+        "type": "object"
+      },
       "CalibrationOutput": {
         "properties": {
           "analytes": {
@@ -460,11 +1004,41 @@
             "title": "Analytes",
             "type": "array"
           },
+          "calibration_type": {
+            "default": "solvent",
+            "title": "Calibration Type",
+            "type": "string"
+          },
+          "curve_used": {
+            "default": "dataset",
+            "description": "solvent | matrix rows of a `curve` column, or dataset",
+            "title": "Curve Used",
+            "type": "string"
+          },
+          "heteroscedastic_analytes": {
+            "default": [],
+            "description": "Analytes whose F-test rejects constant variance",
+            "items": {
+              "type": "string"
+            },
+            "title": "Heteroscedastic Analytes",
+            "type": "array"
+          },
           "kind": {
             "const": "calibration",
             "default": "calibration",
             "title": "Kind",
             "type": "string"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "weighting": {
             "enum": [
@@ -716,6 +1290,82 @@
           "label"
         ],
         "title": "ConditionField",
+        "type": "object"
+      },
+      "CriteriaCreate": {
+        "description": "Request body for a new criteria version.",
+        "properties": {
+          "criteria": {
+            "$ref": "#/components/schemas/AcceptanceCriteria"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "criteria"
+        ],
+        "title": "CriteriaCreate",
+        "type": "object"
+      },
+      "CriteriaVersionOut": {
+        "description": "One immutable version of a project's criteria (version 0 = built-in defaults).",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "criteria": {
+            "$ref": "#/components/schemas/AcceptanceCriteria"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "version",
+          "label",
+          "criteria"
+        ],
+        "title": "CriteriaVersionOut",
         "type": "object"
       },
       "CritiqueOut": {
@@ -1383,6 +2033,22 @@
             ],
             "title": "Calibration Weighting"
           },
+          "criteria_versions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Criteria Versions",
+            "type": "array"
+          },
+          "expanded_uncertainty_pct": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "default": {},
+            "title": "Expanded Uncertainty Pct",
+            "type": "object"
+          },
           "experiment_id": {
             "title": "Experiment Id",
             "type": "integer"
@@ -1394,6 +2060,17 @@
             },
             "title": "Flags",
             "type": "array"
+          },
+          "ion_ratio_injections_flagged": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ion Ratio Injections Flagged"
           },
           "is_injections_flagged": {
             "anyOf": [
@@ -1416,6 +2093,14 @@
               }
             ],
             "title": "Is Injections Total"
+          },
+          "limits": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AnalyteLimitsSummary"
+            },
+            "title": "Limits",
+            "type": "array"
           },
           "matrix_effect_pct": {
             "additionalProperties": {
@@ -1447,12 +2132,42 @@
             ],
             "title": "Min R Squared"
           },
+          "outlier_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outlier Count"
+          },
           "per_analyte_recovery": {
             "default": [],
             "items": {
               "$ref": "#/components/schemas/AnalyteRecoverySummary"
             },
             "title": "Per Analyte Recovery",
+            "type": "array"
+          },
+          "qc_status": {
+            "default": "not_analyzed",
+            "enum": [
+              "pass",
+              "warning",
+              "fail",
+              "not_analyzed"
+            ],
+            "title": "Qc Status",
+            "type": "string"
+          },
+          "qc_verdicts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AnalyteVerdict"
+            },
+            "title": "Qc Verdicts",
             "type": "array"
           },
           "recovery_mean_pct": {
@@ -1761,6 +2476,50 @@
         "title": "GraphNode",
         "type": "object"
       },
+      "GrubbsOut": {
+        "description": "Two-sided Grubbs test of one replicate group (flag only, data never removed).",
+        "properties": {
+          "alpha": {
+            "title": "Alpha",
+            "type": "number"
+          },
+          "g_critical": {
+            "title": "G Critical",
+            "type": "number"
+          },
+          "g_statistic": {
+            "title": "G Statistic",
+            "type": "number"
+          },
+          "is_outlier": {
+            "title": "Is Outlier",
+            "type": "boolean"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "suspect_injection_id": {
+            "title": "Suspect Injection Id",
+            "type": "string"
+          },
+          "suspect_value": {
+            "title": "Suspect Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "n",
+          "g_statistic",
+          "g_critical",
+          "alpha",
+          "suspect_injection_id",
+          "suspect_value",
+          "is_outlier"
+        ],
+        "title": "GrubbsOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1785,6 +2544,70 @@
           "status"
         ],
         "title": "HealthOut",
+        "type": "object"
+      },
+      "HeteroscedasticityOut": {
+        "description": "F-test of response variance at the highest vs lowest calibration level (ANA-5).",
+        "properties": {
+          "alpha": {
+            "title": "Alpha",
+            "type": "number"
+          },
+          "f_critical": {
+            "title": "F Critical",
+            "type": "number"
+          },
+          "f_statistic": {
+            "title": "F Statistic",
+            "type": "number"
+          },
+          "level_high": {
+            "title": "Level High",
+            "type": "number"
+          },
+          "level_low": {
+            "title": "Level Low",
+            "type": "number"
+          },
+          "n_high": {
+            "title": "N High",
+            "type": "integer"
+          },
+          "n_low": {
+            "title": "N Low",
+            "type": "integer"
+          },
+          "p_value": {
+            "title": "P Value",
+            "type": "number"
+          },
+          "significant": {
+            "title": "Significant",
+            "type": "boolean"
+          },
+          "var_high": {
+            "title": "Var High",
+            "type": "number"
+          },
+          "var_low": {
+            "title": "Var Low",
+            "type": "number"
+          }
+        },
+        "required": [
+          "level_low",
+          "level_high",
+          "n_low",
+          "n_high",
+          "var_low",
+          "var_high",
+          "f_statistic",
+          "f_critical",
+          "p_value",
+          "alpha",
+          "significant"
+        ],
+        "title": "HeteroscedasticityOut",
         "type": "object"
       },
       "HypothesisCreate": {
@@ -1927,6 +2750,15 @@
             "title": "Response Pct",
             "type": "number"
           },
+          "role": {
+            "default": "sample",
+            "enum": [
+              "calibration",
+              "sample"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
           "sample_id": {
             "title": "Sample Id",
             "type": "string"
@@ -1944,6 +2776,15 @@
       },
       "ISResponseOutput": {
         "properties": {
+          "calibration_injections": {
+            "default": [],
+            "description": "Calibration injections in run order (IS trend)",
+            "items": {
+              "$ref": "#/components/schemas/ISInjectionOut"
+            },
+            "title": "Calibration Injections",
+            "type": "array"
+          },
           "flagged_count": {
             "title": "Flagged Count",
             "type": "integer"
@@ -1961,9 +2802,31 @@
             "title": "Kind",
             "type": "string"
           },
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "reference_is_area": {
             "title": "Reference Is Area",
             "type": "number"
+          },
+          "reference_is_rsd_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "RSD of the calibration IS areas (reference precision)",
+            "title": "Reference Is Rsd Pct"
           }
         },
         "required": [
@@ -1972,6 +2835,187 @@
           "flagged_count"
         ],
         "title": "ISResponseOutput",
+        "type": "object"
+      },
+      "IonRatioOutput": {
+        "properties": {
+          "flagged_count": {
+            "title": "Flagged Count",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "ion_ratio",
+            "default": "ion_ratio",
+            "title": "Kind",
+            "type": "string"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/IonRatioRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "tolerance_pct": {
+            "title": "Tolerance Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "tolerance_pct",
+          "rows",
+          "flagged_count"
+        ],
+        "title": "IonRatioOutput",
+        "type": "object"
+      },
+      "IonRatioRowOut": {
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "deviation_pct": {
+            "title": "Deviation Pct",
+            "type": "number"
+          },
+          "flagged": {
+            "title": "Flagged",
+            "type": "boolean"
+          },
+          "injection_id": {
+            "title": "Injection Id",
+            "type": "string"
+          },
+          "ion_ratio": {
+            "title": "Ion Ratio",
+            "type": "number"
+          },
+          "reference_ratio": {
+            "title": "Reference Ratio",
+            "type": "number"
+          },
+          "sample_type": {
+            "title": "Sample Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "injection_id",
+          "sample_type",
+          "analyte",
+          "ion_ratio",
+          "reference_ratio",
+          "deviation_pct",
+          "flagged"
+        ],
+        "title": "IonRatioRowOut",
+        "type": "object"
+      },
+      "LimitEstimateOut": {
+        "properties": {
+          "lod": {
+            "title": "Lod",
+            "type": "number"
+          },
+          "loq": {
+            "title": "Loq",
+            "type": "number"
+          },
+          "max_level": {
+            "default": 0.0,
+            "description": "Highest calibration level used for σ",
+            "title": "Max Level",
+            "type": "number"
+          },
+          "method": {
+            "enum": [
+              "residual_sd",
+              "intercept_sd",
+              "low_level_replicates"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "sigma": {
+            "title": "Sigma",
+            "type": "number"
+          },
+          "slope": {
+            "title": "Slope",
+            "type": "number"
+          }
+        },
+        "required": [
+          "method",
+          "sigma",
+          "slope",
+          "n",
+          "lod",
+          "loq"
+        ],
+        "title": "LimitEstimateOut",
+        "type": "object"
+      },
+      "LimitsOutput": {
+        "properties": {
+          "analytes": {
+            "items": {
+              "$ref": "#/components/schemas/AnalyteLimitsOut"
+            },
+            "title": "Analytes",
+            "type": "array"
+          },
+          "k_lod": {
+            "title": "K Lod",
+            "type": "number"
+          },
+          "k_loq": {
+            "title": "K Loq",
+            "type": "number"
+          },
+          "kind": {
+            "const": "limits",
+            "default": "limits",
+            "title": "Kind",
+            "type": "string"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unit": {
+            "default": "ng/mL",
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "k_lod",
+          "k_loq",
+          "analytes"
+        ],
+        "title": "LimitsOutput",
         "type": "object"
       },
       "MatrixEffectOut": {
@@ -2016,6 +3060,16 @@
             "default": "matrix_effect",
             "title": "Kind",
             "type": "string"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2024,9 +3078,62 @@
         "title": "MatrixEffectOutput",
         "type": "object"
       },
+      "MethodDoc": {
+        "description": "Formulas, assumptions and references of one computation (stored with results).",
+        "properties": {
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "formulas": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Formulas",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "references": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "version",
+          "title",
+          "formulas",
+          "assumptions"
+        ],
+        "title": "MethodDoc",
+        "type": "object"
+      },
       "MetricsComparison": {
         "description": "Numerical comparison of two experiments (b relative to a).",
         "properties": {
+          "alpha": {
+            "default": 0.05,
+            "title": "Alpha",
+            "type": "number"
+          },
           "experiment_a": {
             "title": "Experiment A",
             "type": "integer"
@@ -2034,6 +3141,16 @@
           "experiment_b": {
             "title": "Experiment B",
             "type": "integer"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "metrics_a": {
             "$ref": "#/components/schemas/ExperimentMetrics"
@@ -2068,6 +3185,14 @@
                 "type": "null"
               }
             ]
+          },
+          "significant_analytes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Significant Analytes",
+            "type": "array"
           }
         },
         "required": [
@@ -2162,6 +3287,32 @@
           "name"
         ],
         "title": "ProjectCreate",
+        "type": "object"
+      },
+      "ProjectCriteria": {
+        "description": "Active criteria of a project plus its full version history (oldest first).",
+        "properties": {
+          "active": {
+            "$ref": "#/components/schemas/CriteriaVersionOut"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/CriteriaVersionOut"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "active",
+          "history"
+        ],
+        "title": "ProjectCriteria",
         "type": "object"
       },
       "ProjectOut": {
@@ -2365,7 +3516,11 @@
               "calibration_back_calc_error",
               "is_suppression",
               "is_enhancement",
-              "matrix_effect_significant"
+              "matrix_effect_significant",
+              "outlier_suspected",
+              "uncertainty_high",
+              "ion_ratio_out_of_range",
+              "loq_above_lowest_level"
             ],
             "title": "Code",
             "type": "string"
@@ -2375,6 +3530,18 @@
             "default": {},
             "title": "Context",
             "type": "object"
+          },
+          "criteria_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Label of the criteria version used for this judgement",
+            "title": "Criteria Version"
           },
           "severity": {
             "enum": [
@@ -2426,6 +3593,27 @@
             "title": "Analyte",
             "type": "string"
           },
+          "grubbs": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GrubbsOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mean_no_is_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean No Is Pct"
+          },
           "mean_pct": {
             "title": "Mean Pct",
             "type": "number"
@@ -2473,6 +3661,16 @@
             "title": "Kind",
             "type": "string"
           },
+          "method": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MethodDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "n": {
             "title": "N",
             "type": "integer"
@@ -2490,6 +3688,14 @@
               "$ref": "#/components/schemas/RecoveryRowOut"
             },
             "title": "Rows",
+            "type": "array"
+          },
+          "uncertainty": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/UncertaintyOut"
+            },
+            "title": "Uncertainty",
             "type": "array"
           }
         },
@@ -2517,6 +3723,18 @@
             "title": "Measured Ng G",
             "type": "number"
           },
+          "recovery_no_is_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Recovery from an absolute-area calibration (no IS)",
+            "title": "Recovery No Is Pct"
+          },
           "recovery_pct": {
             "title": "Recovery Pct",
             "type": "number"
@@ -2542,7 +3760,107 @@
         "type": "object"
       },
       "RecoveryTTest": {
+        "description": "Welch t-test on all recoveries. ``t = (x̄_a − x̄_b)/SE``; difference/CI/d are b − a.",
         "properties": {
+          "ci_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci High"
+          },
+          "ci_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci Low"
+          },
+          "cohens_d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohens D"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "df": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Df"
+          },
+          "hedges_g": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hedges G"
+          },
+          "mean_a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean A"
+          },
+          "mean_b": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean B"
+          },
+          "mean_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Difference"
+          },
           "n_a": {
             "title": "N A",
             "type": "integer"
@@ -2554,6 +3872,39 @@
           "p_value": {
             "title": "P Value",
             "type": "number"
+          },
+          "sd_a": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sd A"
+          },
+          "sd_b": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sd B"
+          },
+          "standard_error": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Error"
           },
           "t_statistic": {
             "title": "T Statistic",
@@ -2604,6 +3955,63 @@
           "roots"
         ],
         "title": "ResearchGraph",
+        "type": "object"
+      },
+      "ResidualOut": {
+        "description": "One calibration injection and its residuals (all computed in the backend).",
+        "properties": {
+          "back_calculated": {
+            "title": "Back Calculated",
+            "type": "number"
+          },
+          "injection_id": {
+            "title": "Injection Id",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "number"
+          },
+          "predicted": {
+            "title": "Predicted",
+            "type": "number"
+          },
+          "relative_error_pct": {
+            "description": "%RE = (x̂ − x)/x × 100",
+            "title": "Relative Error Pct",
+            "type": "number"
+          },
+          "residual": {
+            "title": "Residual",
+            "type": "number"
+          },
+          "response_ratio": {
+            "title": "Response Ratio",
+            "type": "number"
+          },
+          "standardized_residual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "√w·(y − ŷ)/s (weighted standardized residual)",
+            "title": "Standardized Residual"
+          }
+        },
+        "required": [
+          "injection_id",
+          "level",
+          "response_ratio",
+          "predicted",
+          "residual",
+          "back_calculated",
+          "relative_error_pct"
+        ],
+        "title": "ResidualOut",
         "type": "object"
       },
       "RunResponse": {
@@ -2836,6 +4244,60 @@
         "title": "TrendPoint",
         "type": "object"
       },
+      "UncertaintyOut": {
+        "description": "Relative expanded measurement uncertainty of one analyte (ANA-4), %.",
+        "properties": {
+          "analyte": {
+            "title": "Analyte",
+            "type": "string"
+          },
+          "coverage_factor": {
+            "title": "Coverage Factor",
+            "type": "number"
+          },
+          "expanded_pct": {
+            "title": "Expanded Pct",
+            "type": "number"
+          },
+          "levels": {
+            "title": "Levels",
+            "type": "integer"
+          },
+          "rms_bias_pct": {
+            "title": "Rms Bias Pct",
+            "type": "number"
+          },
+          "u_bias_pct": {
+            "title": "U Bias Pct",
+            "type": "number"
+          },
+          "u_combined_pct": {
+            "title": "U Combined Pct",
+            "type": "number"
+          },
+          "u_cref_pct": {
+            "title": "U Cref Pct",
+            "type": "number"
+          },
+          "u_rw_pct": {
+            "title": "U Rw Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "analyte",
+          "levels",
+          "u_rw_pct",
+          "rms_bias_pct",
+          "u_cref_pct",
+          "u_bias_pct",
+          "u_combined_pct",
+          "coverage_factor",
+          "expanded_pct"
+        ],
+        "title": "UncertaintyOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -2910,6 +4372,7 @@
   "paths": {
     "/api/analysis/compare": {
       "get": {
+        "description": "Welch t-tests, effect sizes and Holm-adjusted per-analyte tests of b vs a.",
         "operationId": "analysis_compare",
         "parameters": [
           {
@@ -2995,7 +4458,28 @@
     },
     "/api/analysis/criteria": {
       "get": {
+        "description": "Default criteria, or the active criteria of ``project_id``.",
         "operationId": "analysis_get_criteria",
+        "parameters": [
+          {
+            "description": "Return this project's active criteria instead of defaults",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return this project's active criteria instead of defaults",
+              "title": "Project Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -3036,6 +4520,16 @@
               }
             },
             "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Get Criteria",
@@ -3046,6 +4540,7 @@
     },
     "/api/analysis/experiments/{experiment_id}/metrics": {
       "get": {
+        "description": "Headline metrics from the latest stored results.",
         "operationId": "analysis_get_metrics",
         "parameters": [
           {
@@ -3116,8 +4611,98 @@
         ]
       }
     },
+    "/api/analysis/experiments/{experiment_id}/report": {
+      "get": {
+        "description": "Markdown or CSV export of the latest stored results (download).",
+        "operationId": "analysis_get_report",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "title": "Experiment Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "markdown",
+              "enum": [
+                "markdown",
+                "csv"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {},
+              "text/markdown": {},
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Report",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
     "/api/analysis/experiments/{experiment_id}/run": {
       "post": {
+        "description": "Run all applicable analyses (idempotent for identical inputs).",
         "operationId": "analysis_run_experiment",
         "parameters": [
           {
@@ -3188,8 +4773,219 @@
         ]
       }
     },
+    "/api/analysis/methods": {
+      "get": {
+        "description": "Formula sheets (formulas, assumptions, references) of every current method.",
+        "operationId": "analysis_list_methods",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MethodDoc"
+                  },
+                  "title": "Response Analysis List Methods",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "summary": "List Methods",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/projects/{project_id}/criteria": {
+      "get": {
+        "description": "Active criteria version and full history (version 0 = defaults).",
+        "operationId": "analysis_get_project_criteria",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectCriteria"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Project Criteria",
+        "tags": [
+          "analysis"
+        ]
+      },
+      "post": {
+        "description": "Append a new criteria version (existing results stay unchanged; re-run to apply).",
+        "operationId": "analysis_create_project_criteria",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriteriaCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CriteriaVersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Project Criteria",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
     "/api/analysis/projects/{project_id}/trend": {
       "get": {
+        "description": "Recovery trend across a project's experiments.",
         "operationId": "analysis_project_trend",
         "parameters": [
           {
@@ -3266,6 +5062,7 @@
     },
     "/api/analysis/results": {
       "get": {
+        "description": "Stored results filtered by experiment and kind.",
         "operationId": "analysis_list_results",
         "parameters": [
           {
@@ -3295,7 +5092,9 @@
                     "calibration",
                     "recovery",
                     "is_response",
-                    "matrix_effect"
+                    "matrix_effect",
+                    "limits",
+                    "ion_ratio"
                   ],
                   "type": "string"
                 },
@@ -3371,6 +5170,7 @@
     },
     "/api/analysis/results/{result_id}": {
       "get": {
+        "description": "One stored result.",
         "operationId": "analysis_get_result",
         "parameters": [
           {

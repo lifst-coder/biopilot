@@ -10,6 +10,10 @@ const LABELS: Record<QCFlag["code"], string> = {
   is_suppression: "IS 억제",
   is_enhancement: "IS 증강",
   matrix_effect_significant: "유의한 매트릭스 효과",
+  outlier_suspected: "이상치 의심 (Grubbs)",
+  uncertainty_high: "확장 불확도 초과",
+  ion_ratio_out_of_range: "이온비 허용범위 이탈",
+  loq_above_lowest_level: "LOQ > 최저 검량 수준",
 };
 
 function range(f: QCFlag): string {
