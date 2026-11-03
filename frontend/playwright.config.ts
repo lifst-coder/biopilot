@@ -14,7 +14,7 @@ const python = process.env.E2E_PYTHON ?? "python";
 const backend = (profile: "reference" | "lab", port: number) => ({
   command:
     `rm -rf .e2e/${profile} && mkdir -p .e2e/${profile} && ` +
-    `${python} -m uvicorn app.main:app --port ${port}`,
+    `${python} -m uvicorn app.main:app --host 127.0.0.1 --port ${port}`,
   cwd: "../backend",
   env: {
     BIOPILOT_DATABASE_URL: `sqlite:///./.e2e/${profile}/biopilot.db`,
@@ -28,9 +28,13 @@ const backend = (profile: "reference" | "lab", port: number) => ({
   reuseExistingServer: false,
 });
 const ui = (port: number, api: number) => ({
-  command: `npx vite --port ${port} --strictPort`,
+  // Bind explicitly to the address polled below. Vite's default host is "localhost", which
+  // Node ≥17 resolves in OS order: on GitHub's Ubuntu runners (/etc/hosts maps ::1 localhost)
+  // that is [::1] only, so polling 127.0.0.1 never succeeds and the webServer wait times out.
+  command: `npx vite --host 127.0.0.1 --port ${port} --strictPort`,
   env: { BIOPILOT_API_PROXY: `http://127.0.0.1:${api}` },
   url: `http://127.0.0.1:${port}/`,
+  stdout: "pipe" as const, // surface Vite's startup banner/errors in the CI log
   timeout: 120_000,
   reuseExistingServer: false,
 });
