@@ -38,15 +38,21 @@
 | 3 | 빈 숫자 칸(NaN)이 slope=NaN으로 저장 | Analysis `_frame()`이 계약 숫자 컬럼의 빈 칸·NaN·inf를 행 번호와 함께 `skipped`로 보고, 저장 단계가 출력·플래그의 비유한 값을 최종 거부. ELN은 `inf`/`Infinity`를 `not_finite` 오류로 거부(빈 칸은 이미 `blank_value`) | analysis, eln |
 | 4 | Severity 정책 + `flag_count`의 info 합산 | **결정: Grubbs 의심·불확도 초과는 warning 유지**(정책은 `analysis/criteria.py` 상단). `TrendPoint.flag_count` = warning+critical, 새 필드 `info_flag_count` | analysis |
 | 5 | Holm 입력 `p_value or 1.0` | `None`일 때만 1.0, p=0.0은 그대로 | analysis |
-| 6 | ELN-3 동시 PATCH → 500 | SAVEPOINT 안에서 개정 기록, 충돌 시 409 `revision_conflict` | eln |
-| 7 | GET `/search`·`/recall`의 DDL·쓰기 | GET은 읽기 전용: 워터마크까지 FTS + 이후 감사 이벤트는 Python 스캔. 인덱스 동기화는 시작 시(`main.py` lifespan)와 `POST /api/memory/search-index/sync`에서만 | memory |
+| 6 | ELN-3 동시 PATCH → 500 | 충돌(`uq_experiment_rev`) 시 트랜잭션 롤백 → 다시 읽어 번호·before/after 재계산 → 재시도(최대 5회), 끝내 지면 409 `revision_conflict`. 처음 넣은 SAVEPOINT는 pysqlite에서 RELEASE가 곧 커밋이라 롤백된 요청의 수정이 감사 이벤트 없이 남아 제거([SECURITY_REVIEW](SECURITY_REVIEW.md) §7) | eln |
+| 7 | GET `/search`·`/recall`의 DDL·쓰기 | GET은 읽기 전용: 워터마크까지 FTS + 이후 감사 이벤트는 Python 스캔. 인덱스 동기화는 감사 이벤트를 남긴 트랜잭션의 커밋 직전(같은 트랜잭션), 시작 시(`main.py` lifespan), `POST /api/memory/search-index/sync`에서만([SECURITY_REVIEW](SECURITY_REVIEW.md) §6) | memory |
 | 8 | 결정 피드백의 한계 | (a) `proposal_intent()` — 표기만 바꾼 재제안도 반복으로 판정(저장 서명은 그대로) (b) 채택·수정·과학적 기각·보류는 **그 실험에만** 적용, 기각된 변경 조합과 자원 제약은 프로젝트 전체 (c) 사유 키워드를 구(句)로 — "배치"·"부담" 단독 제거, "기기 일정"·"재주입 슬롯" → 주입 제약, "이미 시도"·"재고" 추가 (d) #OA09 "기기 일정" 기각이 이제 `extra_injections`로 분류되어 추가 주입이 필요한 대안이 나오지 않는다 | partner |
 | 9 | 결정 감사 actor `user`·시점 오늘 고정 | `decide(..., actor=)`, `DecisionCreate/Out.decided_on`(실험일 이후·미래 불가, 컬럼 + Alembic `0002_decision_decided_on`), 감사 payload에 `decided_by`·`decided_on`. 시드는 `actor="seed"`, `decided_on` = 결정한 실험의 날짜 | partner, seed |
 | 10 | `tests_proposal` 매칭이 거의 안 생김 | Partner `ProposalOut.implementing_changes`(수정 결정은 modifications, 설계 서술 키·미정 값 제외) → Memory가 그것과 결정일로 매칭, 부모 대비 실제로 바꾼 실험만, 계보 위치 무관, 기각 제안 제외. **lab에서 정답 7개 엣지와 정확히 일치**(`test_accumulation_lab`) | partner, memory |
 
 P1 처리 중 새로 정한 것:
 - 수정(modify) 결정의 modifications는 Memory 매칭에서 **제안 변경을 대체**한다(시드 7건과 `test_follow_up_experiments_implement_the_decision`의 의미와 같음). PAR-2 실험 초안은 여전히 "제안 변경 + modifications 우선 병합"이라 두 의미가 다르다 → P2-20.
-- Memory 검색 점수: 인덱스 이후 기록(Python 스캔, 출현 횟수)과 FTS 기록(bm25)이 한 목록에 섞일 때 점수 척도가 다르다. 동기화하면 사라지는 일시 상태라 그대로 둔다.
+- Memory 검색 점수: 인덱스 이후 기록(Python 스캔, 출현 횟수)과 FTS 기록(bm25)이 한 목록에 섞일 때 점수 척도가 다르다. 커밋 시 색인되므로 커밋 전 같은 트랜잭션·색인 실패 때만 생기는 일시 상태라 그대로 둔다.
+
+## 보안·성능 점검 (2026-11-03)
+
+[SECURITY_REVIEW.md](SECURITY_REVIEW.md) — CORS·의존성·업로드 상한·FTS 바인딩·오류 응답·GET 읽기 전용·revision 경쟁(P1-6·7 보강).
+[PERFORMANCE.md](PERFORMANCE.md) — 1000 실험에서 Records 7.7–8.2 s, 지식 그래프 첫 구축 28 s, 전체 관계 그래프 15 s, recall 7 s,
+색인 전체 재구축 35 s(원인 기록, 최적화 미착수 → memory·analysis 다음 스프린트 후보). 인증·rate limit은 범위 밖.
 
 ## P2 — 기능 완성
 

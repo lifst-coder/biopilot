@@ -70,8 +70,11 @@ Partner.run_critique:
 ## 3. API 계약 요약
 
 전체 계약: `backend/openapi.json` (생성 파일, CI가 최신 여부 검사). TS 타입: `frontend/src/api/schema.d.ts`.
-오류 응답: `{code, message}` — 400 `validation_failed`, 404 `not_found`, 409 `immutable_record`.
-요청 스키마 위반은 FastAPI 기본 422.
+오류 응답: `{code, message}` — 400 `validation_failed`, 404 `not_found`, 409 `immutable_record`,
+409 `revision_conflict`(ELN 동시 수정이 재시도 후에도 충돌), 409 `conflict`(그 밖의 제약 위반 안전망), 413 `payload_too_large`, 500 `internal_error`(내부 정보 없음).
+요청 스키마 위반은 FastAPI 기본 422(`detail[].input`은 200자로 잘라 돌려준다).
+요청 본문 상한·JSON 깊이·CORS는 `BIOPILOT_MAX_REQUEST_BYTES`, `BIOPILOT_MAX_JSON_BYTES`, `BIOPILOT_MAX_JSON_DEPTH`,
+`BIOPILOT_CORS_ORIGINS`로 조정한다([SECURITY_REVIEW.md](SECURITY_REVIEW.md)).
 
 ### system
 | Method | Path | 응답 |
@@ -120,7 +123,9 @@ CSV 계약(`eln/schemas.py: DATASET_COLUMNS`):
 Memory는 eln에만 의존한다. Analysis 결과·QC 플래그·Partner 레코드는 `memory.schemas.FactProvider`
 포트로 들어오고, 구현체는 composition root `app/wiring.py`가 `create_app()`에서 등록한다
 (값·Δ·p는 Analysis가 계산한 그대로 복사). 지식 그래프와 검색 인덱스는 `core_audit_events`를
-변경 피드로 삼아 워터마크 이후 이벤트만 증분 반영한다.
+변경 피드로 삼아 워터마크 이후 이벤트만 증분 반영한다. 검색 인덱스는 **쓰기 경로**(감사 이벤트를 남긴 트랜잭션의
+커밋 직전, 같은 트랜잭션)·앱 시작 시·`POST /api/memory/search-index/sync`에서만 갱신되고, `GET` 검색·회상은 DDL·쓰기를 하지 않는다
+(아직 색인되지 않은 이벤트는 읽기 시 스캔으로 보충).
 
 ### analysis
 | Method | Path | 응답 |
