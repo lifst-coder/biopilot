@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { useState } from "react";
 import { useDecideProposal, useProposalExperimentDraft } from "@/api/queries";
 import type { DecisionCreate, ProposalOut } from "@/api/types";
@@ -48,7 +49,12 @@ export function ProposalCard({ proposal, codeOf }: { proposal: ProposalOut; code
   };
 
   return (
-    <article className="flex flex-col gap-2 rounded-md border border-border p-3 text-xs">
+    <article
+      className={clsx(
+        "flex flex-col gap-2 rounded-md border p-3 text-xs",
+        proposal.status === "pending" ? "border-border bg-surface" : "border-border bg-subtle/60",
+      )}
+    >
       <header className="flex flex-wrap items-center gap-2">
         <Badge tone={STATUS_TONE[proposal.status]}>{STATUS_LABEL[proposal.status]}</Badge>
         {proposal.origin !== "user" && <EngineBadge engine={proposal.origin === "ai:claude" ? "claude" : "rules"} />}
@@ -62,26 +68,35 @@ export function ProposalCard({ proposal, codeOf }: { proposal: ProposalOut; code
       {proposal.supersedes_proposal_ids.length > 0 && (
         <p className="text-ai">기각 사유 반영: {proposal.supersedes_proposal_ids.map((id) => `P${id}`).join(", ")} 대체</p>
       )}
-      {proposal.design && <DesignDetails design={proposal.design} codeOf={codeOf} />}
-      {proposal.changes.length > 0 && (
-        <ul className="rounded-md bg-subtle p-2 font-mono text-[11px]">
-          {proposal.changes.map((c) => (
-            <li key={c.key}>
-              {c.key} → {formatConditionValue(c.value)}
-            </li>
-          ))}
-        </ul>
-      )}
-      {proposal.priority_factors.length > 0 && (
-        <ul className="flex flex-wrap gap-1">
-          {proposal.priority_factors.map((f) => (
-            <li key={f.name}>
-              <Badge>
-                {f.name} +{f.points}
-              </Badge>
-            </li>
-          ))}
-        </ul>
+      {(proposal.design || proposal.changes.length > 0 || proposal.priority_factors.length > 0) && (
+        <details className="rounded-md border border-border">
+          <summary className="cursor-pointer select-none px-2 py-1.5 text-ink-muted hover:bg-subtle/60">
+            설계 자세히 — 변수 · 대조군 · 반복 수 · 판별력 · 우선순위 근거
+          </summary>
+          <div className="space-y-2 border-t border-border p-2">
+            {proposal.design && <DesignDetails design={proposal.design} codeOf={codeOf} />}
+            {proposal.changes.length > 0 && (
+              <ul className="rounded-md bg-subtle p-2 font-mono text-[11px]">
+                {proposal.changes.map((c) => (
+                  <li key={c.key}>
+                    {c.key} → {formatConditionValue(c.value)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {proposal.priority_factors.length > 0 && (
+              <ul className="flex flex-wrap gap-1">
+                {proposal.priority_factors.map((f) => (
+                  <li key={f.name}>
+                    <Badge>
+                      {f.name} +{f.points}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </details>
       )}
       {proposal.status !== "rejected" && (
         <button type="button" className="bp-btn-ghost self-start" onClick={() => setShowDraft((v) => !v)}>
