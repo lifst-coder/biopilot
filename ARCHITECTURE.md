@@ -131,7 +131,18 @@ weighting_comparison) · `recovery`(groups, rows) · `is_response`(injections, f
 | GET | `/api/partner/proposals?project_id&experiment_id&status` | `ProposalOut[]` |
 | GET | `/api/partner/proposals/{proposal_id}` | `ProposalOut` (+ decision) |
 | POST | `/api/partner/proposals/{proposal_id}/decision` | `ProposalOut` (`DecisionCreate{action, rationale, modifications}`; 제안당 1회) |
-| POST | `/api/partner/ask` | `AskResponse` (answer, engine, evidence[], topics) |
+| POST | `/api/partner/ask` | `AskResponse` (answer, engine, evidence[], topics, intent, statements[사실/판단/추정], sources, critique_id, exchange_id) |
+| POST | `/api/partner/ask/stream` | SSE `start → delta* → replace? → final(AskResponse)` |
+| GET | `/api/partner/projects/{project_id}/exchanges?experiment_id` | `ExchangeHistory` (저장된 Q&A) |
+| GET/POST | `/api/partner/projects/{project_id}/critiques?scope` | `CritiqueOut[]` / `CritiqueOut` (프로젝트 수준 비판) |
+| GET | `/api/partner/projects/{project_id}/decisions?experiment_id` | `DecisionHistory` (결정 + 반영된 비판 id) |
+| POST | `/api/partner/hypotheses/{hypothesis_id}/status` | `HypothesisOut` (proposed→open→supported/refuted) |
+| GET | `/api/partner/proposals/{proposal_id}/experiment-draft` | `ExperimentDraftOut` (저장하지 않는 ExperimentCreate 초안) |
+
+Partner 출력 구조: `CritiqueOut.assessments[]`(Research Critic: 지지/반대 근거, 누락 대조군, 대안 설명,
+확정 불가 이유, verdict) · `ProposalOut.design`(변수·대조군·반복 수·측정·예상 판별력·근거 실험) ·
+`priority`/`priority_factors` · `decision_feedback[]`(이전 결정이 어떻게 반영됐는지).
+결정 사유는 다음 비판의 근거(`partner.Decision` evidence)가 되고, 결정된 제안과 같은 변경(signature)은 다시 제안하지 않는다.
 
 ## 4. 프론트엔드
 

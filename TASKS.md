@@ -96,33 +96,43 @@ API 변경 시 `openapi.json`/`schema.d.ts` 재생성, 새 쓰기 경로는 Audi
 
 ## Partner (`backend/app/partner/**`, `frontend/src/features/{research-ai,partner-panel}/**`)
 
-- [ ] **PAR-1 가설 상태 전이 API**
+- [x] **PAR-1 가설 상태 전이 API**
   `POST /api/partner/hypotheses/{id}/status {status, rationale, evidence_result_ids}` (proposed→open→supported/refuted).
   완료 기준: 허용되지 않는 전이 400, 감사 이벤트에 전/후 상태.
-- [ ] **PAR-2 수락된 제안 → 실험 초안**
+- [x] **PAR-2 수락된 제안 → 실험 초안**
   `GET /api/partner/proposals/{id}/experiment-draft` — 기준 실험 조건 + 변경 적용한 `ExperimentCreate` 초안 반환(생성은 ELN 화면에서).
   완료 기준: modify 결정이면 modifications 우선 적용, 초안은 저장하지 않음.
-- [ ] **PAR-3 Claude 모드 평가 세트**
+- [x] **PAR-3 Claude 모드 평가 세트**
   시드 7개 실험 × 기대 지적 목록으로 Claude 출력 평가 스크립트(근거 통과율, 기대 지적 재현율).
   완료 기준: `scripts/eval_partner.py`, API 키 없으면 skip, 결과 리포트 JSON.
-- [ ] **PAR-4 Q&A 기록 저장**
+- [x] **PAR-4 Q&A 기록 저장**
   `PartnerExchange{question, answer, engine, evidence}`(불변 + 감사), 패널에 대화 이력.
   완료 기준: 실험별 이력 조회 엔드포인트, 패널 표시.
-- [ ] **PAR-5 규칙 확장**
+- [x] **PAR-5 규칙 확장**
   RSD 초과, R² 미달, ME 유의인데 용매 검량선 사용, pH 민감 분석물 표 등 규칙 추가(표 기반).
   완료 기준: 규칙별 단위 테스트, 모든 출력이 `ungrounded_numbers == []`.
-- [ ] **PAR-6 근거 검증기 고도화**
+- [x] **PAR-6 근거 검증기 고도화**
   `%`/`%p` 단위 구분, 천 단위 구분자, 한국어 수사("세 번") 처리, 근거 값과 반올림 허용오차.
   완료 기준: 엣지케이스 테스트 10개 이상.
-- [ ] **PAR-7 프로젝트 수준 비판**
+- [x] **PAR-7 프로젝트 수준 비판**
   전 실험 추이 기반 비판(예: "회수율 저하가 GCB 도입 실험에만 나타남").
   완료 기준: `POST /api/partner/projects/{id}/critiques`, 동일 CritiqueDraft 스키마.
-- [ ] **PAR-8 제안 우선순위**
+- [x] **PAR-8 제안 우선순위**
   결정론적 휴리스틱(교란 해소 여부, 기준 미달 분석물 수)으로 `priority` 점수 — 숫자는 Evidence 기반.
   완료 기준: 시드 #024 제안 정렬 테스트.
-- [ ] **PAR-9 Claude 스트리밍 답변**
+- [x] **PAR-9 Claude 스트리밍 답변**
   `/ask`의 Claude 모드 SSE 스트리밍(최종 검증 후 확정, 실패 시 규칙 답변으로 교체).
   완료 기준: 규칙 모드 응답 계약 불변, 스트림 종료 이벤트에 evidence 포함.
+  (진짜 토큰 스트리밍은 core 게이트웨이 `stream_text` 필요 — CHANGES_REQUESTED 참조)
+
+> Partner 완료 메모(2026-11-03): 위 9개 외에 Research Critic 구조화 출력(`CriticAssessment`),
+> Next Experiment Designer(`ExperimentDesign`), Decision History 피드백 루프
+> (`GET /api/partner/projects/{id}/decisions`, 기각 사유 → 이후 비판·제안 반영, 같은 제안 반복 금지),
+> 대화형 패널(사실/판단/추정 표시, 출처)을 구현했다. 매핑: PAR-1 `POST /hypotheses/{id}/status`,
+> PAR-2 `GET /proposals/{id}/experiment-draft`, PAR-3 `python -m app.partner.scripts.eval_partner`,
+> PAR-4 `GET /projects/{id}/exchanges`, PAR-5 `engines/rules.py`·`knowledge.py`, PAR-6 `grounding.py`,
+> PAR-7 `POST|GET /projects/{id}/critiques`, PAR-8 `priority.py` + `?sort=priority`,
+> PAR-9 `POST /ask/stream`.
 
 ## Frontend (`frontend/src/{layout,components,lib,styles}/**`, `features/overview/**`)
 
