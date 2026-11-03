@@ -85,10 +85,10 @@
     `mobile_phase: 이동상`, `injection_volume_ul: 주입량 (µL)`, `injection_dilution: 주입 희석`
   - `calibration` CSV 선택 컬럼 `curve`(`solvent`|`matrix`)를 `DATASET_COLUMNS` 주석에 명시(현재 Analysis 동작).
   - 기존 extra 값 하위호환(대소문자·`_`/공백 별칭은 Analysis가 이미 정규화한다).
-- **남은 상충(Partner):** 설계기 `pre_post_spike`가 `calibration_type = "solvent + matrix-matched"`(두 곡선 모두)를 낸다.
-  도메인 밖 값이라 필드가 Literal이 되면 PAR-2 초안 생성이 400이 된다. 제안 값 변경은 제안 서명과 seed lab 결정
-  이력에 영향을 주므로 병합 중에는 바꾸지 않았다. ELN 필드 도입 전에 Partner가 값을 도메인 안 값 + 별도 키
-  (예: `curves_compared`)로 바꾸고 seed가 이력 서명을 갱신해야 한다(ISSUES.md).
+- ~~남은 상충(Partner)~~ **해결(2026-11-03, ISSUES P1-2):** `pre_post_spike`는 `calibration_type = matrix-matched` +
+  `curves_compared = "solvent + matrix-matched"`를 낸다. `partner.knowledge.out_of_domain_changes()`가 Claude 초안·수정
+  결정의 도메인 밖 값을 막는다. lab 결정 이력은 `pre_post_spike`를 가리키지 않아 서명 갱신이 필요 없었다.
+  ELN이 Literal 필드를 도입해도 Partner 초안은 도메인 안 값만 낸다.
 - 완료 기준: `/api/eln/condition-fields`에 6개 키 포함, `test_matrix_matched_calibration_selects_matrix_curve` 통과,
   Partner 초안이 400 없이 생성.
 
@@ -114,7 +114,7 @@
   `memory.schemas.FactProvider`에 필요한 메서드가 있으면 추가하고 `app/wiring.py`의 구현을 함께 고친다.
 - 완료 기준: 기각 사유 텍스트가 `/api/memory/projects/{id}/search` 결과에 나타나고 출처가 `partner.Decision:<id>`.
 
-## [OPEN] memory + partner — 제안 → 후속 실험(`tests_proposal`) 매칭 계약
+## [DONE] memory + partner — 제안 → 후속 실험(`tests_proposal`) 매칭 계약
 - 요청자: integration(REVIEW §7-3), seed(정답 데이터 공지) · 날짜: 2026-11-03
 - 필요 이유: `memory/conditions.py proposal_tests`는 제안 `changes`의 모든 키가 자식 실험 조건 블록에 같은 값으로
   있어야 연결한다. Partner 설계형 제안(`design: factorial 2x2`, `factor_<key>: a | b`, `"solvent + matrix-matched"`)은
@@ -123,6 +123,9 @@
 - 정답 데이터(seed): `load_seed_spec("lab").history.decisions[*].followed_by` — 수락/수정 결정 7건의 후속 실험
   (#007 #017 #025 #026 #028 #OA07 #OA11). 결정은 `decision.proposal.template_id/signature`로 제안을 지정한다.
 - 완료 기준: lab 시드에서 7개 `tests_proposal` 엣지 확인.
+- **완료(2026-11-03, ISSUES P1-10):** `ProposalOut.implementing_changes`(partner) → `ProposalFact.changes/status/decided_on`
+  (wiring) → `memory.conditions.proposal_tests`(결정일 이후, 부모 대비 실제 변경, 계보 무관, 기각 제외).
+  `tests/test_accumulation_lab.py::test_tests_proposal_edges_are_the_seven_follow_ups`.
 
 ## [OPEN] memory — 보충 기록(addenda)을 검색·정리본 입력에 포함 검토
 - 요청자: eln · 날짜: 2026-11-03
@@ -131,13 +134,16 @@
 
 ### Analysis
 
-## [OPEN] analysis (+ eln) — 숫자 칸 결측(NaN) 처리
+## [DONE] analysis (+ eln) — 숫자 칸 결측(NaN) 처리
 - 요청자: seed · 날짜: 2026-11-03
 - 필요 이유: ELN `_validate_csv`는 빈 숫자 칸을 통과시키고 `calibrate`/`fit_line`이 NaN을 받아 slope=NaN 결과를
   **저장**한다(재현: 검량선 CSV 한 행의 analyte_area를 비우고 run).
 - 제안: Analysis가 NaN 행을 제외하고 `excluded_rows`를 기록(+ 플래그 `missing_values`, `METHOD_VERSIONS` 올림),
   또는 ELN이 빈 숫자 칸을 400으로 거부 — 둘 중 하나는 필요.
 - 완료 기준: 빈 칸 CSV로 NaN이 저장되지 않는 테스트.
+- **완료(2026-11-03, ISSUES P1-3):** 둘 다 했다. ELN은 빈 칸(`blank_value`, 기존)과 `inf`(`not_finite`, 신규)를 거부하고,
+  Analysis는 비유한 입력을 `skipped`로 보고하며 비유한 출력은 저장하지 않는다. 출력 형태 변화가 없어 METHOD_VERSIONS 유지.
+  `test_missing_or_non_finite_numbers_are_never_stored`, `test_non_finite_output_is_not_stored`.
 
 ## [OPEN] analysis — 전·후 첨가 비교(`spike_recovery`) 결과 종류
 - 요청자: partner · 날짜: 2026-11-03
@@ -155,12 +161,14 @@
 
 ### Partner
 
-## [OPEN] partner — 결정 기록의 actor·시점
+## [DONE] partner — 결정 기록의 actor·시점
 - 요청자: seed · 날짜: 2026-11-03
 - 필요 이유: `decide()`는 감사 actor를 `"user"`로 고정하고 `created_at`은 현재 시각뿐이다. lab 시드의 과거 결정 14건이
   사용자 행위·시드 실행일로 기록된다(다른 시드 레코드는 actor=`seed`).
 - 제안: `decide(..., *, actor: Actor = "user")`, `DecisionCreate.decided_on: date | None`(필드 추가만).
 - 완료 기준: 시드 결정의 감사 actor가 `seed`, `decided_on`이 실험 날짜 이후. (시드는 `loader._replay_history`에서 인자만 넘긴다.)
+- **완료(2026-11-03, ISSUES P1-9):** 제안대로 + `partner_decisions.decided_on` 컬럼(Alembic `0002_decision_decided_on`),
+  감사 payload `decided_by`·`decided_on`. `tests/test_seed_lab.py::test_decisions_are_seed_actions_dated_on_their_experiment`.
 
 ## [OPEN] partner — Memory recall/근거 조각 활용 검토
 - 요청자: memory · 날짜: 2026-11-03
@@ -222,7 +230,7 @@
 ## [DONE] core — Alembic 마이그레이션 도입 (3건 → 1건)
 - 요청자: skeleton, eln("기존 로컬 DB 재생성 필요"), memory("마이그레이션 대상 추가") · 날짜: 2026-11-03
 - 처리(integration): `app/core/migrate.py` + `app/core/migrations/`(env.py `render_as_batch=True`, FTS5
-  `memory_search_fts*`는 autogenerate 제외 — Memory가 첫 검색 때 지연 생성), 병합된 전체 스키마를 baseline
+  `memory_search_fts*`는 autogenerate 제외 — Memory가 검색 인덱스 동기화 때 생성), 병합된 전체 스키마를 baseline
   revision `0001_baseline` 하나로. `create_app`은 `Database.prepare_schema()`(빈 DB → create_all + stamp,
   관리 DB → upgrade head, Alembic 이전 DB → `LegacyDatabaseError`). CI `alembic upgrade head && alembic check`.
   기존 `biopilot.db`·`./eln_storage` 재생성 절차는 README. 테스트 `tests/test_migrations.py`.

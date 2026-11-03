@@ -9,10 +9,10 @@
 | 검사 | 결과 |
 |---|---|
 | backend `ruff check` · `ruff format --check` · `mypy app` (strict) | 통과 |
-| backend `pytest` | 360 passed (lab 시드 테스트 포함, xfail 없음) |
+| backend `pytest` | 408 passed (lab 시드 테스트 포함, xfail 없음) — P1 스프린트 후 |
 | `export_openapi --check` · frontend `check:api` | 통과 |
-| frontend `tsc` · `vitest` · `vite build` | 통과 (vitest 56) |
-| Playwright E2E (`npm run e2e`, reference 1 + lab 2) | 로컬 통과 |
+| frontend `tsc` · `vitest` · `vite build` | 통과 (vitest 80) |
+| Playwright E2E (`npm run e2e`, reference 1 + lab 4) | 로컬 통과 |
 | `alembic upgrade head && alembic check` | 로컬 통과 |
 | GitHub Actions의 새 잡(`e2e`, Alembic 단계)과 Pages 배포 워크플로 | **이 세션에서 실행하지 못했다**(Actions 실행 불가). 로컬에서 같은 명령으로 확인했다. Pages는 저장소 Settings → Pages → Source를 "GitHub Actions"로 켜야 배포된다. |
 
@@ -21,7 +21,7 @@
 ## ★ 병합 지시와 실제가 달랐던 점
 
 1. **info 등급 플래그 범위.** 지시서는 `loq_above_lowest_level`, `uncertainty_high`, `outlier_suspected`를 info로 봤지만,
-   코드에서 info는 `loq_above_lowest_level`뿐이고 나머지 둘은 **warning**이다(`analysis/criteria.py`).
+   코드에서 info는 `loq_above_lowest_level`뿐이고 나머지 둘은 **warning**이다(`analysis/criteria.py`). → P1-4에서 warning 유지로 결정.
    Memory는 severity 기준으로 분리했다(`qc_changes` = warning/critical, `qc_info_changes` = info). 그래서 #018→#024 diff에는
    Grubbs `outlier_suspected`(warning)가 여전히 resolved로 나온다. memory `test_diff`는 "critical·IS 억제 플래그가
    해소되지 않음"으로 단정을 바꿨다. → **결정 필요(P1, Analysis):** Grubbs 의심·불확도 초과를 info로 내릴지.
@@ -29,20 +29,24 @@
 3. ~~**교차 프로젝트 회상.**~~ 해결: 헤더 프로젝트 전환(`?project=`), 교차 프로젝트 `/api/memory/search`·`/recall`,
    Critic 위 "과거에 같은 증상이 있었다"(#OA06 → 잔류농약 PSA 사용 이력). E2E `lab: #OA06 recalls …`가 UI로 확인한다.
 
-## P1 — 정확성·원칙에 닿는 것 (다음 스프린트)
+## P1 — 정확성·원칙에 닿는 것 — **전부 해결 (2026-11-03, P1 스프린트)**
 
-| # | 항목 | 담당 | 근거 |
+| # | 항목 | 해결 | 커밋 접두사 |
 |---|---|---|---|
-| 1 | ★ Memory 근거 검증기(`memory/grounding.py`)가 부호를 보지 않고(`\d+` 정규식), `"1,000"`을 1.0으로 읽는다. Partner C5와 같은 종류 — 정리본·Q&A의 Claude 모드에서 방향이 틀린 숫자가 통과할 수 있다. Partner `grounding`과 같은 부호 규칙으로 맞추고 회귀 테스트 추가 | memory | REVIEW ⑤ Memory, 병합 중 확인 |
-| 2 | Partner `pre_post_spike` 제안의 `calibration_type = "solvent + matrix-matched"`가 확정 도메인 밖 → ELN Literal 필드 도입 시 PAR-2 초안 400. 값 변경은 seed lab 이력 서명 갱신과 함께 | partner + seed → eln | CHANGES_REQUESTED ConditionBlock |
-| 3 | 빈 숫자 칸(NaN)이 slope=NaN 결과로 **저장**된다 | analysis (+eln) | CR NaN |
-| 4 | Severity 정책 결정(위 ★1) + Overview `TrendPoint.flag_count`가 info 플래그를 합산 | analysis, shell | REVIEW §7-2 |
-| 5 | Holm 보정 입력 `p_value or 1.0`이 p=0.0(언더플로)을 1.0으로 바꾼다(`analysis/service.py`) | analysis | REVIEW ⑤ |
-| 6 | ELN-3 메타데이터 동시 PATCH에서 revision `count+1` → IntegrityError 500 | eln | REVIEW ⑤ |
-| 7 | GET `/search`·`/recall`이 FTS DDL·쓰기·커밋을 한다(GET 부작용) | memory | REVIEW ⑤ |
-| 8 | 결정 피드백의 한계: 서명이 값 문자열 정확 일치라 Claude가 바꿔 말하면 통과, 수용·과학적 기각이 대조군을 영구 억제, 사유 분류가 부분 문자열 키워드("배치" → 시료 부담), #OA09 "기기 일정" 기각 후에도 재주입 대안 | partner | REVIEW §12 |
-| 9 | 결정 감사 actor가 `user`·시점이 오늘로 고정(lab 시드 결정 14건) | partner (+seed) | CR |
-| 10 | 제안→후속 실험 `tests_proposal` 매칭이 설계형 제안에서 거의 생기지 않음(`implementing_changes` 계약) | memory + partner | CR |
+| 1 | Memory 근거 검증기가 부호를 무시하고 `"1,000"`을 1.0으로 읽음 | 두 검증기를 `app/core/grounding.py` 하나로 합쳤다(Partner 구현을 core로 이동, `add_quantities`·`ungrounded_numbers` 추가). Memory 정리본·Q&A도 Partner와 같은 부호·단위·천 단위·반올림 규칙. `memory/grounding.py`·`partner/grounding.py` 삭제, 테스트 `tests/test_grounding.py` + Memory 회귀 테스트 | core, partner, memory |
+| 2 | `pre_post_spike`의 `calibration_type = "solvent + matrix-matched"` | `calibration_type = matrix-matched` + 별도 키 `curves_compared`. `knowledge.out_of_domain_changes()`가 Claude 초안(→ 규칙 대체)과 수정 결정(→ 400)을 막는다. **lab 이력 서명 변경 없음**: 14개 결정 중 `pre_post_spike`를 가리키는 것이 없다(D07·D08의 `matrix-matched`는 이미 도메인 안) | partner |
+| 3 | 빈 숫자 칸(NaN)이 slope=NaN으로 저장 | Analysis `_frame()`이 계약 숫자 컬럼의 빈 칸·NaN·inf를 행 번호와 함께 `skipped`로 보고, 저장 단계가 출력·플래그의 비유한 값을 최종 거부. ELN은 `inf`/`Infinity`를 `not_finite` 오류로 거부(빈 칸은 이미 `blank_value`) | analysis, eln |
+| 4 | Severity 정책 + `flag_count`의 info 합산 | **결정: Grubbs 의심·불확도 초과는 warning 유지**(정책은 `analysis/criteria.py` 상단). `TrendPoint.flag_count` = warning+critical, 새 필드 `info_flag_count` | analysis |
+| 5 | Holm 입력 `p_value or 1.0` | `None`일 때만 1.0, p=0.0은 그대로 | analysis |
+| 6 | ELN-3 동시 PATCH → 500 | SAVEPOINT 안에서 개정 기록, 충돌 시 409 `revision_conflict` | eln |
+| 7 | GET `/search`·`/recall`의 DDL·쓰기 | GET은 읽기 전용: 워터마크까지 FTS + 이후 감사 이벤트는 Python 스캔. 인덱스 동기화는 시작 시(`main.py` lifespan)와 `POST /api/memory/search-index/sync`에서만 | memory |
+| 8 | 결정 피드백의 한계 | (a) `proposal_intent()` — 표기만 바꾼 재제안도 반복으로 판정(저장 서명은 그대로) (b) 채택·수정·과학적 기각·보류는 **그 실험에만** 적용, 기각된 변경 조합과 자원 제약은 프로젝트 전체 (c) 사유 키워드를 구(句)로 — "배치"·"부담" 단독 제거, "기기 일정"·"재주입 슬롯" → 주입 제약, "이미 시도"·"재고" 추가 (d) #OA09 "기기 일정" 기각이 이제 `extra_injections`로 분류되어 추가 주입이 필요한 대안이 나오지 않는다 | partner |
+| 9 | 결정 감사 actor `user`·시점 오늘 고정 | `decide(..., actor=)`, `DecisionCreate/Out.decided_on`(실험일 이후·미래 불가, 컬럼 + Alembic `0002_decision_decided_on`), 감사 payload에 `decided_by`·`decided_on`. 시드는 `actor="seed"`, `decided_on` = 결정한 실험의 날짜 | partner, seed |
+| 10 | `tests_proposal` 매칭이 거의 안 생김 | Partner `ProposalOut.implementing_changes`(수정 결정은 modifications, 설계 서술 키·미정 값 제외) → Memory가 그것과 결정일로 매칭, 부모 대비 실제로 바꾼 실험만, 계보 위치 무관, 기각 제안 제외. **lab에서 정답 7개 엣지와 정확히 일치**(`test_accumulation_lab`) | partner, memory |
+
+P1 처리 중 새로 정한 것:
+- 수정(modify) 결정의 modifications는 Memory 매칭에서 **제안 변경을 대체**한다(시드 7건과 `test_follow_up_experiments_implement_the_decision`의 의미와 같음). PAR-2 실험 초안은 여전히 "제안 변경 + modifications 우선 병합"이라 두 의미가 다르다 → P2-20.
+- Memory 검색 점수: 인덱스 이후 기록(Python 스캔, 출현 횟수)과 FTS 기록(bm25)이 한 목록에 섞일 때 점수 척도가 다르다. 동기화하면 사라지는 일시 상태라 그대로 둔다.
 
 ## P2 — 기능 완성
 
@@ -64,8 +68,9 @@
 | 14 | lab 프로파일 픽스처 위에서 모듈 테스트 통과(시드 모양 하드코딩 제거) | 각 모듈 |
 | 15 | 보충 기록(addenda)을 검색·정리본 입력에 포함 | memory |
 | 16 | ~~두 프로젝트를 가로지르는 검색/회상 API~~ — 완료 (`/api/memory/search`, `/recall`) | memory |
-| 18 | Records 탭의 한계: 작업자 쌍은 조건 블록 **완전 일치**·14일 이내만(부분 일치 비교 없음), 실패 = critical 플래그만(경고 반복은 아카이브에 없음), 원인 가설 메모 규칙은 키워드 부분 문자열("점검 후"도 기기 상태로 잡힘), 결정→후속 실험 연결은 결정 시각 대신 `performed_on`과 조건값 일치로 찾는다(memory `tests_proposal`이 seed 결정 시각 때문에 비어 있음 — P1-10) | analysis, partner, memory |
+| 18 | Records 탭의 한계: 작업자 쌍은 조건 블록 **완전 일치**·14일 이내만(부분 일치 비교 없음), 실패 = critical 플래그만(경고 반복은 아카이브에 없음), 원인 가설 메모 규칙은 키워드 부분 문자열("점검 후"도 기기 상태로 잡힘), 결정→후속 실험 연결은 결정 시각 대신 `performed_on`과 조건값 일치로 찾는다(P1-10으로 memory `tests_proposal`이 lab에서 정답 7건을 내므로 Records가 그 엣지를 쓰도록 바꾸는 일이 남음) | analysis, partner, memory |
 | 19 | 과거 사례는 저장된 비판에 스냅샷되지 않는다(조회 시점 계산). Claude 모드 비판의 근거(Evidence)로 넣으려면 `partner/context.py`에 연결 필요 | partner |
+| 20 | 수정 결정의 의미 통일: PAR-2 초안은 modifications를 제안 변경 위에 병합, `implementing_changes`·시드는 대체로 본다(위 P1 참고) | partner |
 | 17 | 데모 모드: 미리 계산하지 않은 검색어·비교 쌍은 "시나리오에 없음"으로 표시된다(lab은 부모·루트·직전 실험 쌍만) | shell |
 
 ## P3 — 정리·품질
@@ -83,4 +88,4 @@
 - **경계 기록**: memory가 Frontend Shell 영역(`features/overview/**`)·`ARCHITECTURE.md`·`tests/test_contract.py`를 직접 수정했고
   커밋 하나에 여러 모듈을 섞었다(REVIEW §Memory-4). partner도 `queries.ts` 헤더·SSE 코드·`ARCHITECTURE.md`를 직접 수정했다.
   병합 세션이 사후 승인·정리했으며 재발 방지는 CLAUDE.md §3 규칙으로 충분하다고 본다.
-- **core**: 인증/사용자 식별(README "의도적으로 구현하지 않은 것").
+- **core**: 인증/사용자 식별(README "무엇을 의도적으로 만들지 않았나").
