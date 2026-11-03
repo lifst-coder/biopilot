@@ -47,15 +47,26 @@ def decode_bytes(raw: bytes) -> tuple[str, str]:
         raise DecodeError("인코딩을 판별할 수 없습니다 (UTF-8 또는 CP949만 지원)") from exc
 
 
-def parse_frame(content: str) -> pd.DataFrame:
-    """Parse CSV text; raises ``ValueError`` with a user-facing message."""
+def parse_frame(content: str, *, lenient: bool = False) -> pd.DataFrame:
+    """Parse CSV text; raises ``ValueError`` with a user-facing message.
+
+    The default (strict) mode parses exactly like the Analysis layer re-reads stored
+    content (``pd.read_csv`` with default options), so a CSV that validates here is the
+    CSV Analysis will see. Header cells are **not** trimmed: ``" level_ng_ml"`` is a
+    different column and fails the contract check instead of being stored as-is.
+
+    ``lenient=True`` trims header cells and skips spaces after delimiters. It is only for
+    vendor exports that are converted and re-serialized to the canonical long CSV (which
+    is then validated strictly) — never for content that is stored verbatim.
+    """
     try:
-        frame = pd.read_csv(io.StringIO(content), skipinitialspace=True)
+        frame = pd.read_csv(io.StringIO(content), skipinitialspace=lenient)
     except pd.errors.EmptyDataError as exc:
         raise ValueError("빈 파일입니다 (헤더 행 없음)") from exc
     except pd.errors.ParserError as exc:
         raise ValueError(f"CSV를 해석할 수 없습니다: {exc}") from exc
-    frame.columns = [str(c).strip() for c in frame.columns]
+    if lenient:
+        frame.columns = [str(c).strip() for c in frame.columns]
     return frame
 
 
@@ -161,7 +172,8 @@ def validate_frame(frame: pd.DataFrame, spec: DatasetKindSpec) -> list[CsvIssue]
     for col, allowed in spec.enum_columns.items():
         if col not in frame.columns:
             continue
-        values = frame[col].astype(str).str.strip()
+        # Exact match: Analysis compares these values verbatim (no trimming).
+        values = frame[col].astype(str)
         bad = frame.index[~values.isin(allowed) & frame[col].notna()]
         for i in bad[:MAX_ROW_ISSUES]:
             issues.append(

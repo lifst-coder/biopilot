@@ -31,6 +31,7 @@ from app.eln.models import (
 )
 from app.eln.schemas import (
     DATASET_KIND_REGISTRY,
+    MAX_FILENAME_LENGTH,
     Attachment,
     AttachmentFileOut,
     ConditionBlock,
@@ -883,6 +884,7 @@ def upload_dataset(
     actor: Actor = "user",
 ) -> DatasetOut:
     """Store an uploaded CSV file (UTF-8/CP949 auto-detected, size-limited, ELN-1)."""
+    _check_filename(filename)
     text, encoding = _decode_upload(raw)
     data = DatasetCreate(
         kind=kind,
@@ -952,7 +954,9 @@ def preview_import(
     """Convert a wide vendor file to the long contract and validate it (no write)."""
     text, encoding = _decode_upload(raw)
     try:
-        frame = csv_ingest.parse_frame(text)
+        # Lenient parse is safe here: the vendor file is kept as an attachment and the
+        # stored dataset is the re-serialized long CSV, validated strictly below.
+        frame = csv_ingest.parse_frame(text, lenient=True)
         long, analytes = converters.convert_wide(frame, layout, kind)
     except ValueError as exc:  # ConversionError is a ValueError
         raise ValidationFailedError(str(exc)) from exc
@@ -975,8 +979,18 @@ def preview_import(
 
 
 def _converted_name(filename: str) -> str:
+    """Dataset name for a converted vendor file, kept within the 255-char column."""
+    suffix = ".long.csv"
     stem = filename.rsplit(".", 1)[0] if "." in filename else filename
-    return f"{stem or 'import'}.long.csv"
+    return f"{(stem or 'import')[: MAX_FILENAME_LENGTH - len(suffix)]}{suffix}"
+
+
+def _check_filename(filename: str) -> None:
+    """Reject names longer than the ``String(255)`` columns with a 400 (not a 500)."""
+    if len(filename) > MAX_FILENAME_LENGTH:
+        raise ValidationFailedError(
+            f"파일 이름이 너무 깁니다 ({len(filename)}자 > {MAX_FILENAME_LENGTH}자)"
+        )
 
 
 def import_dataset(
@@ -991,6 +1005,7 @@ def import_dataset(
     actor: Actor = "user",
 ) -> DatasetOut:
     """Convert + store: original vendor file kept as an attachment, long CSV as dataset."""
+    _check_filename(filename)
     preview = preview_import(kind, layout, filename, raw, preview_limit=0)
     if not preview.validation.ok:
         raise ValidationFailedError(csv_ingest.error_summary(preview.validation.issues))
@@ -1034,6 +1049,7 @@ def store_attachment(
 ) -> AttachmentFileOut:
     """Store an attachment binary (content-addressed). Identical re-upload → same record."""
     exp = _get_experiment_row(session, experiment_id)
+    _check_filename(name)
     if not data:
         raise ValidationFailedError("빈 파일입니다")
     if len(data) > storage.MAX_ATTACHMENT_BYTES:

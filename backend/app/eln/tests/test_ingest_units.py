@@ -37,8 +37,20 @@ def test_parse_frame_errors() -> None:
         csv_ingest.parse_frame("")
     with pytest.raises(ValueError, match="해석할 수 없습니다"):
         csv_ingest.parse_frame('a,b\n"unterminated,1\n')
-    frame = csv_ingest.parse_frame(" a , b\n1,2\n")
-    assert list(frame.columns) == ["a", "b"]
+    # Strict (default): header cells kept verbatim — same parse Analysis applies later.
+    assert list(csv_ingest.parse_frame(" a , b\n1,2\n").columns) == [" a ", " b"]
+    # Lenient: only for vendor exports that are converted and re-serialized.
+    lenient = csv_ingest.parse_frame(" a , b\n1,2\n", lenient=True)
+    assert list(lenient.columns) == ["a", "b"]
+
+
+def test_enum_values_must_match_exactly() -> None:
+    """Analysis compares enum values verbatim, so ' matrix' must not validate."""
+    content = (
+        "injection_id,curve,level_ng_ml,analyte,analyte_area\n"
+        "M1, matrix,1,azo,100\nS1,solvent,1,azo,200\n"
+    )
+    assert ("error", "not_allowed", 1) in _issues(content, "matrix_effect")
 
 
 # ------------------------------------------------------------ CSV contract

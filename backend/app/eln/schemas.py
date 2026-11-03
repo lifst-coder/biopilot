@@ -18,6 +18,10 @@ HistoryKind = Literal["created", "metadata", "addendum", "dataset", "attachment"
 # ------------------------------------------------------- dataset kind registry
 
 
+#: Longest stored file name (``String(255)`` name columns of datasets/attachments).
+MAX_FILENAME_LENGTH = 255
+
+
 class DatasetKindSpec(BaseModel):
     """One version of a dataset kind's CSV contract (``kind@version``)."""
 
@@ -374,7 +378,7 @@ class ExperimentHistory(BaseModel):
 
 class DatasetCreate(BaseModel):
     kind: DatasetKind
-    filename: str = Field(min_length=1, max_length=255)
+    filename: str = Field(min_length=1, max_length=MAX_FILENAME_LENGTH)
     content: str = Field(min_length=1, description="Raw CSV text (UTF-8, header row first)")
     schema_version: int | None = Field(
         default=None, ge=1, description="Contract version (kind@version); latest when omitted"
