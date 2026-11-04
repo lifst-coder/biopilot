@@ -22,6 +22,7 @@ from app.analysis.schemas import (
     OperatorPair,
     OperatorRecords,
     PeriodRecords,
+    ProtocolRecords,
     RecordExperiment,
     RecordGap,
     RecordGroup,
@@ -104,6 +105,8 @@ def group(key: str, members: list[RecordExperiment], value: Any = None) -> Recor
         recovery_max_pct=max(recoveries) if recoveries else None,
         fail_count=fails,
         fail_ratio=fails / analyzed if analyzed else None,
+        pass_count=analyzed - fails,
+        pass_ratio=(analyzed - fails) / analyzed if analyzed else None,
     )
 
 
@@ -229,3 +232,23 @@ def by_period(
                 )
             )
     return PeriodRecords(project_ids=pids, gap_days=gap_days, months=months, gaps=gaps)
+
+
+def by_protocol(session: Session, project_ids: Iterable[int] | None = None) -> ProtocolRecords:
+    """Experiments grouped by the protocol template version they were recorded with.
+
+    QC pass = stored QC status other than ``fail`` (no critical flag) among analyzed
+    experiments — the same rule as ``fail_ratio`` of the other groupings.
+    """
+    pids = _project_ids(session, project_ids)
+    rows = [r for r in _rows(session, pids) if r.exp.protocol_template_id is not None]
+    groups = _grouped(rows, lambda r: (str(r.exp.protocol_template_id), r.exp.protocol_template_id))
+    groups.sort(
+        key=lambda g: (
+            g.pass_ratio is None,
+            -(g.pass_ratio or 0.0),
+            -g.analyzed_count,
+            int(g.key),
+        )
+    )
+    return ProtocolRecords(project_ids=pids, groups=groups)

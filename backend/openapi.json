@@ -7982,6 +7982,31 @@
         "title": "ProtocolLineageItem",
         "type": "object"
       },
+      "ProtocolRecords": {
+        "description": "Stored QC outcomes of the experiments recorded with each protocol template version.\n\nOne group per template id (``key`` = str(id), ``value`` = id); experiments without a\ntemplate are not included. Highest ``pass_ratio`` first, ties by ``analyzed_count``.",
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/RecordGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "project_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Project Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_ids",
+          "groups"
+        ],
+        "title": "ProtocolRecords",
+        "type": "object"
+      },
       "ProtocolRunComplete": {
         "description": "Turn a run into an experiment record. ``dry_run`` previews without saving.",
         "properties": {
@@ -9108,6 +9133,22 @@
           "key": {
             "title": "Key",
             "type": "string"
+          },
+          "pass_count": {
+            "default": 0,
+            "title": "Pass Count",
+            "type": "integer"
+          },
+          "pass_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pass Ratio"
           },
           "recovery_max_pct": {
             "anyOf": [
@@ -11500,6 +11541,91 @@
           }
         },
         "summary": "Records By Period",
+        "tags": [
+          "analysis"
+        ]
+      }
+    },
+    "/api/analysis/records/protocols": {
+      "get": {
+        "description": "Stored QC pass counts of the experiments recorded with each protocol version.",
+        "operationId": "analysis_records_by_protocol",
+        "parameters": [
+          {
+            "description": "Restrict to these projects (default: every project)",
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to these projects (default: every project)",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolRecords"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Records By Protocol",
         "tags": [
           "analysis"
         ]

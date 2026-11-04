@@ -609,6 +609,10 @@ class RecordGroup(BaseModel):
     recovery_max_pct: float | None = None
     fail_count: int
     fail_ratio: float | None = None
+    #: Analyzed members without a critical flag (``analyzed_count - fail_count``).
+    pass_count: int = 0
+    #: ``pass_count / analyzed_count``; ``None`` when nothing was analyzed.
+    pass_ratio: float | None = None
 
 
 class ConditionRecords(BaseModel):
@@ -655,6 +659,17 @@ class RecordGap(BaseModel):
     days: int
     before: list[RecordExperiment]
     after: list[RecordExperiment]
+
+
+class ProtocolRecords(BaseModel):
+    """Stored QC outcomes of the experiments recorded with each protocol template version.
+
+    One group per template id (``key`` = str(id), ``value`` = id); experiments without a
+    template are not included. Highest ``pass_ratio`` first, ties by ``analyzed_count``.
+    """
+
+    project_ids: list[int]
+    groups: list[RecordGroup]
 
 
 class PeriodRecords(BaseModel):

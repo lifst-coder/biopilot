@@ -19,6 +19,7 @@ from app.analysis.schemas import (
     OperatorRecords,
     PeriodRecords,
     ProjectCriteria,
+    ProtocolRecords,
     ReportFormat,
     ResultKind,
     RunResponse,
@@ -199,3 +200,16 @@ def records_by_period(
 ) -> PeriodRecords:
     """Outcomes by month and stretches without any experiment."""
     return records.by_period(session, project_id, gap_days)
+
+
+@router.get(
+    "/records/protocols",
+    response_model=ProtocolRecords,
+    operation_id="analysis_records_by_protocol",
+)
+def records_by_protocol(
+    project_id: list[int] | None = _PROJECTS,
+    session: Session = Depends(get_session),
+) -> ProtocolRecords:
+    """Stored QC pass counts of the experiments recorded with each protocol version."""
+    return records.by_protocol(session, project_id)

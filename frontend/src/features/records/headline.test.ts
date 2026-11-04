@@ -22,6 +22,8 @@ const group = (key: string, fail: number, analyzed: number, ratio: number | null
   recovery_n: analyzed,
   fail_count: fail,
   fail_ratio: ratio,
+  pass_count: analyzed - fail,
+  pass_ratio: null,
 });
 const pair = (delta: number, significant: boolean) => ({
   experiment_a: exp(1, "김"),

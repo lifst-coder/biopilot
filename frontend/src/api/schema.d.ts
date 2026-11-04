@@ -228,6 +228,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/analysis/records/protocols": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Records By Protocol
+         * @description Stored QC pass counts of the experiments recorded with each protocol version.
+         */
+        get: operations["analysis_records_by_protocol"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/analysis/results": {
         parameters: {
             query?: never;
@@ -4933,6 +4953,19 @@ export interface components {
             versions: components["schemas"]["ProtocolVersionNode"][];
         };
         /**
+         * ProtocolRecords
+         * @description Stored QC outcomes of the experiments recorded with each protocol template version.
+         *
+         *     One group per template id (``key`` = str(id), ``value`` = id); experiments without a
+         *     template are not included. Highest ``pass_ratio`` first, ties by ``analyzed_count``.
+         */
+        ProtocolRecords: {
+            /** Groups */
+            groups: components["schemas"]["RecordGroup"][];
+            /** Project Ids */
+            project_ids: number[];
+        };
+        /**
          * ProtocolRunComplete
          * @description Turn a run into an experiment record. ``dry_run`` previews without saving.
          */
@@ -5412,6 +5445,13 @@ export interface components {
             fail_ratio?: number | null;
             /** Key */
             key: string;
+            /**
+             * Pass Count
+             * @default 0
+             */
+            pass_count: number;
+            /** Pass Ratio */
+            pass_ratio?: number | null;
             /** Recovery Max Pct */
             recovery_max_pct?: number | null;
             /** Recovery Median Pct */
@@ -6613,6 +6653,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PeriodRecords"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analysis_records_by_protocol: {
+        parameters: {
+            query?: {
+                /** @description Restrict to these projects (default: every project) */
+                project_id?: number[] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolRecords"];
                 };
             };
             /** @description Bad Request */

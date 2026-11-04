@@ -105,3 +105,61 @@ def test_records_routes(client: TestClient) -> None:
     assert periods["gap_days"] == 7 and periods["gaps"]
     missing = client.get("/api/analysis/records/periods", params={"project_id": [999]})
     assert missing.status_code == 404
+
+
+def _copy_experiment(
+    session: Session, project_id: int, source_id: int, code: str, template_id: int
+) -> int:
+    """New experiment with the source's conditions and CSVs, recorded with a template."""
+    src = eln.get_experiment(session, source_id)
+    exp = eln.create_experiment(
+        session,
+        project_id,
+        ExperimentCreate(
+            code=code,
+            title=f"{src.code} 재수행",
+            performed_on=date(2026, 11, 1),
+            raw_note="재수행",
+            condition_block=src.condition_block,
+            protocol_template_id=template_id,
+        ),
+    )
+    for ds in eln.list_datasets(session, source_id):
+        eln.create_dataset(
+            session,
+            exp.id,
+            DatasetCreate(
+                kind=ds.kind, filename=ds.filename, content=eln.get_dataset_content(session, ds.id)
+            ),
+        )
+    service.run_experiment(session, exp.id)
+    return exp.id
+
+
+def test_protocol_groups_count_stored_qc_passes(session: Session, seeded: dict[str, int]) -> None:
+    from app.eln.schemas import ProtocolTemplateCreate
+
+    pid = seeded["project"]
+    good = eln.create_protocol_template(
+        session, pid, ProtocolTemplateCreate(name="SOP", source_experiment_id=seeded["#018"])
+    )
+    bad = eln.create_protocol_template(
+        session, pid, ProtocolTemplateCreate(name="SOP", source_experiment_id=seeded["#024"])
+    )
+    _copy_experiment(session, pid, seeded["#018"], "#101", good.id)
+    _copy_experiment(session, pid, seeded["#022"], "#102", good.id)
+    _copy_experiment(session, pid, seeded["#024"], "#103", bad.id)
+    out = records.by_protocol(session, [pid])
+    assert [g.value for g in out.groups] == [good.id, bad.id]  # best pass ratio first
+    g, b = out.groups
+    statuses = {e.code: e.qc_status for e in g.experiments + b.experiments}
+    assert statuses["#103"] == "fail" and b.pass_count == 0 and b.pass_ratio == 0.0
+    passes = sum(1 for e in g.experiments if e.qc_status != "fail")
+    assert g.pass_count == passes and g.pass_ratio == passes / g.analyzed_count
+    # Experiments recorded without a template are not grouped.
+    assert sum(x.experiment_count for x in out.groups) == 3
+
+
+def test_protocol_records_api(client: TestClient) -> None:
+    res = client.get("/api/analysis/records/protocols", params={"project_id": 1})
+    assert res.status_code == 200 and res.json()["groups"] == []
