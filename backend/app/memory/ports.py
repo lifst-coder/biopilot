@@ -83,6 +83,22 @@ def qc_flags_many(session: Session, experiment_ids: list[int]) -> dict[int, list
     return merged
 
 
+def facts_many(
+    session: Session, experiment_ids: list[int]
+) -> tuple[dict[int, list[ResultFact]], dict[int, list[QCFact] | None]]:
+    """:func:`results_many` and :func:`qc_flags_many` in one call per provider (merged alike)."""
+    results: dict[int, list[ResultFact]] = {i: [] for i in experiment_ids}
+    flags: dict[int, list[QCFact] | None] = dict.fromkeys(experiment_ids)
+    for p in _providers.values():
+        part_results, part_flags = p.facts_many(session, experiment_ids)
+        for i, facts in part_results.items():
+            results[i].extend(facts)
+        for i, part in part_flags.items():
+            if part is not None:
+                flags[i] = (flags[i] or []) + part
+    return results, flags
+
+
 def describe(
     session: Session, ref_type: str, ref_id: int, project_id: int, payload: dict[str, Any]
 ) -> EntityFacts | None:

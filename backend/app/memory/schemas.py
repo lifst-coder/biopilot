@@ -496,6 +496,15 @@ class FactProvider:
         """:meth:`results` of many experiments (every id a key). Override to batch reads."""
         return {i: self.results(session, i) for i in experiment_ids}
 
+    def facts_many(
+        self, session: Session, experiment_ids: list[int]
+    ) -> tuple[dict[int, list[ResultFact]], dict[int, list[QCFact] | None]]:
+        """:meth:`results_many` and :meth:`qc_flags_many` together (override to read once)."""
+        return (
+            self.results_many(session, experiment_ids),
+            self.qc_flags_many(session, experiment_ids),
+        )
+
     def result_deltas(self, session: Session, a_id: int, b_id: int) -> list[ResultDelta] | None:
         """Result comparison of two experiments, or ``None`` if not this provider's job."""
         return None

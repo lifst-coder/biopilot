@@ -117,8 +117,7 @@ def load(session: Session, project_ids: Iterable[int] | None = None) -> dict[int
             continue
         exps = eln.list_experiments_full(session, p.id)
         ids = [e.id for e in exps]
-        flags = ports.qc_flags_many(session, ids)  # batched: not one lookup per experiment
-        results = ports.results_many(session, ids)
+        results, flags = ports.facts_many(session, ids)  # batched: not one read per experiment
         for e in exps:
             items[e.id] = _Exp(
                 exp=e, project_name=p.name, flags=flags[e.id] or [], results=results[e.id]

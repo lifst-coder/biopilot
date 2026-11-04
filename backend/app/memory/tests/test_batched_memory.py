@@ -129,6 +129,10 @@ def test_batched_ports_equal_per_item_calls(
     ids = [1, 2, 3, 4]
     assert ports.results_many(session, ids) == {i: ports.results(session, i) for i in ids}
     assert ports.qc_flags_many(session, ids) == {i: ports.qc_flags(session, i) for i in ids}
+    assert ports.facts_many(session, ids) == (
+        ports.results_many(session, ids),
+        ports.qc_flags_many(session, ids),
+    )
     items = [(i, {"p": i}) for i in ids]
     assert ports.describe_many(session, "t", items, 1) == [
         ports.describe(session, "t", i, 1, p) for i, p in items
@@ -160,9 +164,13 @@ def test_failure_archive_and_recall_batches_equal_per_item(
     assert facts.experiment_vocabs(session, pid, exps) == {
         e.id: facts.experiment_vocab(session, e) for e in exps
     }
-    monkeypatch.setattr(ports, "results_many", lambda s, ids: {i: ports.results(s, i) for i in ids})
     monkeypatch.setattr(
-        ports, "qc_flags_many", lambda s, ids: {i: ports.qc_flags(s, i) for i in ids}
+        ports,
+        "facts_many",
+        lambda s, ids: (
+            {i: ports.results(s, i) for i in ids},
+            {i: ports.qc_flags(s, i) for i in ids},
+        ),
     )
     monkeypatch.setattr(
         memory,
