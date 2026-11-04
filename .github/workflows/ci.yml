@@ -24,7 +24,11 @@ jobs:
           cache: pip
           cache-dependency-path: backend/pyproject.toml
       - name: Install
-        run: pip install -e ".[dev]"
+        # The runner's Python ships an older setuptools; pip-audit audits the whole environment,
+        # so bring the build tooling up to date first (it is not a project dependency).
+        run: |
+          python -m pip install --upgrade pip setuptools
+          pip install -e ".[dev]"
       - name: Ruff
         run: |
           ruff check .
