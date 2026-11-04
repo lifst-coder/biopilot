@@ -148,6 +148,16 @@ def _record_project(rec: Recorder, project: dict[str, Any], codes_elsewhere: lis
     rec.get("/api/audit", {"project_id": pid, "limit": 100})
     rec.get(f"/api/eln/projects/{pid}/condition-template")
     rec.get(f"/api/eln/projects/{pid}/protocol-templates")
+    rec.get(f"/api/eln/projects/{pid}/protocol-templates", {"all_versions": "true"})
+    rec.get(f"/api/eln/projects/{pid}/protocol-runs")
+    rec.get(f"/api/eln/projects/{pid}/protocol-runs", {"status": "in_progress"})
+    rec.get("/api/analysis/records/protocols", {"project_id": pid})
+    lineage = rec.get(f"/api/eln/projects/{pid}/protocol-lineage") or {"lineages": []}
+    for item in lineage["lineages"]:
+        ids = [v["template"]["template_id"] for v in item["versions"]]
+        for i, a in enumerate(ids):
+            for b in ids[i + 1 :]:
+                rec.get("/api/eln/protocol-diff", {"a": a, "b": b})
     rec.get(f"/api/memory/projects/{pid}/timeline")
     rec.get(f"/api/memory/projects/{pid}/knowledge-graph")
     rec.get(f"/api/memory/projects/{pid}/graph")

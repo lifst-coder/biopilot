@@ -242,12 +242,68 @@ class HistorySpec(_Strict):
         return [d for d in self.decisions if d.critique == critique_id]
 
 
+class ProtocolStepSpec(_Strict):
+    """One step of a seeded protocol version (values come from the condition block)."""
+
+    title: str
+    detail: str = ""
+    condition_keys: list[str] = []
+
+
+class ProtocolSpec(_Strict):
+    """One protocol template version and the experiments recorded with it (``lab`` only).
+
+    The template is created right before its first experiment; ``source_experiment``
+    (the experiment that led to the version) must already exist then. Its condition
+    block is the original condition block of ``conditions_of``.
+    """
+
+    project: str
+    name: str
+    version_label: str
+    author: str
+    description: str
+    conditions_of: str
+    source_experiment: str | None
+    raw_note_template: str
+    steps: list[ProtocolStepSpec]
+    experiments: list[str] = Field(min_length=1)
+
+
 class SeedSpec(_Strict):
     """Everything one profile loads."""
 
     profile: SeedProfile
     projects: list[ProjectSpec]
     history: HistorySpec
+    protocols: list[ProtocolSpec] = []
+
+    @model_validator(mode="after")
+    def _protocols_resolve(self) -> SeedSpec:
+        assigned: set[tuple[str, str]] = set()
+        for p in self.protocols:
+            project = self.project(p.project)
+            order = {e.code: i for i, e in enumerate(project.experiments)}
+            block = project.experiment(p.conditions_of).condition_block
+            for step in p.steps:
+                missing = [k for k in step.condition_keys if k not in block]
+                if missing:
+                    raise ValueError(f"{p.version_label} {step.title}: no value for {missing}")
+            first = min(order[c] for c in p.experiments)
+            if p.source_experiment is not None and order[p.source_experiment] >= first:
+                raise ValueError(f"{p.version_label}: source must precede its first experiment")
+            for code in p.experiments:
+                if (p.project, code) in assigned:
+                    raise ValueError(f"{code} is assigned to two protocol versions")
+                assigned.add((p.project, code))
+        return self
+
+    def protocol_of(self, project: str, code: str) -> ProtocolSpec | None:
+        """Protocol version an experiment was recorded with, if any."""
+        for p in self.protocols:
+            if p.project == project and code in p.experiments:
+                return p
+        return None
 
     def project(self, key: str) -> ProjectSpec:
         """Project by scenario key; raises ``KeyError``."""
@@ -301,4 +357,7 @@ def load_seed_spec(profile: SeedProfile = "reference") -> SeedSpec:
             ),
         )
     acids = ProjectSpec.model_validate(_read_json("organic_acids.json"))
-    return SeedSpec(profile=profile, projects=[residue, acids], history=history)
+    protocols = [ProtocolSpec.model_validate(p) for p in _read_json("protocols.json")["protocols"]]
+    return SeedSpec(
+        profile=profile, projects=[residue, acids], history=history, protocols=protocols
+    )

@@ -1,0 +1,310 @@
+{
+  "protocols": [
+    {
+      "project": "residue",
+      "name": "잔류농약 QuEChERS SOP",
+      "version_label": "v1",
+      "author": "김연구",
+      "description": "EN 15662 시트레이트 완충 기반 첫 SOP. 시료/용매 동량, PSA 단독 정제, 무가중 검량선.",
+      "conditions_of": "#001",
+      "source_experiment": null,
+      "raw_note_template": "목적:\n절차: 잔류농약 QuEChERS SOP v1 단계를 따른다.\n관찰:\n- ",
+      "steps": [
+        {
+          "title": "시료 칭량",
+          "detail": "균질화한 시료를 50 mL 원심관에 칭량한다.",
+          "condition_keys": [
+            "matrix",
+            "sample_mass_g"
+          ]
+        },
+        {
+          "title": "용매 추출",
+          "detail": "아세토니트릴을 넣고 진탕해 추출한다.",
+          "condition_keys": [
+            "extraction_solvent",
+            "extraction_volume_ml",
+            "extraction_time_min"
+          ]
+        },
+        {
+          "title": "완충염 분배",
+          "detail": "시트레이트 완충염을 넣고 진탕한 뒤 원심분리한다. 상등액 pH를 확인한다.",
+          "condition_keys": [
+            "buffer",
+            "ph"
+          ]
+        },
+        {
+          "title": "d-SPE 정제",
+          "detail": "상등액을 d-SPE 튜브로 옮겨 진탕하고 원심분리한다.",
+          "condition_keys": [
+            "cleanup_sorbent"
+          ]
+        },
+        {
+          "title": "내부표준 첨가",
+          "detail": "최종 추출액에 내부표준을 첨가하고 바이알에 옮긴다.",
+          "condition_keys": [
+            "internal_standard"
+          ]
+        },
+        {
+          "title": "LC-MS/MS 분석",
+          "detail": "컬럼 온도를 맞춘 뒤 검량 표준과 시료를 시퀀스 순서대로 주입한다.",
+          "condition_keys": [
+            "instrument",
+            "column",
+            "column_temp_c"
+          ]
+        },
+        {
+          "title": "검량선 적합",
+          "detail": "정해진 가중 방식으로 검량선을 적합하고 회수율을 산출한다.",
+          "condition_keys": [
+            "calibration_weighting"
+          ]
+        }
+      ],
+      "experiments": [
+        "#001",
+        "#002",
+        "#003",
+        "#004"
+      ]
+    },
+    {
+      "project": "residue",
+      "name": "잔류농약 QuEChERS SOP",
+      "version_label": "v1.1",
+      "author": "김연구",
+      "description": "#004 결과로 d-SPE에 C18 추가(색소·비극성 공추출물 제거).",
+      "conditions_of": "#004",
+      "source_experiment": "#004",
+      "raw_note_template": "목적:\n절차: 잔류농약 QuEChERS SOP v1.1 단계를 따른다.\n관찰:\n- ",
+      "steps": [
+        {
+          "title": "시료 칭량",
+          "detail": "균질화한 시료를 50 mL 원심관에 칭량한다.",
+          "condition_keys": [
+            "matrix",
+            "sample_mass_g"
+          ]
+        },
+        {
+          "title": "용매 추출",
+          "detail": "아세토니트릴을 넣고 진탕해 추출한다.",
+          "condition_keys": [
+            "extraction_solvent",
+            "extraction_volume_ml",
+            "extraction_time_min"
+          ]
+        },
+        {
+          "title": "완충염 분배",
+          "detail": "시트레이트 완충염을 넣고 진탕한 뒤 원심분리한다. 상등액 pH를 확인한다.",
+          "condition_keys": [
+            "buffer",
+            "ph"
+          ]
+        },
+        {
+          "title": "d-SPE 정제",
+          "detail": "상등액을 d-SPE 튜브로 옮겨 진탕하고 원심분리한다.",
+          "condition_keys": [
+            "cleanup_sorbent"
+          ]
+        },
+        {
+          "title": "내부표준 첨가",
+          "detail": "최종 추출액에 내부표준을 첨가하고 바이알에 옮긴다.",
+          "condition_keys": [
+            "internal_standard"
+          ]
+        },
+        {
+          "title": "LC-MS/MS 분석",
+          "detail": "컬럼 온도를 맞춘 뒤 검량 표준과 시료를 시퀀스 순서대로 주입한다.",
+          "condition_keys": [
+            "instrument",
+            "column",
+            "column_temp_c"
+          ]
+        },
+        {
+          "title": "검량선 적합",
+          "detail": "정해진 가중 방식으로 검량선을 적합하고 회수율을 산출한다.",
+          "condition_keys": [
+            "calibration_weighting"
+          ]
+        }
+      ],
+      "experiments": [
+        "#005",
+        "#006",
+        "#007",
+        "#008"
+      ]
+    },
+    {
+      "project": "residue",
+      "name": "잔류농약 QuEChERS SOP",
+      "version_label": "v1.2",
+      "author": "이분석",
+      "description": "#007의 1/x 가중 검량선과 #008의 컬럼 온도 상향(carbendazim 테일링 개선)을 반영.",
+      "conditions_of": "#008",
+      "source_experiment": "#008",
+      "raw_note_template": "목적:\n절차: 잔류농약 QuEChERS SOP v1.2 단계를 따른다.\n관찰:\n- ",
+      "steps": [
+        {
+          "title": "시료 칭량",
+          "detail": "균질화한 시료를 50 mL 원심관에 칭량한다.",
+          "condition_keys": [
+            "matrix",
+            "sample_mass_g"
+          ]
+        },
+        {
+          "title": "용매 추출",
+          "detail": "아세토니트릴을 넣고 진탕해 추출한다.",
+          "condition_keys": [
+            "extraction_solvent",
+            "extraction_volume_ml",
+            "extraction_time_min"
+          ]
+        },
+        {
+          "title": "완충염 분배",
+          "detail": "시트레이트 완충염을 넣고 진탕한 뒤 원심분리한다. 상등액 pH를 확인한다.",
+          "condition_keys": [
+            "buffer",
+            "ph"
+          ]
+        },
+        {
+          "title": "d-SPE 정제",
+          "detail": "상등액을 d-SPE 튜브로 옮겨 진탕하고 원심분리한다.",
+          "condition_keys": [
+            "cleanup_sorbent"
+          ]
+        },
+        {
+          "title": "내부표준 첨가",
+          "detail": "최종 추출액에 내부표준을 첨가하고 바이알에 옮긴다.",
+          "condition_keys": [
+            "internal_standard"
+          ]
+        },
+        {
+          "title": "LC-MS/MS 분석",
+          "detail": "컬럼 온도를 맞춘 뒤 검량 표준과 시료를 시퀀스 순서대로 주입한다.",
+          "condition_keys": [
+            "instrument",
+            "column",
+            "column_temp_c"
+          ]
+        },
+        {
+          "title": "검량선 적합",
+          "detail": "정해진 가중 방식으로 검량선을 적합하고 회수율을 산출한다.",
+          "condition_keys": [
+            "calibration_weighting"
+          ]
+        }
+      ],
+      "experiments": [
+        "#009",
+        "#010",
+        "#011",
+        "#012",
+        "#013",
+        "#014",
+        "#015",
+        "#016",
+        "#017"
+      ]
+    },
+    {
+      "project": "residue",
+      "name": "잔류농약 QuEChERS SOP",
+      "version_label": "v2",
+      "author": "김연구",
+      "description": "AOAC 2007.01 아세테이트 완충으로 전환, 시료/용매량 축소(#009 결정 반영).",
+      "conditions_of": "#017",
+      "source_experiment": "#017",
+      "raw_note_template": "목적:\n절차: 잔류농약 QuEChERS SOP v2 단계를 따른다.\n관찰:\n- ",
+      "steps": [
+        {
+          "title": "시료 칭량",
+          "detail": "균질화한 시료를 50 mL 원심관에 칭량한다.",
+          "condition_keys": [
+            "matrix",
+            "sample_mass_g"
+          ]
+        },
+        {
+          "title": "용매 추출",
+          "detail": "1% 아세트산 아세토니트릴을 넣고 진탕해 추출한다.",
+          "condition_keys": [
+            "extraction_solvent",
+            "extraction_volume_ml",
+            "extraction_time_min"
+          ]
+        },
+        {
+          "title": "완충염 분배",
+          "detail": "아세테이트 완충염을 넣고 진탕한 뒤 원심분리한다. 상등액 pH를 확인한다.",
+          "condition_keys": [
+            "buffer",
+            "ph"
+          ]
+        },
+        {
+          "title": "d-SPE 정제",
+          "detail": "상등액을 d-SPE 튜브로 옮겨 진탕하고 원심분리한다.",
+          "condition_keys": [
+            "cleanup_sorbent"
+          ]
+        },
+        {
+          "title": "내부표준 첨가",
+          "detail": "최종 추출액에 내부표준을 첨가하고 바이알에 옮긴다.",
+          "condition_keys": [
+            "internal_standard"
+          ]
+        },
+        {
+          "title": "LC-MS/MS 분석",
+          "detail": "컬럼 온도를 맞춘 뒤 검량 표준과 시료를 시퀀스 순서대로 주입한다.",
+          "condition_keys": [
+            "instrument",
+            "column",
+            "column_temp_c"
+          ]
+        },
+        {
+          "title": "검량선 적합",
+          "detail": "정해진 가중 방식으로 검량선을 적합하고 회수율을 산출한다.",
+          "condition_keys": [
+            "calibration_weighting"
+          ]
+        }
+      ],
+      "experiments": [
+        "#018",
+        "#019",
+        "#020",
+        "#021",
+        "#022",
+        "#023",
+        "#024",
+        "#025",
+        "#026",
+        "#027",
+        "#028",
+        "#029",
+        "#030"
+      ]
+    }
+  ]
+}

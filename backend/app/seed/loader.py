@@ -32,6 +32,8 @@ from app.eln.schemas import (
     ConditionBlock,
     DatasetCreate,
     ExperimentCreate,
+    ProtocolStep,
+    ProtocolTemplateCreate,
 )
 from app.memory import service as memory
 from app.partner import service as partner
@@ -79,6 +81,8 @@ class SeedResult:
     critique_ids: dict[str, int] = field(default_factory=dict)
     #: decision spec id (``D01`` …) → proposal id
     decided_proposal_ids: dict[str, int] = field(default_factory=dict)
+    #: ``(project_key, protocol name, version label)`` → protocol template id
+    protocol_template_ids: dict[tuple[str, str, str], int] = field(default_factory=dict)
 
     @property
     def primary_project_id(self) -> int:
@@ -98,13 +102,47 @@ def resolve_profile(profile: str | None = None) -> SeedProfile:
     return value
 
 
-def _load_project(session: Session, spec: ProjectSpec, result: SeedResult) -> None:
+def _protocol_template_id(
+    session: Session, seed_spec: SeedSpec, spec: ProjectSpec, code: str, result: SeedResult
+) -> int | None:
+    """Template id of the version ``code`` was recorded with (created on first use)."""
+    proto = seed_spec.protocol_of(spec.key, code)
+    if proto is None:
+        return None
+    key = (spec.key, proto.name, proto.version_label)
+    if key not in result.protocol_template_ids:
+        source = proto.source_experiment
+        tpl = eln.create_protocol_template(
+            session,
+            result.project_ids[spec.key],
+            ProtocolTemplateCreate(
+                name=proto.name,
+                version_label=proto.version_label,
+                description=proto.description,
+                author=proto.author,
+                raw_note_template=proto.raw_note_template,
+                condition_block=ConditionBlock.model_validate(
+                    spec.experiment(proto.conditions_of).condition_block
+                ),
+                source_experiment_id=result.experiment_ids[(spec.key, source)] if source else None,
+                steps=[ProtocolStep.model_validate(s.model_dump()) for s in proto.steps],
+            ),
+            actor="seed",
+        )
+        result.protocol_template_ids[key] = tpl.id
+    return result.protocol_template_ids[key]
+
+
+def _load_project(
+    session: Session, spec: ProjectSpec, result: SeedResult, seed_spec: SeedSpec
+) -> None:
     project = eln.create_project(session, spec.project, actor="seed")
     result.project_ids[spec.key] = project.id
     for item in spec.experiments:
         parent_id = (
             result.experiment_ids[(spec.key, item.parent_code)] if item.parent_code else None
         )
+        template_id = _protocol_template_id(session, seed_spec, spec, item.code, result)
         exp = eln.create_experiment(
             session,
             project.id,
@@ -117,6 +155,7 @@ def _load_project(session: Session, spec: ProjectSpec, result: SeedResult) -> No
                 raw_note=item.raw_note,
                 condition_block=ConditionBlock.model_validate(item.condition_block),
                 attachments=[Attachment.model_validate(a) for a in item.attachments],
+                protocol_template_id=template_id,
             ),
             actor="seed",
         )
@@ -200,7 +239,7 @@ def seed_profile(session: Session, profile: SeedProfile = "reference") -> SeedRe
     spec = load_seed_spec(profile)
     result = SeedResult(profile=profile)
     for project in spec.projects:
-        _load_project(session, project, result)
+        _load_project(session, project, result, spec)
     rules = RulesOnlyGateway()
     for exp_id in result.experiment_ids.values():
         analysis.run_experiment(session, exp_id, actor="seed")
