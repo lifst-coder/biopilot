@@ -955,6 +955,7 @@ def _result_views_many(
                 AnalysisResult.id,
                 AnalysisResult.experiment_id,
                 AnalysisResult.kind,
+                AnalysisResult.method_version,
                 AnalysisResult.parameters,
                 type_coerce(AnalysisResult.flags, Text),
                 type_coerce(AnalysisResult.output, Text),
@@ -962,10 +963,11 @@ def _result_views_many(
             .where(AnalysisResult.id.in_(_latest_ids(unique[start : start + _IN_CHUNK])))
             .order_by(AnalysisResult.experiment_id, AnalysisResult.kind)
         )
-        for rid, exp_id, kind, parameters, flags, output in rows:
+        for rid, exp_id, kind, method_version, parameters, flags, output in rows:
             out[exp_id][kind] = ResultView(
                 id=rid,
                 kind=kind,
+                method_version=method_version,
                 parameters=parameters,
                 flags=_FLAGS.validate_json(flags),
                 output=OUTPUT_VIEW.validate_json(output),
@@ -983,6 +985,28 @@ def get_metrics_many(session: Session, experiment_ids: list[int]) -> dict[int, E
     """:func:`get_metrics` of many existing experiments, read in batches (no per-id query)."""
     views = _result_views_many(session, experiment_ids)
     return {i: _metrics(i, views[i]) for i in experiment_ids}
+
+
+def get_metrics_and_heads_many(
+    session: Session, experiment_ids: list[int]
+) -> tuple[dict[int, ExperimentMetrics], dict[int, dict[ResultKind, ResultHead]]]:
+    """:func:`get_metrics_many` and :func:`latest_result_refs_many` from one read of the rows."""
+    views = _result_views_many(session, experiment_ids)
+    metrics = {i: _metrics(i, views[i]) for i in experiment_ids}
+    heads = {
+        i: {
+            kind: ResultHead(
+                id=v.id,
+                experiment_id=i,
+                kind=kind,
+                method_version=v.method_version,
+                flags=v.flags,
+            )
+            for kind, v in views[i].items()
+        }
+        for i in experiment_ids
+    }
+    return metrics, heads
 
 
 def _metrics(experiment_id: int, latest: dict[ResultKind, ResultView]) -> ExperimentMetrics:

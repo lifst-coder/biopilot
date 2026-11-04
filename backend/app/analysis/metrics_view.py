@@ -113,6 +113,7 @@ class ResultView:
 
     id: int
     kind: ResultKind
+    method_version: str
     parameters: dict[str, Any]
     flags: list[QCFlag]
     output: OutputView
