@@ -13,7 +13,9 @@ is therefore exactly what the backend computed — the demo frontend only looks 
 
 Partner answers for the panel's suggestion questions are pre-computed on a *copy* of the
 database, so the browsable snapshot stays identical to the seed (asking stores exchanges and
-may run critiques).
+may run critiques). Two more stateless answers are recorded so the read-only demo can still
+show them: the backend-rendered analysis reports (``text``, Markdown/CSV per experiment) and
+the protocol extraction of one example paste (``protocol_example``; extraction saves nothing).
 
 Key format (shared with ``demo.ts``): ``/api/...path?<query>`` with the query parameters
 sorted by name, empty values dropped and pagination parameters (``limit``, ``offset``)
@@ -75,6 +77,19 @@ RECORD_CONTAINS_KEYS: tuple[str, ...] = (
     "internal_standard",
     "column",
 )
+#: Example paste for the Protocols tab's "예시 원문" button in the demo (extraction is
+#: stateless, so its real response is recorded once). A range ("5~10분") is included on
+#: purpose: the extractor leaves it empty instead of guessing.
+PROTOCOL_EXAMPLE = """잔류농약 QuEChERS SOP (개정 초안)
+1. 균질화한 사과 10 g을 50 mL 원심관에 칭량한다.
+2. 1% 아세트산 아세토니트릴 10 mL를 넣고 추출 5~10분 진탕한다.
+3. 아세테이트 완충염 (AOAC 2007.01) 첨가 후 1분 진탕, 원심분리 4000 rpm 5분.
+4. 상등액을 d-SPE 튜브(PSA 50 mg + GCB 7.5 mg + MgSO4 150 mg)로 옮긴다.
+5. LC-MS/MS (ESI+, MRM), 컬럼 C18 2.1×100 mm, 1.8 µm, 컬럼 온도 40 °C
+6. 내부표준 TPP는 추출 전에 첨가한다.
+"""
+#: Report formats pre-rendered per experiment (``GET .../report?format=``).
+REPORT_FORMATS: tuple[str, ...] = ("markdown", "csv")
 PAGINATION = {"limit", "offset"}
 #: Projects with at most this many experiments get every ordered compare/diff pair.
 ALL_PAIRS_MAX = 12
@@ -99,6 +114,7 @@ class Recorder:
         self.client = client
         self.responses: dict[str, Any] = {}
         self.errors: dict[str, dict[str, Any]] = {}
+        self.texts: dict[str, dict[str, str]] = {}
         self.failures: list[str] = []
 
     def get(self, path: str, query: dict[str, Any] | None = None) -> Any:
@@ -117,6 +133,19 @@ class Recorder:
         body = res.json()
         self.responses[key] = body
         return body
+
+    def get_text(self, path: str, query: dict[str, Any]) -> None:
+        """GET a non-JSON download (report) and keep body, media type and filename header."""
+        key = request_key(path, query)
+        res = self.client.get(path, params=query)
+        if res.status_code != 200:
+            self.failures.append(f"{key} → {res.status_code}")
+            return
+        self.texts[key] = {
+            "body": res.text,
+            "content_type": res.headers.get("content-type", "text/plain"),
+            "content_disposition": res.headers.get("content-disposition", ""),
+        }
 
 
 def _pairs(experiments: list[dict[str, Any]]) -> Iterable[tuple[int, int]]:
@@ -148,10 +177,15 @@ def _record_project(rec: Recorder, project: dict[str, Any], codes_elsewhere: lis
     rec.get("/api/audit", {"project_id": pid, "limit": 100})
     rec.get(f"/api/eln/projects/{pid}/condition-template")
     rec.get(f"/api/eln/projects/{pid}/protocol-templates")
-    rec.get(f"/api/eln/projects/{pid}/protocol-templates", {"all_versions": "true"})
+    rec.get(f"/api/eln/projects/{pid}/experiment-draft")
     rec.get(f"/api/eln/projects/{pid}/protocol-runs")
     rec.get(f"/api/eln/projects/{pid}/protocol-runs", {"status": "in_progress"})
     rec.get("/api/analysis/records/protocols", {"project_id": pid})
+    templates = rec.get(f"/api/eln/projects/{pid}/protocol-templates", {"all_versions": "true"})
+    for template in (templates or {}).get("items", []):
+        rec.get(
+            f"/api/eln/projects/{pid}/experiment-draft", {"protocol_template_id": template["id"]}
+        )
     lineage = rec.get(f"/api/eln/projects/{pid}/protocol-lineage") or {"lineages": []}
     for item in lineage["lineages"]:
         ids = [v["template"]["template_id"] for v in item["versions"]]
@@ -186,6 +220,8 @@ def _record_project(rec: Recorder, project: dict[str, Any], codes_elsewhere: lis
         metrics = rec.get(f"/api/analysis/experiments/{eid}/metrics") or {}
         analytes |= {a["analyte"] for a in metrics.get("per_analyte_recovery", [])}
         rec.get("/api/analysis/results", {"experiment_id": eid})
+        for fmt in REPORT_FORMATS:
+            rec.get_text(f"/api/analysis/experiments/{eid}/report", {"format": fmt})
         rec.get(f"/api/partner/experiments/{eid}/critiques")
         rec.get("/api/partner/hypotheses", {"project_id": pid, "experiment_id": eid})
         for sort in (None, "priority"):
@@ -284,6 +320,11 @@ def build(profile: SeedProfileName) -> dict[str, Any]:
             _record_cross_project(
                 rec, projects, [*SEARCH_TERMS, *(c for cs in codes.values() for c in cs)]
             )
+            extraction = client.post(
+                "/api/eln/protocol-extractions", json={"text": PROTOCOL_EXAMPLE}
+            )
+            if extraction.status_code != 200:
+                rec.failures.append(f"protocol example extraction → {extraction.status_code}")
         sandbox = root / "ask.db"
         shutil.copyfile(db_path, sandbox)
         with TestClient(create_app(settings, Database(f"sqlite:///{sandbox}"))) as client:
@@ -296,12 +337,15 @@ def build(profile: SeedProfileName) -> dict[str, Any]:
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "note": (
             "Static snapshot of the BioPilot API for the backend-less demo. Read-only; "
-            "Partner answers exist only for the panel's suggestion questions."
+            "Partner answers exist only for the panel's suggestion questions; protocol "
+            "extraction only for the example paste."
         ),
         "ask_suggestions": list(ASK_SUGGESTIONS),
         "get": rec.responses,
         "errors": rec.errors,
+        "text": rec.texts,
         "ask": asks,
+        "protocol_example": {"text": PROTOCOL_EXAMPLE, "extraction": extraction.json()},
     }
 
 
