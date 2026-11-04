@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useCreateCriteria, useProjectCriteria, useRunAnalysis } from "@/api/queries";
-import { Badge, Card, DataTable, QueryState } from "@/components";
+import { Badge, Card, DataTable, ErrorState, QueryState, isDemoNotice } from "@/components";
 import { formatDateTime } from "@/lib/format";
 import type { AcceptanceCriteria, CriteriaVersionOut } from "./types";
 
@@ -91,11 +91,14 @@ function CriteriaEditor({
             {run.data.skipped.length > 0 && ` · 건너뜀: ${run.data.skipped.join("; ")}`}
           </span>
         )}
-        {(create.error || run.error) && (
-          <span role="alert" className="text-xs text-crit">
-            {String((create.error ?? run.error)?.message)}
-          </span>
-        )}
+        {(create.error || run.error) &&
+          (isDemoNotice(create.error ?? run.error) ? (
+            <ErrorState error={create.error ?? run.error} />
+          ) : (
+            <span role="alert" className="text-xs text-crit">
+              {String((create.error ?? run.error)?.message)}
+            </span>
+          ))}
       </div>
     </div>
   );
