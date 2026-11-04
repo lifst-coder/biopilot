@@ -13,7 +13,8 @@
 - 6개월치 연구실 기록: **https://lifst-coder.github.io/biopilot/?scenario=lab** ← 먼저 보길 권한다
 - 단일 시나리오 7개 실험: https://lifst-coder.github.io/biopilot/?scenario=reference
 
-추천 클릭 순서는 [§6](#6-데모-추천-클릭-순서)에 있다.
+추천 클릭 순서는 [§6](#6-데모-추천-클릭-순서)에 있다. 시간이 3분뿐이라면 화면 위 안내 바의 ①→④를 차례로 누르면 된다
+(기록 → 기준 실험과 비교 → AI 비판 → 연구자 결정이 다음 제안에 반영된 모습).
 
 ---
 
@@ -58,6 +59,8 @@ AI를 붙이면 문제가 더 커질 수도 있다. 언어 모델은 그럴듯�
 | **Notebook** — 기준 실험 #018과 다른 조건 2개, 저장된 결과(QC 불합격, 불합격 분석물)를 먼저 보여준다. 원본 메모와 AI 정리본은 나란히, 서로 다른 레코드로 있다. | **교차 프로젝트 회상** — 유기산 프로젝트의 #OA06을 열면, 잔류농약 프로젝트에서 같은 흡착제를 쓴 기록과 **그때 내린 결론(기각 사유 포함)**이 비판 위에 먼저 나온다. |
 | ![Research AI #024: 반영된 연구자 결정](docs/images/02-critic-decision-feedback.png) | ![Records: 실패 아카이브](docs/images/04-records-failure-archive.png) |
 | **Research Critic + 결정 반영** — "현재 데이터로 확정 불가"의 이유와 누락 대조군, 그리고 과거 기각 사유를 반영해 대체한 제안. | **Records · 실패 아카이브** — 쌓인 기록에서만 보이는 것: 같은 실패의 반복(#014→#015→#016), 작업자 차이, 기록 공백. |
+| ![Protocols: 버전별 QC 통과](docs/screenshots/protocols/after/protocols-lineage-1440.png) | ![Protocols: 실험대에서 단계별 실행 (390px)](docs/screenshots/protocols/after/run-390.png) |
+| **Protocols · 버전 계보** — SOP v1 → v1.1 → v1.2 → v2 중 어느 버전으로 한 실험이 저장된 QC를 잘 통과했는지가 맨 위에. 버전을 펼치면 불합격 실험이 SOP와 어떤 조건이 달랐는지 나온다. | **Protocols · 붙여넣기와 실행** — 붙여넣은 프로토콜 원문에서 **적힌 값만** 조건으로 읽고(범위·모호한 값은 비워 둔다) 확인 후 저장. 실험대에서는 휴대폰 폭으로 단계를 체크하고, 끝내면 실제 값과 "프로토콜과 다른 점"이 그대로 실험 기록이 된다. |
 
 ## 4. 아키텍처
 
@@ -77,15 +80,17 @@ AI를 붙이면 문제가 더 커질 수도 있다. 언어 모델은 그럴듯�
 
 | 레이어 | 모듈 | 하는 일 |
 |---|---|---|
-| L1 ELN | `backend/app/eln` | 실험·조건 블록·CSV 원본(불변), 업로드 검증(인코딩·스키마 버전·비유한 값 거부), 첨부, 보충 기록, 템플릿 |
+| L1 ELN | `backend/app/eln` | 실험·조건 블록·CSV 원본(불변), 업로드 검증(인코딩·스키마 버전·비유한 값 거부), 첨부, 보충 기록, 프로토콜(붙여넣기 → 조건 추출 → 확인 저장, 단계별 실행 기록, 버전 계보) |
 | L2 Memory | `backend/app/memory` | 계보·지식 그래프, 두 실험 diff, 프로젝트를 가로지르는 검색·회상, 실패 아카이브, 제안→후속 실험 연결, AI 정리본 |
-| L3 Analysis | `backend/app/analysis` | 검량선(WLS·가중 선택), 회수율·불확도·Grubbs, IS 응답, 매트릭스 효과, LOD/LOQ, 이온비, Welch+Holm 비교, 조건값·작업자·기간별 기록 교차, 프로젝트별 QC 기준 버전 |
+| L3 Analysis | `backend/app/analysis` | 검량선(WLS·가중 선택), 회수율·불확도·Grubbs, IS 응답, 매트릭스 효과, LOD/LOQ, 이온비, Welch+Holm 비교, 조건값·작업자·기간·프로토콜 버전별 기록 교차, 프로젝트별 QC 기준 버전 |
 | L4 Partner | `backend/app/partner` | 근거(Evidence) 기반 비판, 가설 상태 전이, 우선순위가 매겨진 다음 실험 설계, 결정 피드백, 과거 같은 증상 사례, Q&A |
 | core | `backend/app/core` | 설정, DB·Alembic, 감사 로그, 불변성 가드, LLM 게이트웨이, 숫자 근거 검증기(`grounding`) |
+| wiring | `backend/app/wiring.py` | composition root: 상위 모듈(Analysis·Partner)의 사실을 Memory의 읽기 전용 포트(`FactProvider`)에 연결 — Memory가 상위 모듈을 import하지 않고도 결과·QC·결정을 검색·회상한다 |
 
 의존 방향은 `eln ← memory/analysis ← partner` 하나뿐이고, 모듈 사이는 `service` 함수와 `schemas` DTO로만
-오간다. 이 경계는 `backend/tests/test_architecture.py`가 AST 정적 분석으로 검사한다. 프론트엔드는 탭 하나가
-모듈 하나다(Overview · Notebook · Analysis · Research AI · Records + 오른쪽 Research Partner 패널).
+오간다. 이 경계는 `backend/tests/test_architecture.py`가 AST 정적 분석으로 검사한다. 프론트엔드는 6개 탭
+(Overview · Notebook · Protocols · Analysis · Research AI · Records)과 오른쪽 Research Partner 패널이고, 탭마다
+그 화면이 답하는 질문 하나를 제목 아래에 적었다(예: Records — "지금까지 쌓인 기록에서 무엇이 보이는가?").
 상세 계약은 [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### 데이터 무결성 원칙
@@ -135,6 +140,15 @@ BioPilot은 결정(채택·수정·기각)마다 **사유를 필수**로 받아 
 그리고 비판 화면에 "반영된 연구자 결정"으로 **그 사유를 그대로 인용**한다. 사유가 다음 판단에 실제로
 쓰였다는 것이 보여야 연구자가 사유를 계속 적는다.
 
+### 규모와 견고성은 측정했다
+
+- **성능** — 실험 1000개 합성 DB에서 조회를 재고, 원인(N+1 조회, O(n²) 유사도, 인덱스 누락)을 고친 뒤 같은 데이터로
+  다시 쟀다. 예: 교차 회상 6.1 → 0.26 s, 전체 관계 그래프 12.1 → 1.6 s, 검색 색인 재구축 26.5 → 1.1 s, Records 5–6 → 1.3–1.9 s.
+  측정한 16개 응답이 **수정 전후로 같음**을 비교 스크립트와 CI 테스트로 확인했다. 2초를 넘는 2건(지식 그래프 첫 구성 3.4 s, 실패 아카이브 2.0 s)과
+  그 이유도 적었다 → [PERFORMANCE.md](PERFORMANCE.md).
+- **보안·견고성** — CORS, 의존성 취약점, 업로드 상한(300 MB 본문 → 메모리 2.6 GB, 열 20,000개 CSV → 90초 무응답을 재현한 뒤 상한 추가),
+  FTS 주입, 오류 응답의 내부 정보 노출, 동시 수정 경쟁을 점검하고 항목마다 회귀 테스트를 붙였다 → [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
+
 ### 무엇을 의도적으로 만들지 않았나
 
 | 만들지 않은 것 | 이유 |
@@ -160,12 +174,18 @@ BioPilot은 결정(채택·수정·기각)마다 **사유를 필수**로 받아 
    그 프로젝트의 실험으로 이동한다.
 4. **Records** — "기록 가로지르기": 같은 조건인데 작업자에 따라 회수율이 달랐던 쌍(#029/#030), 기록 공백.
    **"실패 아카이브"**: 같은 실패의 반복(#014→#015→#016, MgSO4 lot)과 원인 가설.
-5. **Overview** 검색에 `#OA02`를 입력 — 잔류농약 #011 메모(같은 C18 컬럼 공유 → 피크 테일링)가 회상된다.
+5. **Protocols** (프로젝트를 잔류농약으로 되돌린 뒤) — SOP v1 → v1.1 → v1.2 → v2 가운데 저장된 QC 통과율이 가장 높은
+   버전이 맨 위에 나온다. v2를 펼치면 불합격한 #024·#026·#028이 모두 SOP와 정제 흡착제가 달랐던 실험이다.
+   **"+ 붙여넣어 새 프로토콜" → "예시 원문 넣기" → "조건 추출"**: 원문에 적힌 값만 읽고, 범위로 적힌 추출 시간(5~10분)은
+   추측하지 않고 비워 둔다.
+6. **Overview** 검색에 `#OA02`를 입력 — 잔류농약 #011 메모(같은 C18 컬럼 공유 → 피크 테일링)가 회상된다.
 
-**reference 시나리오** (7개 실험) — 위 1~2단계를 한 프로젝트로 압축한 버전. 상단 안내 바의 ①→④ 버튼이
-같은 순서를 안내한다.
+**reference 시나리오** (7개 실험) — 위 1~2단계를 한 프로젝트로 압축한 버전. 상단 안내 바의 ①→④ 버튼은 두 시나리오
+모두에서 1~2단계 순서를 안내한다.
 
-> 데모는 읽기 전용이다. 제안을 직접 **기각 + 사유 입력 → 비판 재실행**해 사유가 인용되는 것을 보려면
+> 데모는 읽기 전용이다(백엔드 없이 실제 API 응답을 저장한 정적 파일). 데모에서도 되는 것: 모든 조회, Research Partner의
+> 추천 질문 3개, 분석 리포트(Markdown/CSV) 내려받기, 프로토콜 예시 원문의 조건 추출. 저장·실행 버튼은 누르면
+> "데모 · 읽기 전용" 안내가 뜬다. 제안을 직접 **기각 + 사유 입력 → 비판 재실행**해 사유가 인용되는 것을 보려면
 > 로컬에서 백엔드와 함께 실행한다(§7). 이 흐름은 `frontend/e2e/`의 Playwright 테스트가 실제 백엔드로 재현한다.
 
 ## 7. 로컬 실행
@@ -239,4 +259,5 @@ cd frontend && E2E_PYTHON=../backend/.venv/bin/python npm run e2e   # Playwright
 
 - 작업 규칙: [CLAUDE.md](CLAUDE.md) · 구조와 계약: [ARCHITECTURE.md](ARCHITECTURE.md)
 - 남은 일과 알려진 한계: [ISSUES.md](ISSUES.md) · 모듈 간 요청: [CHANGES_REQUESTED.md](CHANGES_REQUESTED.md) · 백로그: [TASKS.md](TASKS.md)
+- 성능(1000 실험): [PERFORMANCE.md](PERFORMANCE.md) · 보안·견고성 점검: [SECURITY_REVIEW.md](SECURITY_REVIEW.md) · 제출 전 최종 점검: [FINAL_CHECK.md](FINAL_CHECK.md)
 - 시드 시나리오(6개월의 연구실 이야기): [backend/app/seed/SCENARIO.md](backend/app/seed/SCENARIO.md)

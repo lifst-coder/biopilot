@@ -26,16 +26,19 @@ BioPilot = **ELN + Research Memory + Scientific Analysis + AI Partner**.
 - 숫자는 L3에서만 만들어진다. L4는 L3 결과를 `Evidence{key, ref_type, ref_id, value, unit}`로 옮겨
   인용만 한다. 프론트는 숫자를 포맷만 한다.
 - 모든 쓰기는 같은 트랜잭션에서 `AuditEvent`를 남긴다.
+- Memory(L2)는 Analysis·Partner를 import하지 않는다. 결과·QC·결정 같은 상위 레이어 사실은 composition root
+  `app/wiring.py`가 Memory의 읽기 전용 포트에 연결한다(§3 memory 아래 문단).
 
 ## 2. 모듈 책임
 
 | 모듈 | 소유 테이블 | 책임 | 의존 |
 |---|---|---|---|
-| `core` | `core_audit_events` | 설정, DB, 감사 로그, 불변성 가드, LLM 게이트웨이, 도메인 에러 | — |
-| `eln` | `eln_projects`, `eln_experiments`, `eln_datasets`, `eln_protocol_templates`, `eln_protocol_runs`, `eln_protocol_run_entries` | 원본 기록 생성·조회, CSV 수집 검증(`DATASET_COLUMNS`), 조건 키 라벨, 프로토콜(붙여넣기 추출·단계·실행·버전 계보) | core |
-| `memory` | `memory_digests` | 실험 계보 그래프(NetworkX, `parent_experiment_id`), 타임라인, 두 실험 diff(조건·메모·데이터셋·관계), 검색, AI 정리본 | core, eln |
-| `analysis` | `analysis_results` | 검량선(WLS 1, 1/x, 1/x²), 역산 정확도, 회수율, IS 응답, 매트릭스 효과(기울기 비), Welch t-test 비교, QC 플래그(SANTE/11312/2021) | core, eln |
-| `partner` | `partner_critiques`, `partner_hypotheses`, `partner_proposals`, `partner_decisions` | 근거 컨텍스트 구성, 규칙/Claude 비판, 가설·제안 저장, 연구자 결정(accept/modify/reject + rationale), Q&A | core, eln, memory, analysis |
+| `core` | `core_audit_events` | 설정, DB·Alembic(`core/migrations`, 시작 시 `upgrade head`), 감사 로그, 불변성 가드, LLM 게이트웨이, 숫자 근거 검증기(`grounding.py` — Memory·Partner 공용), 요청 상한(`limits.py`), 도메인 에러 | — |
+| `eln` | `eln_projects`, `eln_experiments`, `eln_experiment_revisions`, `eln_experiment_addenda`, `eln_attachment_files`, `eln_datasets`, `eln_condition_templates`, `eln_protocol_templates`, `eln_protocol_runs`, `eln_protocol_run_entries` | 원본 기록 생성·조회, CSV 수집 검증(`DATASET_COLUMNS`)·벤더 CSV 변환, 첨부(sha256 블롭), 보충 기록, 메타데이터 개정 이력, 조건 템플릿·키 라벨, 프로토콜(붙여넣기 추출·단계·실행·버전 계보) | core |
+| `memory` | `memory_digests`, `memory_knowledge_notes`, `memory_index_state` (+ FTS5 가상 테이블 `memory_search_fts`, 파생) | 실험 계보·지식 그래프(NetworkX), 타임라인, 두 실험 diff(조건·메모·데이터셋·결과·QC·관계), 프로젝트를 가로지르는 검색·회상, 실패 아카이브, 지식 노트, AI 정리본 | core, eln (+ `FactProvider` 포트) |
+| `analysis` | `analysis_results`, `analysis_criteria_versions` | 검량선(WLS 1, 1/x, 1/x²), 역산 정확도, 회수율·불확도·Grubbs, IS 응답, 매트릭스 효과(기울기 비), LOD/LOQ, 이온비, Welch t-test + Holm 비교, QC 플래그(SANTE/11312/2021, 프로젝트별 기준 버전), 리포트, 기록 교차(조건값·작업자·기간·프로토콜 버전) | core, eln |
+| `partner` | `partner_critiques`, `partner_hypotheses`, `partner_hypothesis_transitions`, `partner_proposals`, `partner_decisions`, `partner_exchanges` | 근거 컨텍스트 구성, 규칙/Claude 비판, 가설 상태 전이, 우선순위가 매겨진 제안 설계, 연구자 결정(accept/modify/reject + rationale)과 그 피드백, 실패 원인 가설·과거 사례, Q&A | core, eln, memory, analysis |
+| `wiring.py` | — | composition root(core 소유). Analysis·Partner 서비스를 Memory의 `FactProvider` 포트에 연결한다. `app.<module>.service/schemas`만 import하고, 어떤 기능 모듈도 wiring을 import하지 않는다 | eln, memory, analysis, partner |
 
 서비스 함수는 항상 `Session`을 첫 인자로 받고 Pydantic DTO를 반환한다. 라우터는 얇다(서비스 호출만).
 
@@ -43,8 +46,8 @@ BioPilot = **ELN + Research Memory + Scientific Analysis + AI Partner**.
 
 | 엔티티 | 불변 필드 | 변경 가능 |
 |---|---|---|
-| Experiment | project_id, code, raw_note, condition_block, attachments, performed_on, parent_experiment_id, created_at | title, author (오타 수정용; 감사 대상 — TASKS ELN-3) |
-| Dataset, AnalysisResult, ExperimentDigest, Critique, Decision, AuditEvent | 전체 | 없음 |
+| Experiment | project_id, code, raw_note, condition_block, attachments, performed_on, parent_experiment_id, cloned_from_experiment_id, protocol_template_id, created_at | title, author (오타 수정용; 개정 이력 `eln_experiment_revisions` + 감사, 동시 수정은 409 `revision_conflict`) |
+| Dataset, ExperimentRevision, Addendum, AttachmentFile, ConditionTemplate, ProtocolTemplate, ProtocolRunEntry, AnalysisResult, CriteriaVersion, ExperimentDigest, KnowledgeNote, Critique, Decision, HypothesisTransition, Exchange, AuditEvent | 전체 | 없음 |
 | Hypothesis, Proposal | status 외 전체 | status (Decision/감사 이벤트로만) |
 
 삭제는 불변 엔티티 모두 금지.
@@ -94,6 +97,15 @@ Partner.run_critique:
 | GET | `/api/eln/datasets/{dataset_id}?limit` | `DatasetPreview` |
 | GET | `/api/eln/datasets/{dataset_id}/content` | `text/csv` 원문 |
 | GET | `/api/eln/condition-fields` | `ConditionField[]` (조건 키 라벨) |
+| GET | `/api/eln/dataset-kinds` · `/api/eln/import-formats` | `DatasetKindSpec[]` · `ImportFormat[]` (CSV 계약, 벤더 내보내기 변환기 2종) |
+| POST | `/api/eln/datasets/validate` · `/api/eln/datasets/validate-upload` · `/api/eln/import/preview` | `DatasetValidation` · `ImportPreview` (저장하지 않는 사전 검사) |
+| POST | `/api/eln/experiments/{experiment_id}/datasets/upload` · `…/datasets/import` | `DatasetOut` (multipart CSV · 벤더 형식 변환) |
+| POST | `/api/eln/experiments/{experiment_id}/attachment-files` | `AttachmentFileOut` (원본 파일 블롭, `download_url`) |
+| POST | `/api/eln/experiments/{experiment_id}/addenda` | `ExperimentAddendumOut` (보충 기록 — 원본을 고치지 않는 정정) |
+| PATCH | `/api/eln/experiments/{experiment_id}/metadata` | `ExperimentOut` (title·author만, 개정 번호 + 감사, 충돌 시 409) |
+| GET | `/api/eln/experiments/{experiment_id}/history` · `…/audit?limit` | `ExperimentHistory` · `AuditEventOut[]` |
+| GET | `/api/eln/projects/{project_id}/experiment-draft?source_experiment_id&protocol_template_id` | `ExperimentDraft` (복제·프로토콜 시작용 초안, 저장하지 않음) |
+| GET/POST | `/api/eln/projects/{project_id}/condition-template` · POST `…/condition-check` | `ConditionTemplateOut` · `ConditionCheck` (조건 블록 규칙 검사) |
 | POST | `/api/eln/protocol-extractions` | `ProtocolExtraction` (붙여넣은 텍스트·표 → 조건 후보 + 근거 줄, **저장하지 않음**; 규칙 기본, Claude는 근거 검증 후 사용) |
 | GET/POST | `/api/eln/projects/{project_id}/protocol-templates?all_versions` | `ProtocolTemplateList` / `ProtocolTemplateOut` (`version_label`, `steps`, 원문 `source_text`, 검토 결과 `extraction`) |
 | GET | `/api/eln/projects/{project_id}/protocol-lineage` | `ProtocolLineage` (버전별 이전 대비 조건 변경, 그 버전으로 기록된 실험과 이탈 조건, 사용 기간) |
@@ -142,7 +154,10 @@ Memory는 eln에만 의존한다. Analysis 결과·QC 플래그·Partner 레코�
 ### analysis
 | Method | Path | 응답 |
 |---|---|---|
-| GET | `/api/analysis/criteria` | `AcceptanceCriteria` |
+| GET | `/api/analysis/criteria?project_id` | `AcceptanceCriteria` (프로젝트 활성 기준, 없으면 기본) |
+| GET/POST | `/api/analysis/projects/{project_id}/criteria` | `ProjectCriteria` / `CriteriaVersionOut` (기준 버전 — 이전 결과는 그대로, 새 결과에 버전 기록) |
+| GET | `/api/analysis/methods` | `MethodDoc[]` (방법·가정·버전) |
+| GET | `/api/analysis/experiments/{experiment_id}/report?format=markdown\|csv` | `text/markdown` · `text/csv` (저장된 결과만 렌더링) |
 | POST | `/api/analysis/experiments/{experiment_id}/run` | `RunResponse` (동일 입력이면 재사용: idempotent) |
 | GET | `/api/analysis/experiments/{experiment_id}/metrics` | `ExperimentMetrics` (+ `source_result_ids`) |
 | GET | `/api/analysis/results?experiment_id&kind` | `AnalysisResultOut[]` |
@@ -155,7 +170,8 @@ Memory는 eln에만 의존한다. Analysis 결과·QC 플래그·Partner 레코�
 | GET | `/api/analysis/records/protocols?project_id*` | `ProtocolRecords` (프로토콜 버전별 묶음: 저장된 QC 통과 수 `pass_count`/`pass_ratio`, 통과율 높은 순) |
 
 결과 종류(`kind`): `calibration`(slope, intercept, weighted R², back_calc, points, fit_line,
-weighting_comparison) · `recovery`(groups, rows) · `is_response`(injections, flagged_count) · `matrix_effect`.
+weighting_comparison) · `recovery`(groups, rows) · `is_response`(injections, flagged_count) · `matrix_effect` ·
+`limits`(LOD/LOQ) · `ion_ratio`.
 
 ### partner
 | Method | Path | 응답 |
@@ -190,8 +206,9 @@ Partner 출력 구조: `CritiqueOut.assessments[]`(Research Critic: 지지/반�
 
 ```
 frontend/src/
-  api/            client.ts (openapi-fetch), schema.d.ts (생성), types.ts (별칭), queries.ts (React Query 훅)
-  layout/         AppShell (헤더 + 탭 + 우측 고정 Research Partner 패널), tabs.ts
+  api/            client.ts (openapi-fetch), schema.d.ts (생성), types.ts (별칭), queries.ts (React Query 훅),
+                  demo.ts (VITE_DEMO 빌드: 모든 /api 요청을 내보낸 시나리오 JSON에서 응답 — 아래)
+  layout/         AppShell (헤더 + 6개 탭 + 우측 Research Partner 패널), GuideBar (첫 방문 안내 ①→④), tabs.ts
   components/     Card, Badge(Severity/Engine/Original), StatTile, DataTable, QueryState,
                   ExperimentPicker, ConditionTable, EvidenceChip
   lib/            format.ts (포맷 전용), selection.ts (?exp= URL 상태), chartColors.ts
@@ -206,17 +223,35 @@ frontend/src/
     records/      Records 탭: 기록 가로지르기(조건값·작업자·기간) · 실패 아카이브 (모든 프로젝트)
 ```
 
+- 탭은 6개: Overview · Notebook · Protocols · Analysis · Research AI · Records. 탭마다 그 화면이 답하는 질문 하나를
+  제목 아래에 둔다(`layout/tabs.ts`). 1024px 미만에서는 패널이 본문 아래로 내려가고 탭 줄은 가로로 스크롤된다.
 - 활성 프로젝트는 URL `?project=<id>`(헤더 전환). 없으면 `?exp=`의 프로젝트, 그것도 없으면 첫 프로젝트.
 - 선택된 실험은 URL `?exp=<id>`로 탭/패널 간 공유된다.
 - 각 탭은 lazy chunk. 탭 간 import 금지(공통은 `components/`·`lib/`로).
 - 색은 `tokens.css` 변수만 사용(Tailwind `bg-surface`, `text-ink-muted`, `bg-crit-soft` …).
 
+### 백엔드 없는 데모 (GitHub Pages)
+
+`python -m app.scripts.export_scenario --profile reference|lab`이 시드한 임시 DB에 **실제 API**를 호출해 GET 응답을
+요청 키(경로 + 정렬된 쿼리)별로 `frontend/public/scenario[-lab].json`에 저장한다. 함께 저장하는 것: 4xx 응답(그대로 재생),
+분석 리포트 다운로드(본문·헤더), Research Partner 추천 질문 3개의 답(DB 사본에서 계산), 프로토콜 예시 원문 1건의 추출 결과.
+`VITE_DEMO=true` 빌드의 `api/demo.ts`는 이 파일에서 찾아 응답할 뿐 아무것도 계산하지 않는다. 그 밖의 쓰기는
+`403 demo_read_only`, 저장되지 않은 조합은 `404 not_in_scenario`이고, `ErrorState`가 둘을 오류가 아닌
+"데모 · 읽기 전용" 안내로 보여준다. 배포는 `.github/workflows/pages.yml`.
+
 ## 5. 시드 시나리오
 
-프로젝트 "잔류농약 QuEChERS·LC-MS/MS 회수율 최적화" — 사과 매트릭스, 5종 농약, IS = TPP.
-원본은 `backend/app/seed/data/seed.json`(메모·조건 블록) + CSV 12개. CSV는 `app/seed/generate.py`
-(고정 시드)로 재현 가능하며 `tests/test_seed.py`가 일치 여부를 검사한다. 아래 수치는 **분석 코드가
-CSV에서 계산한 값**이다(설계 목표).
+| 프로파일(`BIOPILOT_SEED_PROFILE`) | 내용 | 사용처 |
+|---|---|---|
+| `reference` (기본) | 잔류농약 #018–#024 7개, #024 규칙 비판 1건 | 테스트 픽스처(`seeded`/`client`), 기본 auto-seed, 데모 reference |
+| `lab` | 프로젝트 2개(잔류농약 30 + 발효식품 유기산 12) · 실험 42개 · 비판 9건 · 결정 14건 · 프로토콜 SOP v1→v1.1→v1.2→v2 | 데모 lab, E2E, `tests/test_seed_lab.py` |
+
+원본은 `backend/app/seed/data/residue.json`·`organic_acids.json`(메모·조건 블록·CSV 배정), `history.json`(비판·결정 이력),
+`protocols.json`(프로토콜 템플릿). CSV는 `app/seed/generate.py`(고정 시드)로 재현 가능하며 `tests/test_seed.py`가
+일치 여부를 검사한다. 6개월의 이야기는 [backend/app/seed/SCENARIO.md](backend/app/seed/SCENARIO.md).
+
+아래는 `reference` 프로파일(프로젝트 "잔류농약 QuEChERS·LC-MS/MS 회수율 최적화" — 사과 매트릭스, 5종 농약, IS = TPP)이다.
+수치는 **분석 코드가 CSV에서 계산한 값**이다(설계 목표).
 
 | 실험 | 부모 | 변경 | 데이터 | 계산 결과(목표) |
 |---|---|---|---|---|

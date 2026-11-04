@@ -48,7 +48,8 @@
 
 ### 계약 문서
 
-## [OPEN] docs — ARCHITECTURE.md 갱신 (3건 → 1건)
+## [DONE] docs — ARCHITECTURE.md 갱신 (3건 → 1건)
+- 처리: 2026-11-04 최종 점검(FINAL_CHECK.md). §2 소유 테이블·wiring, §3에 openapi.json의 82개 경로 전부, §4 탭 6개·데모 어댑터, §5 프로파일 표.
 - 요청자: analysis, eln, seed (+ memory·partner가 직접 수정한 부분의 정합성 확인) · 날짜: 2026-11-03
 - 반영할 내용:
   - **analysis**: §3 표에 `GET /api/analysis/methods`, `GET/POST /api/analysis/projects/{project_id}/criteria`,

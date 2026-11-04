@@ -1,20 +1,21 @@
 # ISSUES — 병합 후 남은 일 (우선순위)
 
-5개 브랜치(analysis → eln → memory → partner → seed-expansion)를 main에 병합한 뒤의 상태다(2026-11-03).
+5개 브랜치(analysis → eln → memory → partner → seed-expansion)를 main에 병합한 뒤의 상태다(2026-11-03, 이후 보안·성능·
+Protocols 작업 반영). 제출 전 최종 점검(2026-11-04)에서 고친 것과 남긴 것은 [FINAL_CHECK.md](FINAL_CHECK.md).
 출처: `feature/review:docs/REVIEW.md` ⑤ "병합 후로 미뤄도 되는 항목", 정리된 [CHANGES_REQUESTED.md](CHANGES_REQUESTED.md),
 병합 중 새로 발견한 것(★). 모듈 담당 변경은 CHANGES_REQUESTED에 계약이 있다.
 
 ## 검증 상태
 
-| 검사 | 결과 |
+| 검사 | 결과 (2026-11-04 최종 점검, [FINAL_CHECK.md](FINAL_CHECK.md) §3) |
 |---|---|
 | backend `ruff check` · `ruff format --check` · `mypy app` (strict) | 통과 |
-| backend `pytest` | 408 passed (lab 시드 테스트 포함, xfail 없음) — P1 스프린트 후 |
+| backend `pytest` | 510 passed, 실패·건너뜀·xfail 0 |
 | `export_openapi --check` · frontend `check:api` | 통과 |
-| frontend `tsc` · `vitest` · `vite build` | 통과 (vitest 80) |
-| Playwright E2E (`npm run e2e`, reference 1 + lab 4) | 로컬 통과 |
-| `alembic upgrade head && alembic check` | 로컬 통과 |
-| GitHub Actions의 새 잡(`e2e`, Alembic 단계)과 Pages 배포 워크플로 | **이 세션에서 실행하지 못했다**(Actions 실행 불가). 로컬에서 같은 명령으로 확인했다. Pages는 저장소 Settings → Pages → Source를 "GitHub Actions"로 켜야 배포된다. |
+| frontend `tsc` · `vitest` · `vite build` · `build:demo` | 통과 (vitest 88) |
+| Playwright E2E (`npm run e2e`, reference 1 + lab 6) | 7 passed |
+| `alembic upgrade head && alembic check` | 통과 |
+| GitHub Actions CI | 2026-11-04 전까지 main에서 **실패**하고 있었다(`pip-audit`가 러너의 setuptools 79.0.1을 잡음 → Alembic 단계·e2e 잡이 건너뛰어짐). `ci.yml` 수정으로 해결(FINAL_CHECK §2.1). Pages 배포 워크플로는 계속 성공 |
 
 **실패로 남긴 검사는 없다.** 다만 아래 ★ 항목은 병합 지시서의 전제와 실제 코드가 달라 판단해서 처리한 부분이다.
 
@@ -24,7 +25,7 @@
    코드에서 info는 `loq_above_lowest_level`뿐이고 나머지 둘은 **warning**이다(`analysis/criteria.py`). → P1-4에서 warning 유지로 결정.
    Memory는 severity 기준으로 분리했다(`qc_changes` = warning/critical, `qc_info_changes` = info). 그래서 #018→#024 diff에는
    Grubbs `outlier_suspected`(warning)가 여전히 resolved로 나온다. memory `test_diff`는 "critical·IS 억제 플래그가
-   해소되지 않음"으로 단정을 바꿨다. → **결정 필요(P1, Analysis):** Grubbs 의심·불확도 초과를 info로 내릴지.
+   해소되지 않음"으로 단정을 바꿨다. → **결정됨(P1-4):** Grubbs 의심·불확도 초과는 warning 유지.
 2. **calibration_type 미지원 플래그의 `value`.** `QCFlag.value`가 필수 숫자라 "정량하지 않은 회수율 주입 수(저장 CSV 행 수)"를 넣었다.
 3. ~~**교차 프로젝트 회상.**~~ 해결: 헤더 프로젝트 전환(`?project=`), 교차 프로젝트 `/api/memory/search`·`/recall`,
    Critic 위 "과거에 같은 증상이 있었다"(#OA06 → 잔류농약 PSA 사용 이력). E2E `lab: #OA06 recalls …`가 UI로 확인한다.
@@ -64,7 +65,7 @@ P1 처리 중 새로 정한 것:
 | 3 | Overview가 프로젝트 활성 기준(`useCriteria(projectId)`) 표시 | shell |
 | 4 | 결정 사유를 Memory 검색에 색인(wiring pull) | memory |
 | 5 | `api/types.ts` 공용 별칭(eln·memory·partner), 전역 검색 바 헤더 이동 | shell |
-| 6 | ARCHITECTURE.md 갱신 1건(analysis·eln·seed + 병합 결정 + memory/partner 직접 수정분 정합) | docs |
+| 6 | ~~ARCHITECTURE.md 갱신 1건~~ — 완료 (2026-11-04 최종 점검: §3이 openapi.json 82개 경로 전부와 일치) | docs |
 | 7 | ConditionBlock 정식 필드·라벨(`calibration_type` 3값, `spike_stage`, `is_addition_stage`, 라벨 6개) | eln |
 | 8 | 시드 데이터 추가(템플릿·첨부·지식 노트) + `test_contract` `file_id` + 첨부 다운로드를 계약에 포함 | seed, eln |
 | 9 | Analysis `spike_recovery`, IS 층화 `by_is_flag`, 요인 실험 결과 종류 | analysis |
