@@ -51,8 +51,9 @@ P1 처리 중 새로 정한 것:
 ## 보안·성능 점검 (2026-11-03)
 
 [SECURITY_REVIEW.md](SECURITY_REVIEW.md) — CORS·의존성·업로드 상한·FTS 바인딩·오류 응답·GET 읽기 전용·revision 경쟁(P1-6·7 보강).
-[PERFORMANCE.md](PERFORMANCE.md) — 1000 실험에서 Records 7.7–8.2 s, 지식 그래프 첫 구축 28 s, 전체 관계 그래프 15 s, recall 7 s,
-색인 전체 재구축 35 s(원인 기록, 최적화 미착수 → memory·analysis 다음 스프린트 후보). 인증·rate limit은 범위 밖.
+[PERFORMANCE.md](PERFORMANCE.md) — 1000 실험 성능 수정(2026-11-04): Records 1.3–1.9 s, 전체 관계 그래프 1.6 s, recall 0.26 s,
+색인 재구축 1.1 s(전후 응답 동일). 남은 것: 지식 그래프 첫 구성 3.4 s(응답 크기 — `shares_conditions` 선택 관계화 등 결정 필요),
+실패 아카이브 2.0 s(지표 요약 저장 — analysis 결정). 인증·rate limit은 범위 밖.
 
 ## P2 — 기능 완성
 

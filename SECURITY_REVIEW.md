@@ -16,7 +16,7 @@
 | 5 | 오류 응답 | 스택트레이스는 없었지만 미처리 예외는 평문 `Internal Server Error`, IntegrityError는 500, 422가 입력 전체(최대 수 MB)를 되돌려 줌 | 500 `internal_error`·409 `conflict` 봉투, 422 `input` 200자 절단, 서로게이트 안전 인코딩 | `tests/test_security.py` 3건 |
 | 6 | GET 검색의 쓰기 | `GET /search`·`/recall`이 매번 `CREATE VIRTUAL TABLE`·upsert·FTS 쓰기·커밋 | (병행 세션이 GET 읽기 전용·시작 시/POST 동기화를 먼저 반영) + 쓰기 커밋 시 같은 트랜잭션에서 증분 색인, 테이블 재생성 시 워터마크 초기화 | `app/memory/tests/test_search_readonly.py` 8건(동시 요청 2건) |
 | 7 | revision `count+1` | 동시 PATCH 8건 중 대부분 IntegrityError(수정 전 500). 병행 세션의 SAVEPOINT 수정은 pysqlite에서 **감사 없는 커밋**을 남김 | SAVEPOINT 제거, 충돌 시 롤백 → 재조회 → 재시도(최대 5회), 끝내 실패하면 409 `revision_conflict` | `test_concurrency_limits.py` 3건 |
-| 8 | 성능 | 1000 실험 규모에서 1초를 크게 넘는 구간 다수 | 기록만 — [PERFORMANCE.md](PERFORMANCE.md) | `python -m app.scripts.bench_scale` |
+| 8 | 성능 | 1000 실험 규모에서 1초를 크게 넘는 구간 다수 | 수정(2026-11-04) — 지식 그래프 첫 구성·실패 아카이브만 2초 경계 이상, [PERFORMANCE.md](PERFORMANCE.md) | `python -m app.scripts.bench_scale --db /tmp/bench1000.db` |
 | 9 | Dependabot | 없음 | `.github/dependabot.yml`(pip·npm·actions) | — |
 
 ---
@@ -205,9 +205,11 @@ eln_experiment_revisions.experiment_id, revision`(점검 시작 시 500)으로 �
 
 ## 8. 성능
 
-[PERFORMANCE.md](PERFORMANCE.md). 1000 실험에서 지식 그래프 첫 구축 28 s, 전체 관계 그래프 15 s, 색인 전체 재구축 35 s,
-Records 7.7–8.2 s, 실패 아카이브 18 s, recall 7 s. 원인(유사도 O(n²), FTS UNINDEXED 열 삭제 풀스캔, 실험별 N+1 조회)을 적었고
-최적화는 하지 않았다. 참고: GET 검색 자체는 70–90 ms로, §6 이후 색인 비용은 쓰기(29 ms)와 시작 시점으로 옮겨졌다.
+[PERFORMANCE.md](PERFORMANCE.md). 2026-11-03 판은 원인(유사도 O(n²), FTS UNINDEXED 열 삭제 풀스캔, 실험별 N+1 조회)만
+기록했고, 2026-11-04에 고쳤다(인덱스 2개, 일괄 조회, 유사도 후보 가지치기 — 응답은 전후 동일, `tests/test_perf_equivalence.py`).
+같은 호스트에서 수정 전 → 후: 지식 그래프 첫 구성 19.9 → 3.4 s, 전체 관계 그래프 12.1 → 1.6 s, 색인 재구축 26.5 → 1.1 s,
+Records 5.3–6.0 → 1.3–1.9 s, 실패 아카이브 12.8 → 2.0 s, recall 6.1 → 0.26 s. 2초를 넘는 것은 지식 그래프 첫 구성(응답 17 MB,
+간선 10만 개)과 경계의 실패 아카이브 — 이유와 남은 일은 PERFORMANCE.md §8.
 
 ## 9. Dependabot
 
@@ -220,7 +222,7 @@ Settings → Code security에서 "Dependabot security updates"를 켜야 별도�
 | 항목 | 이유 |
 |---|---|
 | 인증·권한 없음 — 누구나 기록 생성·첨부 업로드·Claude 모드 호출(비용) 가능 | 의도적 범위 밖. 공개 배포 시 인증 프록시(예: OAuth2 Proxy)와 IP 제한 필요 |
-| 요청 빈도 제한 없음 — 상한 안의 요청(5 MB CSV, Records 8 s)을 반복하면 워커를 붙잡을 수 있음 | 리버스 프록시의 rate limit 권장. 무거운 GET은 PERFORMANCE.md |
+| 요청 빈도 제한 없음 — 상한 안의 요청(5 MB CSV, 지식 그래프 첫 구성 3 s)을 반복하면 워커를 붙잡을 수 있음 | 리버스 프록시의 rate limit 권장. 무거운 GET은 PERFORMANCE.md |
 | 첨부 저장소 총량 제한 없음(파일당 20 MB, 개수 무제한) | 인증 없이는 사용자별 쿼터를 둘 수 없음 |
 | SQLite 쓰기 직렬화 — 동시 쓰기가 5초 넘게 기다리면 `database is locked` → 500 `internal_error` | 운영 규모면 PostgreSQL. 오류는 이제 내부 정보 없이 봉투로 나감 |
 | `/docs`·`/openapi.json` 공개 | 공개 저장소에 계약이 이미 있으므로 유지 |
@@ -232,5 +234,5 @@ Settings → Code security에서 "Dependabot security updates"를 켜야 별도�
 cd backend && pip-audit --skip-editable
 cd frontend && npm audit && npm audit --omit=dev --audit-level=high
 cd backend && pytest tests/test_security.py app/eln/tests/test_concurrency_limits.py app/memory/tests/test_search_readonly.py
-cd backend && python -m app.scripts.bench_scale --experiments 1000
+cd backend && python -m app.scripts.bench_scale --db /tmp/bench1000.db
 ```
