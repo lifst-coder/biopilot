@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { demoProtocolExample } from "@/api/demo";
 import { useAllProtocolTemplates, useCreateProtocolTemplate, useExtractProtocol } from "@/api/queries";
 import { Badge, Card, Disclosure, EngineBadge, ErrorState } from "@/components";
 import type { ProtocolsNav } from "./ProtocolsPage";
@@ -150,6 +151,16 @@ export function PasteView({ projectId, go }: { projectId: number; go: ProtocolsN
   const fields = result?.extraction.fields ?? [];
   const labels = useMemo(() => new Map(fields.map((f) => [f.key, f.label])), [fields]);
 
+  // Demo build: one example paste whose real extraction is part of the scenario snapshot.
+  const [example, setExample] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void demoProtocolExample().then((t) => alive && setExample(t));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const runExtract = () =>
     extract.mutate(text, {
       onSuccess: (ex) => {
@@ -253,6 +264,11 @@ export function PasteView({ projectId, go }: { projectId: number; go: ProtocolsN
           <button type="button" className="bp-btn-primary" disabled={!text.trim() || extract.isPending} onClick={runExtract}>
             {extract.isPending ? "읽는 중…" : result ? "다시 추출" : "조건 추출"}
           </button>
+          {example && !text.trim() && (
+            <button type="button" className="bp-btn-ghost" onClick={() => setText(example)}>
+              예시 원문 넣기
+            </button>
+          )}
           {result && result.text !== text && <span className="text-sm text-warn">원문이 바뀌었습니다 — 다시 추출하세요</span>}
         </div>
         {extract.error && <div className="mt-2"><ErrorState error={extract.error} /></div>}

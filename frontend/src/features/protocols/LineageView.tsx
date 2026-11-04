@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { demoProfile, isDemo, switchDemoProfile } from "@/api/demo";
 import {
   useAllProtocolTemplates,
   useProtocolDiff,
@@ -96,6 +97,25 @@ function PassBar({ group }: { group: RecordGroup | null }) {
   );
 }
 
+/** Demo only: where the version lineage can be seen when this project has none. */
+function DemoLineageHint() {
+  if (demoProfile() === "reference") {
+    return (
+      <p className="text-center text-sm text-ink-muted">
+        프로토콜 버전 계보(버전별 바뀐 조건과 QC 통과)는 lab 시나리오에 있습니다.{" "}
+        <button type="button" className="font-medium text-brand underline" onClick={() => switchDemoProfile("lab")}>
+          lab 시나리오로 전환
+        </button>
+      </p>
+    );
+  }
+  return (
+    <p className="text-center text-sm text-ink-muted">
+      헤더의 프로젝트 전환으로 다른 프로젝트를 고르면 프로토콜 버전 계보를 볼 수 있습니다.
+    </p>
+  );
+}
+
 /**
  * Lineage view: which protocol version's experiments pass QC (answer on top), then each
  * version's condition changes and experiments (collapsed), then an any-two-versions diff.
@@ -126,6 +146,7 @@ export function LineageView({ projectId, go }: { projectId: number; go: Protocol
         <EmptyState>
           저장된 프로토콜이 없습니다. 프로토콜 문서나 표를 붙여넣으면 조건을 읽어 드립니다.
         </EmptyState>
+        {isDemo && <DemoLineageHint />}
         <button type="button" className="bp-btn-primary mt-3" onClick={() => go("new")}>
           + 붙여넣어 새 프로토콜
         </button>
