@@ -85,8 +85,8 @@ Overview `#OA02` 검색 → #011 테일링 메모.
 
 ## 4. 제출 전에 태균이 직접 판단·확인할 것
 
-1. **푸시 후 CI가 초록색인지 확인.** 이 세션은 Actions를 실행할 수 없다. 푸시 직후 GitHub Actions 결과는 아래 §6에 적었다.
-   `pip-audit` 외에 그동안 건너뛰어진 Alembic·e2e 잡이 CI에서 처음으로 다시 돈다(로컬에서는 둘 다 통과).
+1. **CI는 초록색으로 돌아왔다(§6)** — 확인만 하면 된다. 이후 러너 이미지가 바뀌어 `pip-audit`이 다시 다른 도구 패키지를
+   잡으면 같은 증상이 재발할 수 있으니, 제출 직전에 Actions 탭을 한 번 더 볼 것.
 2. **라이브 데모를 직접 열어 볼 것.** Pages 배포 워크플로는 매번 성공했지만, 이 세션의 네트워크에서는
    `lifst-coder.github.io`에 접속할 수 없어 배포된 페이지 자체는 보지 못했다(로컬에서 같은 빌드로 확인).
    lab 시나리오 파일은 14.6 MB(gzip 1.8 MB)라 첫 로딩에 1~3초 걸릴 수 있다.
@@ -115,4 +115,12 @@ Overview `#OA02` 검색 → #011 테일링 메모.
 
 ## 6. 푸시 후 CI
 
-(푸시 후 갱신)
+커밋 `7a10359`(이 점검의 코드·문서 전체) 푸시 후 GitHub Actions:
+
+| 워크플로 · 잡 | 결과 |
+|---|---|
+| CI · frontend (contract · typecheck · test · build) | 성공 |
+| CI · backend (lint · types · tests · contract) — `pip-audit` 포함 | 성공 |
+| CI · backend — Alembic migrations match the models | 성공 (그동안 건너뛰어졌던 단계) |
+| CI · e2e (Playwright · reference + lab seed) | 성공 (그동안 건너뛰어졌던 잡) |
+| Demo (GitHub Pages) 빌드·배포 | 성공 — 이번 데모 수정(리포트·예시 추출·안내)이 배포본에 들어갔다 |
