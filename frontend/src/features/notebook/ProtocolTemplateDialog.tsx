@@ -33,6 +33,7 @@ export function ProtocolTemplateDialog({ exp, onClose }: { exp: ExperimentOut; o
                     raw_note_template: note,
                     source_experiment_id: exp.id,
                     author: exp.author,
+                    version_label: "",
                   },
                 },
                 { onSuccess: onClose },

@@ -16,6 +16,7 @@ PATH_PARAMS = {
     "critique_id": "1",
     "proposal_id": "1",
     "key": "extraction_time_min",
+    "run_id": "1",
 }
 QUERY_PARAMS: dict[str, dict[str, str | int]] = {
     "/api/analysis/compare": {"a": 1, "b": 7},
@@ -28,7 +29,19 @@ QUERY_PARAMS: dict[str, dict[str, str | int]] = {
     "/api/analysis/records/conditions": {"key": "cleanup_sorbent"},
     "/api/partner/hypotheses": {"project_id": 1},
     "/api/partner/proposals": {"project_id": 1},
+    "/api/eln/protocol-diff": {"a": 1, "b": 2},
 }
+
+
+def _protocol_records(client: TestClient) -> None:
+    """The reference seed has no protocols: save two versions and start a run (ids 1, 2)."""
+    for source in (1, 7):
+        res = client.post(
+            "/api/eln/projects/1/protocol-templates",
+            json={"name": "SOP", "source_experiment_id": source},
+        )
+        assert res.status_code == 201
+    assert client.post("/api/eln/protocol-templates/1/runs", json={}).status_code == 201
 
 
 def test_committed_openapi_is_up_to_date() -> None:
@@ -47,6 +60,7 @@ def test_operation_ids_unique_and_prefixed(client: TestClient) -> None:
 
 
 def test_every_get_endpoint_returns_real_data(client: TestClient) -> None:
+    _protocol_records(client)
     spec = client.get("/openapi.json").json()
     for path, item in spec["paths"].items():
         if "get" not in item:

@@ -712,6 +712,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/eln/projects/{project_id}/protocol-lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Protocol Lineage
+         * @description Protocol versions with condition changes and the experiments recorded with each.
+         */
+        get: operations["eln_protocol_lineage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/projects/{project_id}/protocol-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Protocol Runs
+         * @description Runs of a project, newest first.
+         */
+        get: operations["eln_list_protocol_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/eln/projects/{project_id}/protocol-templates": {
         parameters: {
             query?: never;
@@ -724,6 +764,129 @@ export interface paths {
         put?: never;
         /** Create Protocol Template */
         post: operations["eln_create_protocol_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/protocol-diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Protocol Diff
+         * @description Condition-level difference between two protocol template versions.
+         */
+        get: operations["eln_protocol_diff"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/protocol-extractions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract Protocol
+         * @description Condition-block candidates from pasted text or a table — nothing is stored.
+         *
+         *     The researcher confirms/edits the candidates and saves them with
+         *     ``POST /projects/{id}/protocol-templates`` (``source_text`` + ``extraction``).
+         */
+        post: operations["eln_extract_protocol"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/protocol-runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Protocol Run
+         * @description Current state of a run (folded from its append-only entries).
+         */
+        get: operations["eln_get_protocol_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/protocol-runs/{run_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Protocol Run
+         * @description Create the experiment record from the run (``dry_run`` previews it).
+         */
+        post: operations["eln_complete_protocol_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/protocol-runs/{run_id}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Protocol Run Entry
+         * @description Check/uncheck a step, record an actual value or a note (append-only).
+         */
+        post: operations["eln_add_protocol_run_entry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/eln/protocol-templates/{template_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Protocol Run
+         * @description Start following a protocol version step by step.
+         */
+        post: operations["eln_start_protocol_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2249,6 +2412,27 @@ export interface components {
             value: string | number | null;
         };
         /**
+         * ConditionValueChange
+         * @description One condition key that differs between two condition blocks (values copied).
+         */
+        ConditionValueChange: {
+            /** After */
+            after?: unknown;
+            /** Before */
+            before?: unknown;
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "added" | "removed" | "changed";
+            /** Label */
+            label: string;
+            /** Unit */
+            unit?: string | null;
+        };
+        /**
          * CriteriaCreate
          * @description Request body for a new criteria version.
          */
@@ -3325,6 +3509,134 @@ export interface components {
             project_id: number;
             /** Title */
             title: string;
+        };
+        /**
+         * ExtractedField
+         * @description Candidate value for one known condition key, with the line it was read from.
+         */
+        ExtractedField: {
+            /**
+             * Candidates
+             * @default []
+             */
+            candidates: string[];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Line */
+            line?: number | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Source Text */
+            source_text?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "recognized" | "unrecognized" | "ambiguous";
+            /** Unit */
+            unit?: string | null;
+            /** Value */
+            value?: string | number | null;
+            /**
+             * Value Type
+             * @default text
+             * @enum {string}
+             */
+            value_type: "number" | "text" | "choice";
+        };
+        /**
+         * ExtractedStep
+         * @description Candidate procedure step (numbered line or line of the procedure section).
+         */
+        ExtractedStep: {
+            /**
+             * Condition Keys
+             * @default []
+             */
+            condition_keys: string[];
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /** Line */
+            line?: number | null;
+            /** Title */
+            title: string;
+        };
+        /**
+         * ExtractionReview
+         * @description Stored provenance: engine, candidates and the researcher's confirmation.
+         */
+        ExtractionReview: {
+            /** Accepted Count */
+            accepted_count: number;
+            /** Added Count */
+            added_count: number;
+            /** Edited Count */
+            edited_count: number;
+            /**
+             * Engine
+             * @enum {string}
+             */
+            engine: "rules" | "claude";
+            /** Fallback Reason */
+            fallback_reason?: string | null;
+            /** Items */
+            items: components["schemas"]["ExtractionReviewItem"][];
+            /** Model */
+            model?: string | null;
+        };
+        /**
+         * ExtractionReviewItem
+         * @description What the researcher did with one candidate (stored with the template).
+         */
+        ExtractionReviewItem: {
+            /** Candidate */
+            candidate?: string | number | null;
+            /**
+             * Candidate Status
+             * @enum {string}
+             */
+            candidate_status: "recognized" | "unrecognized" | "ambiguous";
+            /** Confirmed */
+            confirmed?: unknown;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "accepted" | "edited" | "added" | "cleared" | "left_empty";
+            /** Source Text */
+            source_text?: string | null;
+        };
+        /**
+         * ExtractionSnapshot
+         * @description The extraction the researcher reviewed, sent back with the confirmed protocol.
+         */
+        ExtractionSnapshot: {
+            /**
+             * Engine
+             * @enum {string}
+             */
+            engine: "rules" | "claude";
+            /** Fallback Reason */
+            fallback_reason?: string | null;
+            /**
+             * Fields
+             * @default []
+             */
+            fields: components["schemas"]["ExtractedField"][];
+            /** Model */
+            model?: string | null;
         };
         /** FailureArchive */
         FailureArchive: {
@@ -4530,6 +4842,56 @@ export interface components {
             title: string;
         };
         /**
+         * ProtocolDiff
+         * @description Condition-level difference between two protocol versions (``a`` → ``b``).
+         */
+        ProtocolDiff: {
+            a: components["schemas"]["ProtocolVersionRef"];
+            b: components["schemas"]["ProtocolVersionRef"];
+            /** Changes */
+            changes: components["schemas"]["ConditionValueChange"][];
+            /** Unchanged Keys */
+            unchanged_keys: string[];
+        };
+        /**
+         * ProtocolExtraction
+         * @description Extraction candidates — **not stored**; the researcher confirms them before saving.
+         *
+         *     Both engines return this schema. ``fields`` lists every known condition key in a
+         *     fixed order; keys that were not found are ``unrecognized`` with ``value=None``.
+         */
+        ProtocolExtraction: {
+            /**
+             * Engine
+             * @enum {string}
+             */
+            engine: "rules" | "claude";
+            /** Fallback Reason */
+            fallback_reason?: string | null;
+            /** Field Count */
+            field_count: number;
+            /** Fields */
+            fields: components["schemas"]["ExtractedField"][];
+            /** Model */
+            model?: string | null;
+            /** Recognized Count */
+            recognized_count: number;
+            /** Source Sha256 */
+            source_sha256: string;
+            /** Steps */
+            steps: components["schemas"]["ExtractedStep"][];
+            /** Unmatched Lines */
+            unmatched_lines: components["schemas"]["UnmatchedLine"][];
+        };
+        /**
+         * ProtocolExtractionRequest
+         * @description Pasted free text or table (TSV, Markdown table, ``key: value`` lines).
+         */
+        ProtocolExtractionRequest: {
+            /** Text */
+            text: string;
+        };
+        /**
          * ProtocolGroup
          * @description Experiments sharing an identical condition block (one protocol variant).
          */
@@ -4553,9 +4915,170 @@ export interface components {
              */
             protocol_id: string;
         };
+        /** ProtocolLineage */
+        ProtocolLineage: {
+            /** Lineages */
+            lineages: components["schemas"]["ProtocolLineageItem"][];
+            /** Project Id */
+            project_id: number;
+        };
+        /**
+         * ProtocolLineageItem
+         * @description All versions of one protocol name, oldest first.
+         */
+        ProtocolLineageItem: {
+            /** Name */
+            name: string;
+            /** Versions */
+            versions: components["schemas"]["ProtocolVersionNode"][];
+        };
+        /**
+         * ProtocolRunComplete
+         * @description Turn a run into an experiment record. ``dry_run`` previews without saving.
+         */
+        ProtocolRunComplete: {
+            /**
+             * Author
+             * @default
+             */
+            author: string;
+            /** Code */
+            code: string;
+            /**
+             * Dry Run
+             * @default false
+             */
+            dry_run: boolean;
+            /**
+             * Observations
+             * @default
+             */
+            observations: string;
+            /** Parent Experiment Id */
+            parent_experiment_id?: number | null;
+            /**
+             * Performed On
+             * Format: date
+             */
+            performed_on: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * ProtocolRunCompletion
+         * @description The experiment the run becomes: condition block with actual values + note.
+         */
+        ProtocolRunCompletion: {
+            /** Deviations */
+            deviations: components["schemas"]["RunDeviation"][];
+            /** Dry Run */
+            dry_run: boolean;
+            experiment: components["schemas"]["ExperimentCreate"];
+            /** Experiment Id */
+            experiment_id?: number | null;
+            run: components["schemas"]["ProtocolRunOut"];
+        };
+        /** ProtocolRunCreate */
+        ProtocolRunCreate: {
+            /**
+             * Operator
+             * @default
+             */
+            operator: string;
+        };
+        /**
+         * ProtocolRunEntryCreate
+         * @description One append-only event of a run (stored immutably, audited).
+         */
+        ProtocolRunEntryCreate: {
+            /** Key */
+            key?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "check" | "uncheck" | "actual" | "note";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Step Index */
+            step_index: number;
+            /** Value */
+            value?: string | number | null;
+        };
+        /** ProtocolRunList */
+        ProtocolRunList: {
+            /** Items */
+            items: components["schemas"]["ProtocolRunOut"][];
+        };
+        /**
+         * ProtocolRunOut
+         * @description Current state of a run, folded from its append-only entries.
+         */
+        ProtocolRunOut: {
+            /** Completed At */
+            completed_at?: string | null;
+            /** Current Step Index */
+            current_step_index?: number | null;
+            /** Deviations */
+            deviations: components["schemas"]["RunDeviation"][];
+            /** Done Count */
+            done_count: number;
+            /** Entry Count */
+            entry_count: number;
+            /** Experiment Id */
+            experiment_id?: number | null;
+            /** Id */
+            id: number;
+            /** Operator */
+            operator: string;
+            /** Project Id */
+            project_id: number;
+            /**
+             * Started At
+             * Format: date-time
+             */
+            started_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "in_progress" | "completed";
+            /** Step Count */
+            step_count: number;
+            /** Steps */
+            steps: components["schemas"]["RunStep"][];
+            template: components["schemas"]["ProtocolVersionRef"];
+        };
+        /**
+         * ProtocolStep
+         * @description One step of an executable protocol.
+         *
+         *     ``condition_keys`` name condition-block keys whose planned values belong to this
+         *     step; the values themselves live in the template's ``condition_block``.
+         */
+        ProtocolStep: {
+            /**
+             * Condition Keys
+             * @default []
+             */
+            condition_keys: string[];
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /** Title */
+            title: string;
+        };
         /**
          * ProtocolTemplateCreate
          * @description Reusable protocol. Saving an existing name creates a new version.
+         *
+         *     ``source_text`` (pasted original) and ``extraction`` (the reviewed candidates) are
+         *     stored unchanged with the template as its original record.
          */
         ProtocolTemplateCreate: {
             /**
@@ -4569,12 +5092,22 @@ export interface components {
              * @default
              */
             description: string;
+            extraction?: components["schemas"]["ExtractionSnapshot"] | null;
             /** Name */
             name: string;
             /** Raw Note Template */
             raw_note_template?: string | null;
             /** Source Experiment Id */
             source_experiment_id?: number | null;
+            /** Source Text */
+            source_text?: string | null;
+            /** Steps */
+            steps?: components["schemas"]["ProtocolStep"][] | null;
+            /**
+             * Version Label
+             * @default
+             */
+            version_label: string;
         };
         /** ProtocolTemplateList */
         ProtocolTemplateList: {
@@ -4597,6 +5130,12 @@ export interface components {
             created_at: string;
             /** Description */
             description: string;
+            /**
+             * Display Version
+             * @default
+             */
+            display_version: string;
+            extraction?: components["schemas"]["ExtractionReview"] | null;
             /** Id */
             id: number;
             /** Name */
@@ -4607,6 +5146,92 @@ export interface components {
             raw_note_template: string;
             /** Source Experiment Id */
             source_experiment_id: number | null;
+            /**
+             * Source Text
+             * @default
+             */
+            source_text: string;
+            /**
+             * Steps
+             * @default []
+             */
+            steps: components["schemas"]["ProtocolStep"][];
+            /**
+             * Steps Derived
+             * @default false
+             */
+            steps_derived: boolean;
+            /** Version */
+            version: number;
+            /**
+             * Version Label
+             * @default
+             */
+            version_label: string;
+        };
+        /**
+         * ProtocolUse
+         * @description An experiment recorded with a protocol version, and where it departed from it.
+         */
+        ProtocolUse: {
+            /** Author */
+            author: string;
+            /** Code */
+            code: string;
+            /**
+             * Deviations
+             * @default []
+             */
+            deviations: components["schemas"]["ConditionValueChange"][];
+            /** Experiment Id */
+            experiment_id: number;
+            /**
+             * Performed On
+             * Format: date
+             */
+            performed_on: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * ProtocolVersionNode
+         * @description One version in a protocol's lineage.
+         */
+        ProtocolVersionNode: {
+            /** Changes From Previous */
+            changes_from_previous: components["schemas"]["ConditionValueChange"][];
+            /** Description */
+            description: string;
+            /** Experiments */
+            experiments: components["schemas"]["ProtocolUse"][];
+            /** First Used On */
+            first_used_on?: string | null;
+            /** Last Used On */
+            last_used_on?: string | null;
+            template: components["schemas"]["ProtocolVersionRef"];
+        };
+        /**
+         * ProtocolVersionRef
+         * @description Compact reference to one protocol template version.
+         */
+        ProtocolVersionRef: {
+            /** Author */
+            author: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Display Version */
+            display_version: string;
+            /** Name */
+            name: string;
+            /** Source Experiment Code */
+            source_experiment_code?: string | null;
+            /** Source Experiment Id */
+            source_experiment_id?: number | null;
+            /** Template Id */
+            template_id: number;
             /** Version */
             version: number;
         };
@@ -4984,6 +5609,68 @@ export interface components {
             /** Value */
             value?: number | null;
         };
+        /**
+         * RunCondition
+         * @description Planned value of a condition in a step and, if recorded, the actual value.
+         */
+        RunCondition: {
+            /** Actual */
+            actual?: unknown;
+            /**
+             * Deviated
+             * @default false
+             */
+            deviated: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Planned */
+            planned?: unknown;
+            /** Unit */
+            unit?: string | null;
+            /**
+             * Value Type
+             * @default text
+             * @enum {string}
+             */
+            value_type: "number" | "text" | "choice";
+        };
+        /**
+         * RunDeviation
+         * @description One difference from the protocol: a changed value, a note, or a step not checked.
+         */
+        RunDeviation: {
+            /** Actual */
+            actual?: unknown;
+            /** Key */
+            key?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "value" | "note" | "skipped";
+            /** Label */
+            label?: string | null;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+            /** Planned */
+            planned?: unknown;
+            /** Step Index */
+            step_index: number;
+            /** Step Title */
+            step_title: string;
+            /** Unit */
+            unit?: string | null;
+        };
         /** RunResponse */
         RunResponse: {
             /** Created */
@@ -4996,6 +5683,35 @@ export interface components {
             reused: number;
             /** Skipped */
             skipped: string[];
+        };
+        /** RunStep */
+        RunStep: {
+            /**
+             * Conditions
+             * @default []
+             */
+            conditions: components["schemas"]["RunCondition"][];
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /**
+             * Done
+             * @default false
+             */
+            done: boolean;
+            /** Done At */
+            done_at?: string | null;
+            /** Index */
+            index: number;
+            /**
+             * Notes
+             * @default []
+             */
+            notes: string[];
+            /** Title */
+            title: string;
         };
         /** SearchHit */
         SearchHit: {
@@ -5156,6 +5872,16 @@ export interface components {
             u_cref_pct: number;
             /** U Rw Pct */
             u_rw_pct: number;
+        };
+        /**
+         * UnmatchedLine
+         * @description A pasted line with numbers that no condition key could be read from.
+         */
+        UnmatchedLine: {
+            /** Line */
+            line: number;
+            /** Text */
+            text: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -7700,6 +8426,124 @@ export interface operations {
             };
         };
     };
+    eln_protocol_lineage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolLineage"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_list_protocol_runs: {
+        parameters: {
+            query?: {
+                status?: ("in_progress" | "completed") | null;
+            };
+            header?: never;
+            path: {
+                project_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolRunList"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     eln_list_protocol_templates: {
         parameters: {
             query?: {
@@ -7782,6 +8626,371 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProtocolTemplateOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_protocol_diff: {
+        parameters: {
+            query: {
+                /** @description older template id */
+                a: number;
+                /** @description newer template id */
+                b: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolDiff"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_extract_protocol: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProtocolExtractionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolExtraction"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_get_protocol_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolRunOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_complete_protocol_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProtocolRunComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolRunCompletion"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_add_protocol_run_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProtocolRunEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolRunOut"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eln_start_protocol_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProtocolRunCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProtocolRunOut"];
                 };
             };
             /** @description Bad Request */

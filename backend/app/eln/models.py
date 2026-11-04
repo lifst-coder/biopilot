@@ -167,3 +167,57 @@ class ProtocolTemplate(ImmutableMixin, Base):
     )
     author: Mapped[str] = mapped_column(String(100), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    #: Researcher-facing version name ("v1.1"); empty → ``v<version>``.
+    version_label: Mapped[str] = mapped_column(String(20), default="", server_default="")
+    #: Executable steps ``[{title, detail, condition_keys}]``; empty → derived from the note.
+    steps: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, server_default="[]")
+    #: Pasted original text the template was confirmed from (original record).
+    source_text: Mapped[str] = mapped_column(Text, default="", server_default="")
+    #: Extraction provenance (:class:`app.eln.schemas.ExtractionReview`), if pasted.
+    extraction: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+
+class ProtocolRun(ImmutableMixin, Base):
+    """One execution of a protocol template at the bench.
+
+    Only ``status``, ``completed_at`` and ``experiment_id`` change (once, on completion,
+    with an audit event); progress itself is the append-only :class:`ProtocolRunEntry`.
+    """
+
+    __tablename__ = "eln_protocol_runs"
+    __immutable_fields__: ClassVar[tuple[str, ...]] = (
+        "project_id",
+        "protocol_template_id",
+        "operator",
+        "started_at",
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("eln_projects.id"), index=True)
+    protocol_template_id: Mapped[int] = mapped_column(
+        ForeignKey("eln_protocol_templates.id"), index=True
+    )
+    operator: Mapped[str] = mapped_column(String(100), default="")
+    status: Mapped[str] = mapped_column(String(16), default="in_progress")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    experiment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("eln_experiments.id"), nullable=True
+    )
+
+
+class ProtocolRunEntry(ImmutableMixin, Base):
+    """One immutable step check/uncheck, actual value or note recorded during a run."""
+
+    __tablename__ = "eln_protocol_run_entries"
+    __table_args__ = (UniqueConstraint("run_id", "seq", name="uq_protocol_run_entry"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey("eln_protocol_runs.id"), index=True)
+    seq: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(String(16))
+    step_index: Mapped[int] = mapped_column(Integer)
+    key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    value: Mapped[Any] = mapped_column(JSON, nullable=True)
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

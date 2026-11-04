@@ -48,9 +48,20 @@ from app.eln.schemas import (
     ImportPreview,
     ProjectCreate,
     ProjectOut,
+    ProtocolDiff,
+    ProtocolExtraction,
+    ProtocolExtractionRequest,
+    ProtocolLineage,
+    ProtocolRunComplete,
+    ProtocolRunCompletion,
+    ProtocolRunCreate,
+    ProtocolRunEntryCreate,
+    ProtocolRunList,
+    ProtocolRunOut,
     ProtocolTemplateCreate,
     ProtocolTemplateList,
     ProtocolTemplateOut,
+    RunStatus,
 )
 from app.eln.storage import MAX_ATTACHMENT_BYTES
 
@@ -261,6 +272,103 @@ def create_protocol_template(
     project_id: int, data: ProtocolTemplateCreate, session: Session = Depends(get_session)
 ) -> ProtocolTemplateOut:
     return service.create_protocol_template(session, project_id, data)
+
+
+@router.post(
+    "/protocol-extractions",
+    response_model=ProtocolExtraction,
+    operation_id="eln_extract_protocol",
+)
+def extract_protocol(data: ProtocolExtractionRequest) -> ProtocolExtraction:
+    """Condition-block candidates from pasted text or a table — nothing is stored.
+
+    The researcher confirms/edits the candidates and saves them with
+    ``POST /projects/{id}/protocol-templates`` (``source_text`` + ``extraction``).
+    """
+    return service.extract_protocol(data.text)
+
+
+@router.get(
+    "/projects/{project_id}/protocol-lineage",
+    response_model=ProtocolLineage,
+    operation_id="eln_protocol_lineage",
+)
+def protocol_lineage(project_id: int, session: Session = Depends(get_session)) -> ProtocolLineage:
+    """Protocol versions with condition changes and the experiments recorded with each."""
+    return service.protocol_lineage(session, project_id)
+
+
+@router.get(
+    "/protocol-diff",
+    response_model=ProtocolDiff,
+    operation_id="eln_protocol_diff",
+)
+def protocol_diff(
+    a: int = Query(description="older template id"),
+    b: int = Query(description="newer template id"),
+    session: Session = Depends(get_session),
+) -> ProtocolDiff:
+    """Condition-level difference between two protocol template versions."""
+    return service.diff_protocols(session, a, b)
+
+
+@router.post(
+    "/protocol-templates/{template_id}/runs",
+    response_model=ProtocolRunOut,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="eln_start_protocol_run",
+)
+def start_protocol_run(
+    template_id: int, data: ProtocolRunCreate, session: Session = Depends(get_session)
+) -> ProtocolRunOut:
+    """Start following a protocol version step by step."""
+    return service.start_protocol_run(session, template_id, data)
+
+
+@router.get(
+    "/projects/{project_id}/protocol-runs",
+    response_model=ProtocolRunList,
+    operation_id="eln_list_protocol_runs",
+)
+def list_protocol_runs(
+    project_id: int,
+    run_status: RunStatus | None = Query(default=None, alias="status"),
+    session: Session = Depends(get_session),
+) -> ProtocolRunList:
+    """Runs of a project, newest first."""
+    return service.list_protocol_runs(session, project_id, run_status)
+
+
+@router.get(
+    "/protocol-runs/{run_id}", response_model=ProtocolRunOut, operation_id="eln_get_protocol_run"
+)
+def get_protocol_run(run_id: int, session: Session = Depends(get_session)) -> ProtocolRunOut:
+    """Current state of a run (folded from its append-only entries)."""
+    return service.get_protocol_run(session, run_id)
+
+
+@router.post(
+    "/protocol-runs/{run_id}/entries",
+    response_model=ProtocolRunOut,
+    operation_id="eln_add_protocol_run_entry",
+)
+def add_protocol_run_entry(
+    run_id: int, data: ProtocolRunEntryCreate, session: Session = Depends(get_session)
+) -> ProtocolRunOut:
+    """Check/uncheck a step, record an actual value or a note (append-only)."""
+    return service.add_protocol_run_entry(session, run_id, data)
+
+
+@router.post(
+    "/protocol-runs/{run_id}/complete",
+    response_model=ProtocolRunCompletion,
+    operation_id="eln_complete_protocol_run",
+)
+def complete_protocol_run(
+    run_id: int, data: ProtocolRunComplete, session: Session = Depends(get_session)
+) -> ProtocolRunCompletion:
+    """Create the experiment record from the run (``dry_run`` previews it)."""
+    return service.complete_protocol_run(session, run_id, data)
 
 
 # --------------------------------------------------------------- experiments

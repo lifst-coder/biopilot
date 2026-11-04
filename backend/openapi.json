@@ -2045,6 +2045,52 @@
         "title": "ConditionUsage",
         "type": "object"
       },
+      "ConditionValueChange": {
+        "description": "One condition key that differs between two condition blocks (values copied).",
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "kind"
+        ],
+        "title": "ConditionValueChange",
+        "type": "object"
+      },
       "CriteriaCreate": {
         "description": "Request body for a new criteria version.",
         "properties": {
@@ -4532,6 +4578,324 @@
           "parent_experiment_id"
         ],
         "title": "ExperimentSummary",
+        "type": "object"
+      },
+      "ExtractedField": {
+        "description": "Candidate value for one known condition key, with the line it was read from.",
+        "properties": {
+          "candidates": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "source_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text"
+          },
+          "status": {
+            "enum": [
+              "recognized",
+              "unrecognized",
+              "ambiguous"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "value_type": {
+            "default": "text",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Value Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "status"
+        ],
+        "title": "ExtractedField",
+        "type": "object"
+      },
+      "ExtractedStep": {
+        "description": "Candidate procedure step (numbered line or line of the procedure section).",
+        "properties": {
+          "condition_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Condition Keys",
+            "type": "array"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "ExtractedStep",
+        "type": "object"
+      },
+      "ExtractionReview": {
+        "description": "Stored provenance: engine, candidates and the researcher's confirmation.",
+        "properties": {
+          "accepted_count": {
+            "title": "Accepted Count",
+            "type": "integer"
+          },
+          "added_count": {
+            "title": "Added Count",
+            "type": "integer"
+          },
+          "edited_count": {
+            "title": "Edited Count",
+            "type": "integer"
+          },
+          "engine": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractionReviewItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "required": [
+          "engine",
+          "items",
+          "accepted_count",
+          "edited_count",
+          "added_count"
+        ],
+        "title": "ExtractionReview",
+        "type": "object"
+      },
+      "ExtractionReviewItem": {
+        "description": "What the researcher did with one candidate (stored with the template).",
+        "properties": {
+          "candidate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate"
+          },
+          "candidate_status": {
+            "enum": [
+              "recognized",
+              "unrecognized",
+              "ambiguous"
+            ],
+            "title": "Candidate Status",
+            "type": "string"
+          },
+          "confirmed": {
+            "title": "Confirmed"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "accepted",
+              "edited",
+              "added",
+              "cleared",
+              "left_empty"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "source_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "candidate_status",
+          "outcome"
+        ],
+        "title": "ExtractionReviewItem",
+        "type": "object"
+      },
+      "ExtractionSnapshot": {
+        "description": "The extraction the researcher reviewed, sent back with the confirmed protocol.",
+        "properties": {
+          "engine": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "fields": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExtractedField"
+            },
+            "maxItems": 200,
+            "title": "Fields",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          }
+        },
+        "required": [
+          "engine"
+        ],
+        "title": "ExtractionSnapshot",
         "type": "object"
       },
       "FailureArchive": {
@@ -7401,6 +7765,134 @@
         "title": "ProposalOut",
         "type": "object"
       },
+      "ProtocolDiff": {
+        "description": "Condition-level difference between two protocol versions (``a`` → ``b``).",
+        "properties": {
+          "a": {
+            "$ref": "#/components/schemas/ProtocolVersionRef"
+          },
+          "b": {
+            "$ref": "#/components/schemas/ProtocolVersionRef"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionValueChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "unchanged_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unchanged Keys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "a",
+          "b",
+          "changes",
+          "unchanged_keys"
+        ],
+        "title": "ProtocolDiff",
+        "type": "object"
+      },
+      "ProtocolExtraction": {
+        "description": "Extraction candidates — **not stored**; the researcher confirms them before saving.\n\nBoth engines return this schema. ``fields`` lists every known condition key in a\nfixed order; keys that were not found are ``unrecognized`` with ``value=None``.",
+        "properties": {
+          "engine": {
+            "enum": [
+              "rules",
+              "claude"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "field_count": {
+            "title": "Field Count",
+            "type": "integer"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "recognized_count": {
+            "title": "Recognized Count",
+            "type": "integer"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractedStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "unmatched_lines": {
+            "items": {
+              "$ref": "#/components/schemas/UnmatchedLine"
+            },
+            "title": "Unmatched Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "engine",
+          "fields",
+          "steps",
+          "unmatched_lines",
+          "recognized_count",
+          "field_count",
+          "source_sha256"
+        ],
+        "title": "ProtocolExtraction",
+        "type": "object"
+      },
+      "ProtocolExtractionRequest": {
+        "description": "Pasted free text or table (TSV, Markdown table, ``key: value`` lines).",
+        "properties": {
+          "text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ProtocolExtractionRequest",
+        "type": "object"
+      },
       "ProtocolGroup": {
         "description": "Experiments sharing an identical condition block (one protocol variant).",
         "properties": {
@@ -7447,8 +7939,374 @@
         "title": "ProtocolGroup",
         "type": "object"
       },
+      "ProtocolLineage": {
+        "properties": {
+          "lineages": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolLineageItem"
+            },
+            "title": "Lineages",
+            "type": "array"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "lineages"
+        ],
+        "title": "ProtocolLineage",
+        "type": "object"
+      },
+      "ProtocolLineageItem": {
+        "description": "All versions of one protocol name, oldest first.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolVersionNode"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "versions"
+        ],
+        "title": "ProtocolLineageItem",
+        "type": "object"
+      },
+      "ProtocolRunComplete": {
+        "description": "Turn a run into an experiment record. ``dry_run`` previews without saving.",
+        "properties": {
+          "author": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Author",
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "observations": {
+            "default": "",
+            "maxLength": 10000,
+            "title": "Observations",
+            "type": "string"
+          },
+          "parent_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Experiment Id"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "performed_on"
+        ],
+        "title": "ProtocolRunComplete",
+        "type": "object"
+      },
+      "ProtocolRunCompletion": {
+        "description": "The experiment the run becomes: condition block with actual values + note.",
+        "properties": {
+          "deviations": {
+            "items": {
+              "$ref": "#/components/schemas/RunDeviation"
+            },
+            "title": "Deviations",
+            "type": "array"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "experiment": {
+            "$ref": "#/components/schemas/ExperimentCreate"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "run": {
+            "$ref": "#/components/schemas/ProtocolRunOut"
+          }
+        },
+        "required": [
+          "run",
+          "experiment",
+          "deviations",
+          "dry_run"
+        ],
+        "title": "ProtocolRunCompletion",
+        "type": "object"
+      },
+      "ProtocolRunCreate": {
+        "properties": {
+          "operator": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Operator",
+            "type": "string"
+          }
+        },
+        "title": "ProtocolRunCreate",
+        "type": "object"
+      },
+      "ProtocolRunEntryCreate": {
+        "description": "One append-only event of a run (stored immutably, audited).",
+        "properties": {
+          "key": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "kind": {
+            "enum": [
+              "check",
+              "uncheck",
+              "actual",
+              "note"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 1000,
+            "title": "Note",
+            "type": "string"
+          },
+          "step_index": {
+            "minimum": 0.0,
+            "title": "Step Index",
+            "type": "integer"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "kind",
+          "step_index"
+        ],
+        "title": "ProtocolRunEntryCreate",
+        "type": "object"
+      },
+      "ProtocolRunList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolRunOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ProtocolRunList",
+        "type": "object"
+      },
+      "ProtocolRunOut": {
+        "description": "Current state of a run, folded from its append-only entries.",
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "current_step_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Step Index"
+          },
+          "deviations": {
+            "items": {
+              "$ref": "#/components/schemas/RunDeviation"
+            },
+            "title": "Deviations",
+            "type": "array"
+          },
+          "done_count": {
+            "title": "Done Count",
+            "type": "integer"
+          },
+          "entry_count": {
+            "title": "Entry Count",
+            "type": "integer"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "operator": {
+            "title": "Operator",
+            "type": "string"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "in_progress",
+              "completed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RunStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "template": {
+            "$ref": "#/components/schemas/ProtocolVersionRef"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "template",
+          "operator",
+          "status",
+          "started_at",
+          "steps",
+          "deviations",
+          "done_count",
+          "step_count",
+          "entry_count"
+        ],
+        "title": "ProtocolRunOut",
+        "type": "object"
+      },
+      "ProtocolStep": {
+        "description": "One step of an executable protocol.\n\n``condition_keys`` name condition-block keys whose planned values belong to this\nstep; the values themselves live in the template's ``condition_block``.",
+        "properties": {
+          "condition_keys": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 40,
+            "title": "Condition Keys",
+            "type": "array"
+          },
+          "detail": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Detail",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "ProtocolStep",
+        "type": "object"
+      },
       "ProtocolTemplateCreate": {
-        "description": "Reusable protocol. Saving an existing name creates a new version.",
+        "description": "Reusable protocol. Saving an existing name creates a new version.\n\n``source_text`` (pasted original) and ``extraction`` (the reviewed candidates) are\nstored unchanged with the template as its original record.",
         "properties": {
           "author": {
             "default": "",
@@ -7469,6 +8327,16 @@
             "default": "",
             "title": "Description",
             "type": "string"
+          },
+          "extraction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtractionSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "name": {
             "maxLength": 120,
@@ -7497,6 +8365,39 @@
               }
             ],
             "title": "Source Experiment Id"
+          },
+          "source_text": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProtocolStep"
+                },
+                "maxItems": 60,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "version_label": {
+            "default": "",
+            "maxLength": 20,
+            "title": "Version Label",
+            "type": "string"
           }
         },
         "required": [
@@ -7549,6 +8450,21 @@
             "title": "Description",
             "type": "string"
           },
+          "display_version": {
+            "default": "",
+            "title": "Display Version",
+            "type": "string"
+          },
+          "extraction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtractionReview"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -7576,9 +8492,32 @@
             ],
             "title": "Source Experiment Id"
           },
+          "source_text": {
+            "default": "",
+            "title": "Source Text",
+            "type": "string"
+          },
+          "steps": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ProtocolStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "steps_derived": {
+            "default": false,
+            "title": "Steps Derived",
+            "type": "boolean"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
+          },
+          "version_label": {
+            "default": "",
+            "title": "Version Label",
+            "type": "string"
           }
         },
         "required": [
@@ -7594,6 +8533,169 @@
           "created_at"
         ],
         "title": "ProtocolTemplateOut",
+        "type": "object"
+      },
+      "ProtocolUse": {
+        "description": "An experiment recorded with a protocol version, and where it departed from it.",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "deviations": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ConditionValueChange"
+            },
+            "title": "Deviations",
+            "type": "array"
+          },
+          "experiment_id": {
+            "title": "Experiment Id",
+            "type": "integer"
+          },
+          "performed_on": {
+            "format": "date",
+            "title": "Performed On",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "code",
+          "title",
+          "author",
+          "performed_on"
+        ],
+        "title": "ProtocolUse",
+        "type": "object"
+      },
+      "ProtocolVersionNode": {
+        "description": "One version in a protocol's lineage.",
+        "properties": {
+          "changes_from_previous": {
+            "items": {
+              "$ref": "#/components/schemas/ConditionValueChange"
+            },
+            "title": "Changes From Previous",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "experiments": {
+            "items": {
+              "$ref": "#/components/schemas/ProtocolUse"
+            },
+            "title": "Experiments",
+            "type": "array"
+          },
+          "first_used_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Used On"
+          },
+          "last_used_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used On"
+          },
+          "template": {
+            "$ref": "#/components/schemas/ProtocolVersionRef"
+          }
+        },
+        "required": [
+          "template",
+          "description",
+          "changes_from_previous",
+          "experiments"
+        ],
+        "title": "ProtocolVersionNode",
+        "type": "object"
+      },
+      "ProtocolVersionRef": {
+        "description": "Compact reference to one protocol template version.",
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_version": {
+            "title": "Display Version",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_experiment_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Experiment Code"
+          },
+          "source_experiment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Experiment Id"
+          },
+          "template_id": {
+            "title": "Template Id",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "template_id",
+          "name",
+          "version",
+          "display_version",
+          "created_at",
+          "author"
+        ],
+        "title": "ProtocolVersionRef",
         "type": "object"
       },
       "QCChange": {
@@ -8636,6 +9738,135 @@
         "title": "ResultFact",
         "type": "object"
       },
+      "RunCondition": {
+        "description": "Planned value of a condition in a step and, if recorded, the actual value.",
+        "properties": {
+          "actual": {
+            "title": "Actual"
+          },
+          "deviated": {
+            "default": false,
+            "title": "Deviated",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "planned": {
+            "title": "Planned"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value_type": {
+            "default": "text",
+            "enum": [
+              "number",
+              "text",
+              "choice"
+            ],
+            "title": "Value Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "RunCondition",
+        "type": "object"
+      },
+      "RunDeviation": {
+        "description": "One difference from the protocol: a changed value, a note, or a step not checked.",
+        "properties": {
+          "actual": {
+            "title": "Actual"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "kind": {
+            "enum": [
+              "value",
+              "note",
+              "skipped"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "planned": {
+            "title": "Planned"
+          },
+          "step_index": {
+            "title": "Step Index",
+            "type": "integer"
+          },
+          "step_title": {
+            "title": "Step Title",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "step_index",
+          "step_title",
+          "kind"
+        ],
+        "title": "RunDeviation",
+        "type": "object"
+      },
       "RunResponse": {
         "properties": {
           "created": {
@@ -8673,6 +9904,62 @@
           "skipped"
         ],
         "title": "RunResponse",
+        "type": "object"
+      },
+      "RunStep": {
+        "properties": {
+          "conditions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RunCondition"
+            },
+            "title": "Conditions",
+            "type": "array"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "done": {
+            "default": false,
+            "title": "Done",
+            "type": "boolean"
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "notes": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "index",
+          "title"
+        ],
+        "title": "RunStep",
         "type": "object"
       },
       "SearchHit": {
@@ -9063,6 +10350,25 @@
           "expanded_pct"
         ],
         "title": "UncertaintyOut",
+        "type": "object"
+      },
+      "UnmatchedLine": {
+        "description": "A pasted line with numbers that no condition key could be read from.",
+        "properties": {
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line",
+          "text"
+        ],
+        "title": "UnmatchedLine",
         "type": "object"
       },
       "ValidationError": {
@@ -12739,6 +14045,172 @@
         ]
       }
     },
+    "/api/eln/projects/{project_id}/protocol-lineage": {
+      "get": {
+        "description": "Protocol versions with condition changes and the experiments recorded with each.",
+        "operationId": "eln_protocol_lineage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolLineage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protocol Lineage",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/projects/{project_id}/protocol-runs": {
+      "get": {
+        "description": "Runs of a project, newest first.",
+        "operationId": "eln_list_protocol_runs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "in_progress",
+                    "completed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolRunList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Protocol Runs",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
     "/api/eln/projects/{project_id}/protocol-templates": {
       "get": {
         "operationId": "eln_list_protocol_templates",
@@ -12896,6 +14368,486 @@
           }
         },
         "summary": "Create Protocol Template",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/protocol-diff": {
+      "get": {
+        "description": "Condition-level difference between two protocol template versions.",
+        "operationId": "eln_protocol_diff",
+        "parameters": [
+          {
+            "description": "older template id",
+            "in": "query",
+            "name": "a",
+            "required": true,
+            "schema": {
+              "description": "older template id",
+              "title": "A",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "newer template id",
+            "in": "query",
+            "name": "b",
+            "required": true,
+            "schema": {
+              "description": "newer template id",
+              "title": "B",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolDiff"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Protocol Diff",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/protocol-extractions": {
+      "post": {
+        "description": "Condition-block candidates from pasted text or a table — nothing is stored.\n\nThe researcher confirms/edits the candidates and saves them with\n``POST /projects/{id}/protocol-templates`` (``source_text`` + ``extraction``).",
+        "operationId": "eln_extract_protocol",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolExtractionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolExtraction"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Extract Protocol",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/protocol-runs/{run_id}": {
+      "get": {
+        "description": "Current state of a run (folded from its append-only entries).",
+        "operationId": "eln_get_protocol_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Protocol Run",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/protocol-runs/{run_id}/complete": {
+      "post": {
+        "description": "Create the experiment record from the run (``dry_run`` previews it).",
+        "operationId": "eln_complete_protocol_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolRunComplete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolRunCompletion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Complete Protocol Run",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/protocol-runs/{run_id}/entries": {
+      "post": {
+        "description": "Check/uncheck a step, record an actual value or a note (append-only).",
+        "operationId": "eln_add_protocol_run_entry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolRunEntryCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Protocol Run Entry",
+        "tags": [
+          "eln"
+        ]
+      }
+    },
+    "/api/eln/protocol-templates/{template_id}/runs": {
+      "post": {
+        "description": "Start following a protocol version step by step.",
+        "operationId": "eln_start_protocol_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "template_id",
+            "required": true,
+            "schema": {
+              "title": "Template Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProtocolRunCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProtocolRunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Protocol Run",
         "tags": [
           "eln"
         ]

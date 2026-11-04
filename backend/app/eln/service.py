@@ -11,7 +11,7 @@ import hashlib
 import re
 from collections import defaultdict
 from datetime import UTC, date, datetime
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -24,7 +24,8 @@ from app.core.errors import (
     NotFoundError,
     ValidationFailedError,
 )
-from app.eln import conditions, converters, csv_ingest, storage
+from app.core.llm import LLMGateway, get_gateway
+from app.eln import conditions, converters, csv_ingest, protocols, storage
 from app.eln.models import (
     AttachmentFile,
     ConditionTemplate,
@@ -33,6 +34,8 @@ from app.eln.models import (
     ExperimentAddendum,
     ExperimentRevision,
     Project,
+    ProtocolRun,
+    ProtocolRunEntry,
     ProtocolTemplate,
 )
 from app.eln.schemas import (
@@ -61,15 +64,32 @@ from app.eln.schemas import (
     ExperimentMetadataUpdate,
     ExperimentOut,
     ExperimentSummary,
+    ExtractionReview,
     HistoryEntry,
     HistoryKind,
     ImportFormat,
     ImportPreview,
     ProjectCreate,
     ProjectOut,
+    ProtocolDiff,
+    ProtocolExtraction,
+    ProtocolExtractionDraft,
+    ProtocolLineage,
+    ProtocolLineageItem,
+    ProtocolRunComplete,
+    ProtocolRunCompletion,
+    ProtocolRunCreate,
+    ProtocolRunEntryCreate,
+    ProtocolRunList,
+    ProtocolRunOut,
+    ProtocolStep,
     ProtocolTemplateCreate,
     ProtocolTemplateList,
     ProtocolTemplateOut,
+    ProtocolUse,
+    ProtocolVersionNode,
+    ProtocolVersionRef,
+    RunStatus,
     kind_spec,
 )
 
@@ -709,6 +729,16 @@ def experiment_draft(
 # ------------------------------------------------------- protocol templates
 
 
+def _display_version(row: ProtocolTemplate) -> str:
+    return row.version_label or f"v{row.version}"
+
+
+def _stored_steps(row: ProtocolTemplate) -> list[ProtocolStep]:
+    if row.steps:
+        return [ProtocolStep.model_validate(x) for x in row.steps]
+    return protocols.derive_steps(row.raw_note_template, row.condition_block)
+
+
 def _template_out(row: ProtocolTemplate) -> ProtocolTemplateOut:
     return ProtocolTemplateOut(
         id=row.id,
@@ -721,7 +751,34 @@ def _template_out(row: ProtocolTemplate) -> ProtocolTemplateOut:
         source_experiment_id=row.source_experiment_id,
         author=row.author,
         created_at=row.created_at,
+        version_label=row.version_label or "",
+        display_version=_display_version(row),
+        steps=_stored_steps(row),
+        steps_derived=not row.steps,
+        source_text=row.source_text or "",
+        extraction=ExtractionReview.model_validate(row.extraction) if row.extraction else None,
     )
+
+
+def _check_steps(steps: list[ProtocolStep], block: dict[str, Any]) -> None:
+    for i, step in enumerate(steps, start=1):
+        missing = [k for k in step.condition_keys if block.get(k) is None]
+        if missing:
+            raise ValidationFailedError(
+                f"{i}단계가 값이 없는 조건을 가리킵니다: {', '.join(missing)}"
+            )
+
+
+def _check_extraction(data: ProtocolTemplateCreate) -> None:
+    """Quotes of the reviewed candidates must come from the stored pasted text."""
+    if data.extraction is None:
+        return
+    if not data.source_text:
+        raise ValidationFailedError("extraction에는 붙여넣은 원문(source_text)이 필요합니다")
+    flat = " ".join(data.source_text.split())
+    for f in data.extraction.fields:
+        if f.source_text and " ".join(f.source_text.split()) not in flat:
+            raise ValidationFailedError(f"{f.key}: 추출 근거 줄이 원문에 없습니다")
 
 
 def create_protocol_template(
@@ -738,6 +795,11 @@ def create_protocol_template(
         block = src.condition_block if block is None else block
     if block is None:
         raise ValidationFailedError("condition_block 또는 source_experiment_id가 필요합니다")
+    block_dict = block.model_dump(exclude_none=True)
+    steps = data.steps or []
+    _check_steps(steps, block_dict)
+    _check_extraction(data)
+    review = protocols.review(data.extraction, block_dict) if data.extraction is not None else None
     latest = session.scalar(
         select(func.max(ProtocolTemplate.version)).where(
             ProtocolTemplate.project_id == project_id, ProtocolTemplate.name == data.name
@@ -749,12 +811,34 @@ def create_protocol_template(
         version=(latest or 0) + 1,
         description=data.description,
         raw_note_template=note or "",
-        condition_block=block.model_dump(exclude_none=True),
+        condition_block=block_dict,
         source_experiment_id=data.source_experiment_id,
         author=data.author,
+        version_label=data.version_label.strip(),
+        steps=[st.model_dump() for st in steps],
+        source_text=data.source_text or "",
+        extraction=review.model_dump(mode="json") if review is not None else None,
     )
     session.add(row)
     session.flush()
+    payload: dict[str, Any] = {
+        "name": row.name,
+        "version": row.version,
+        "source_experiment_id": data.source_experiment_id,
+    }
+    if row.version_label:
+        payload["version_label"] = row.version_label
+    if steps:
+        payload["step_count"] = len(steps)
+    if data.source_text:
+        payload["source_text_sha256"] = hashlib.sha256(data.source_text.encode()).hexdigest()
+    if review is not None:
+        payload["extraction"] = {
+            "engine": review.engine,
+            "accepted": review.accepted_count,
+            "edited": review.edited_count,
+            "added": review.added_count,
+        }
     record_event(
         session,
         actor=actor,
@@ -762,11 +846,7 @@ def create_protocol_template(
         entity_type="eln.ProtocolTemplate",
         entity_id=row.id,
         project_id=project_id,
-        payload={
-            "name": row.name,
-            "version": row.version,
-            "source_experiment_id": data.source_experiment_id,
-        },
+        payload=payload,
     )
     return _template_out(row)
 
@@ -801,6 +881,411 @@ def list_protocol_templates(
         rows = latest
     items = [_template_out(r) for r in rows]
     return ProtocolTemplateList(project_id=project_id, total=len(items), items=items)
+
+
+# ------------------------------------------------- protocol paste extraction
+
+_EXTRACTION_SYSTEM = (
+    "You read a laboratory protocol pasted by a researcher and list condition values that "
+    "are written in it. Copy values exactly as written; never infer, convert units or fill "
+    "a value that is not written. For every value quote the full line it came from "
+    "(source_text, verbatim). Omit keys whose value is not written or is a range. "
+    "Steps: the procedure steps in order, each with the condition keys it uses."
+)
+
+
+def _extraction_prompt(text: str) -> str:
+    keys = "\n".join(
+        f"- {f.key}: {f.label}"
+        + (f" [{f.unit}]" if f.unit else "")
+        + (f" (one of {', '.join(f.options)})" if f.options else "")
+        for f in conditions.condition_fields()
+    )
+    return f"Condition keys:\n{keys}\n\nPasted protocol:\n<<<\n{text}\n>>>"
+
+
+def extract_protocol(text: str, gateway: LLMGateway | None = None) -> ProtocolExtraction:
+    """Condition-block candidates from pasted text (not stored; researcher confirms).
+
+    Rules mode by default; with a Claude gateway the draft is validated against the
+    text (:func:`protocols.validate_claude_draft`) and any violation falls back to rules
+    with ``fallback_reason``. Both return the same schema.
+    """
+    gw = gateway or get_gateway()
+    sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    fields, steps, _ = protocols.extract_rules(text)
+    engine: Literal["rules", "claude"] = "rules"
+    reason: str | None = None
+    model: str | None = None
+    if gw.mode == "claude":
+        draft = gw.generate(
+            system=_EXTRACTION_SYSTEM,
+            prompt=_extraction_prompt(text),
+            schema=ProtocolExtractionDraft,
+        )
+        if draft is None:
+            reason = "claude_unavailable"
+        else:
+            checked = protocols.validate_claude_draft(
+                text,
+                [(f.key, f.value, f.source_text) for f in draft.fields],
+                [(st.title, st.detail, st.condition_keys) for st in draft.steps],
+            )
+            if isinstance(checked, str):
+                reason = f"draft_rejected: {checked}"
+            else:
+                fields, steps = checked
+                engine, model = "claude", gw.model_name
+    return ProtocolExtraction(
+        engine=engine,
+        model=model,
+        fallback_reason=reason,
+        fields=fields,
+        steps=steps,
+        unmatched_lines=protocols.unmatched_lines(text, fields),
+        recognized_count=sum(f.status == "recognized" for f in fields),
+        field_count=len(fields),
+        source_sha256=sha,
+    )
+
+
+# --------------------------------------------------------- protocol lineage
+
+
+def _version_ref(row: ProtocolTemplate, codes: dict[int, str]) -> ProtocolVersionRef:
+    return ProtocolVersionRef(
+        template_id=row.id,
+        name=row.name,
+        version=row.version,
+        display_version=_display_version(row),
+        created_at=row.created_at,
+        author=row.author,
+        source_experiment_id=row.source_experiment_id,
+        source_experiment_code=codes.get(row.source_experiment_id or -1),
+    )
+
+
+def _template_row(session: Session, template_id: int) -> ProtocolTemplate:
+    row = session.get(ProtocolTemplate, template_id)
+    if row is None:
+        raise NotFoundError(f"Protocol template {template_id} not found")
+    return row
+
+
+def _codes(session: Session, ids: list[int]) -> dict[int, str]:
+    if not ids:
+        return {}
+    return dict(
+        session.execute(select(Experiment.id, Experiment.code).where(Experiment.id.in_(ids))).all()
+    )
+
+
+def protocol_lineage(session: Session, project_id: int) -> ProtocolLineage:
+    """Every protocol name of a project: versions oldest first, condition changes from the
+    previous version, and the experiments recorded with each version (with the condition
+    keys where they departed from it)."""
+    get_project(session, project_id)
+    rows = list(
+        session.scalars(
+            select(ProtocolTemplate)
+            .where(ProtocolTemplate.project_id == project_id)
+            .order_by(ProtocolTemplate.name, ProtocolTemplate.version)
+        )
+    )
+    exps = list(
+        session.scalars(
+            select(Experiment)
+            .where(
+                Experiment.project_id == project_id, Experiment.protocol_template_id.is_not(None)
+            )
+            .order_by(Experiment.performed_on, Experiment.code)
+        )
+    )
+    codes = _codes(session, [r.source_experiment_id for r in rows if r.source_experiment_id])
+    by_template: dict[int, list[Experiment]] = defaultdict(list)
+    for e in exps:
+        by_template[cast(int, e.protocol_template_id)].append(e)
+    lineages: dict[str, list[ProtocolVersionNode]] = {}
+    previous: dict[str, ProtocolTemplate] = {}
+    for row in rows:
+        prev = previous.get(row.name)
+        uses = [
+            ProtocolUse(
+                experiment_id=e.id,
+                code=e.code,
+                title=e.title,
+                author=e.author,
+                performed_on=e.performed_on,
+                deviations=protocols.condition_changes(row.condition_block, e.condition_block),
+            )
+            for e in by_template.get(row.id, [])
+        ]
+        lineages.setdefault(row.name, []).append(
+            ProtocolVersionNode(
+                template=_version_ref(row, codes),
+                description=row.description,
+                changes_from_previous=(
+                    protocols.condition_changes(prev.condition_block, row.condition_block)
+                    if prev is not None
+                    else []
+                ),
+                experiments=uses,
+                first_used_on=min((u.performed_on for u in uses), default=None),
+                last_used_on=max((u.performed_on for u in uses), default=None),
+            )
+        )
+        previous[row.name] = row
+    items = [ProtocolLineageItem(name=n, versions=v) for n, v in lineages.items()]
+    items.sort(key=lambda i: i.versions[-1].template.created_at, reverse=True)
+    return ProtocolLineage(project_id=project_id, lineages=items)
+
+
+def diff_protocols(session: Session, a_id: int, b_id: int) -> ProtocolDiff:
+    """Condition-level difference between two template versions (same project)."""
+    a, b = _template_row(session, a_id), _template_row(session, b_id)
+    if a.project_id != b.project_id:
+        raise ValidationFailedError("두 프로토콜이 다른 프로젝트에 있습니다")
+    codes = _codes(
+        session, [x for x in (a.source_experiment_id, b.source_experiment_id) if x is not None]
+    )
+    changes = protocols.condition_changes(a.condition_block, b.condition_block)
+    changed = {c.key for c in changes}
+    unchanged = [k for k in a.condition_block if k in b.condition_block and k not in changed]
+    return ProtocolDiff(
+        a=_version_ref(a, codes),
+        b=_version_ref(b, codes),
+        changes=changes,
+        unchanged_keys=unchanged,
+    )
+
+
+# ------------------------------------------------------------- protocol runs
+
+
+def _run_row(session: Session, run_id: int) -> ProtocolRun:
+    row = session.get(ProtocolRun, run_id)
+    if row is None:
+        raise NotFoundError(f"Protocol run {run_id} not found")
+    return row
+
+
+def _run_entries(session: Session, run_id: int) -> list[ProtocolRunEntry]:
+    return list(
+        session.scalars(
+            select(ProtocolRunEntry)
+            .where(ProtocolRunEntry.run_id == run_id)
+            .order_by(ProtocolRunEntry.seq)
+        )
+    )
+
+
+def _fold(
+    session: Session, run: ProtocolRun, template: ProtocolTemplate, *, include_skipped: bool
+) -> tuple[protocols.FoldedRun, list[ProtocolStep], int]:
+    steps = protocols.executable_steps(_stored_steps(template), template.condition_block)
+    entries = _run_entries(session, run.id)
+    views = [
+        protocols.RunEntryView(
+            seq=e.seq,
+            kind=e.kind,
+            step_index=e.step_index,
+            key=e.key,
+            value=e.value,
+            note=e.note,
+            created_at=e.created_at,
+        )
+        for e in entries
+    ]
+    folded = protocols.fold_run(
+        steps, template.condition_block, views, include_skipped=include_skipped
+    )
+    return folded, steps, len(entries)
+
+
+def _run_out(session: Session, run: ProtocolRun) -> ProtocolRunOut:
+    template = _template_row(session, run.protocol_template_id)
+    completed = run.status == "completed"
+    folded, steps, entry_count = _fold(session, run, template, include_skipped=completed)
+    pending = [s.index for s in folded.steps if not s.done]
+    codes = _codes(
+        session, [template.source_experiment_id] if template.source_experiment_id else []
+    )
+    return ProtocolRunOut(
+        id=run.id,
+        project_id=run.project_id,
+        template=_version_ref(template, codes),
+        operator=run.operator,
+        status=cast(RunStatus, run.status),
+        started_at=run.started_at,
+        completed_at=run.completed_at,
+        experiment_id=run.experiment_id,
+        steps=folded.steps,
+        deviations=folded.deviations,
+        done_count=len(steps) - len(pending),
+        step_count=len(steps),
+        entry_count=entry_count,
+        current_step_index=pending[0] if pending else None,
+    )
+
+
+def start_protocol_run(
+    session: Session, template_id: int, data: ProtocolRunCreate, *, actor: Actor = "user"
+) -> ProtocolRunOut:
+    """Start following a protocol version at the bench (audited)."""
+    template = _template_row(session, template_id)
+    run = ProtocolRun(
+        project_id=template.project_id,
+        protocol_template_id=template.id,
+        operator=data.operator.strip(),
+        status="in_progress",
+    )
+    session.add(run)
+    session.flush()
+    record_event(
+        session,
+        actor=actor,
+        action="start",
+        entity_type="eln.ProtocolRun",
+        entity_id=run.id,
+        project_id=run.project_id,
+        payload={"protocol_template_id": template.id, "version": _display_version(template)},
+    )
+    return _run_out(session, run)
+
+
+def get_protocol_run(session: Session, run_id: int) -> ProtocolRunOut:
+    """Current state of a run; raises :class:`NotFoundError`."""
+    return _run_out(session, _run_row(session, run_id))
+
+
+def list_protocol_runs(
+    session: Session, project_id: int, status: RunStatus | None = None
+) -> ProtocolRunList:
+    """Runs of a project, newest first (optionally only one status)."""
+    get_project(session, project_id)
+    query = select(ProtocolRun).where(ProtocolRun.project_id == project_id)
+    if status is not None:
+        query = query.where(ProtocolRun.status == status)
+    rows = session.scalars(query.order_by(ProtocolRun.started_at.desc(), ProtocolRun.id.desc()))
+    return ProtocolRunList(items=[_run_out(session, r) for r in rows])
+
+
+def add_protocol_run_entry(
+    session: Session, run_id: int, data: ProtocolRunEntryCreate, *, actor: Actor = "user"
+) -> ProtocolRunOut:
+    """Append a check/uncheck, actual value or note to an in-progress run (audited)."""
+    run = _run_row(session, run_id)
+    if run.status != "in_progress":
+        raise ImmutableRecordError("완료된 실행 기록은 바꿀 수 없습니다")
+    template = _template_row(session, run.protocol_template_id)
+    steps = protocols.executable_steps(_stored_steps(template), template.condition_block)
+    if data.step_index >= len(steps):
+        raise ValidationFailedError(f"단계 {data.step_index + 1}이(가) 없습니다")
+    value: Any = None
+    if data.kind == "actual":
+        if data.key is None or data.key not in steps[data.step_index].condition_keys:
+            raise ValidationFailedError("이 단계의 조건 키가 아닙니다")
+        try:
+            value = protocols.parse_actual(data.key, data.value)
+        except ValueError as exc:
+            raise ValidationFailedError(str(exc)) from exc
+    elif data.kind == "note" and not data.note.strip():
+        raise ValidationFailedError("메모가 비어 있습니다")
+    seq = (
+        session.scalar(
+            select(func.max(ProtocolRunEntry.seq)).where(ProtocolRunEntry.run_id == run.id)
+        )
+        or 0
+    ) + 1
+    entry = ProtocolRunEntry(
+        run_id=run.id,
+        seq=seq,
+        kind=data.kind,
+        step_index=data.step_index,
+        key=data.key if data.kind == "actual" else None,
+        value=value,
+        note=data.note.strip(),
+    )
+    session.add(entry)
+    session.flush()
+    payload: dict[str, Any] = {"seq": seq, "kind": data.kind, "step_index": data.step_index}
+    if data.kind == "actual":
+        payload.update(
+            key=data.key, planned=template.condition_block.get(data.key or ""), actual=value
+        )
+    if entry.note:
+        payload["note"] = entry.note
+    record_event(
+        session,
+        actor=actor,
+        action="record",
+        entity_type="eln.ProtocolRun",
+        entity_id=run.id,
+        project_id=run.project_id,
+        payload=payload,
+    )
+    return _run_out(session, run)
+
+
+def complete_protocol_run(
+    session: Session, run_id: int, data: ProtocolRunComplete, *, actor: Actor = "user"
+) -> ProtocolRunCompletion:
+    """Turn a run into an experiment: planned conditions with the actual values recorded,
+    and a note listing the steps, the differences from the protocol and the observations.
+
+    ``dry_run`` returns the experiment that would be created without writing anything.
+    """
+    run = _run_row(session, run_id)
+    if run.status != "in_progress":
+        raise ImmutableRecordError("이미 완료된 실행입니다")
+    template = _template_row(session, run.protocol_template_id)
+    folded, _, _ = _fold(session, run, template, include_skipped=True)
+    note = protocols.compose_note(
+        protocol=f"{template.name} {_display_version(template)}",
+        steps=folded.steps,
+        deviations=folded.deviations,
+        observations=data.observations,
+    )
+    draft = ExperimentCreate(
+        code=data.code,
+        title=data.title,
+        author=data.author or run.operator,
+        performed_on=data.performed_on,
+        parent_experiment_id=data.parent_experiment_id,
+        raw_note=note,
+        condition_block=ConditionBlock.model_validate(folded.actual_block),
+        protocol_template_id=template.id,
+    )
+    if data.dry_run:
+        out = _run_out(session, run).model_copy(update={"deviations": folded.deviations})
+        return ProtocolRunCompletion(
+            run=out, experiment=draft, deviations=folded.deviations, dry_run=True
+        )
+    exp = create_experiment(session, run.project_id, draft, actor=actor)
+    run.status = "completed"
+    run.completed_at = datetime.now(UTC)
+    run.experiment_id = exp.id
+    session.flush()
+    record_event(
+        session,
+        actor=actor,
+        action="complete",
+        entity_type="eln.ProtocolRun",
+        entity_id=run.id,
+        project_id=run.project_id,
+        payload={
+            "experiment_id": exp.id,
+            "code": exp.code,
+            "deviations": [protocols.deviation_line(d) for d in folded.deviations],
+        },
+    )
+    return ProtocolRunCompletion(
+        run=_run_out(session, run),
+        experiment=draft,
+        experiment_id=exp.id,
+        deviations=folded.deviations,
+        dry_run=False,
+    )
 
 
 # ---------------------------------------------------------------- datasets

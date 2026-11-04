@@ -465,11 +465,155 @@ class ImportPreview(BaseModel):
     validation: DatasetValidation
 
 
+# ------------------------------------------------- protocol steps · extraction
+
+#: Longest pasted protocol text accepted (characters).
+MAX_PROTOCOL_TEXT = 20_000
+
+ExtractionEngine = Literal["rules", "claude"]
+#: ``recognized`` = one value found verbatim; ``unrecognized`` = nothing found (left
+#: empty, never guessed); ``ambiguous`` = several different values or a range (left empty).
+ExtractionStatus = Literal["recognized", "unrecognized", "ambiguous"]
+
+
+class ProtocolStep(BaseModel):
+    """One step of an executable protocol.
+
+    ``condition_keys`` name condition-block keys whose planned values belong to this
+    step; the values themselves live in the template's ``condition_block``.
+    """
+
+    title: str = Field(min_length=1, max_length=200)
+    detail: str = Field(default="", max_length=2000)
+    condition_keys: list[str] = Field(default=[], max_length=40)
+
+
+class ProtocolExtractionRequest(BaseModel):
+    """Pasted free text or table (TSV, Markdown table, ``key: value`` lines)."""
+
+    text: str = Field(min_length=1, max_length=MAX_PROTOCOL_TEXT)
+
+
+class ExtractedField(BaseModel):
+    """Candidate value for one known condition key, with the line it was read from."""
+
+    key: str
+    label: str
+    unit: str | None = None
+    value_type: Literal["number", "text", "choice"] = "text"
+    value: str | float | None = None
+    status: ExtractionStatus
+    #: The pasted line the value was read from (verbatim), for the researcher to check.
+    source_text: str | None = None
+    #: 1-based line number in the pasted text.
+    line: int | None = None
+    #: Different values found for this key (``ambiguous``), verbatim.
+    candidates: list[str] = []
+    note: str = ""
+
+
+class ExtractedStep(BaseModel):
+    """Candidate procedure step (numbered line or line of the procedure section)."""
+
+    title: str
+    detail: str = ""
+    condition_keys: list[str] = []
+    line: int | None = None
+
+
+class UnmatchedLine(BaseModel):
+    """A pasted line with numbers that no condition key could be read from."""
+
+    line: int
+    text: str
+
+
+class ProtocolExtraction(BaseModel):
+    """Extraction candidates — **not stored**; the researcher confirms them before saving.
+
+    Both engines return this schema. ``fields`` lists every known condition key in a
+    fixed order; keys that were not found are ``unrecognized`` with ``value=None``.
+    """
+
+    engine: ExtractionEngine
+    model: str | None = None
+    fallback_reason: str | None = None
+    fields: list[ExtractedField]
+    steps: list[ExtractedStep]
+    unmatched_lines: list[UnmatchedLine]
+    recognized_count: int
+    field_count: int
+    source_sha256: str
+
+
+class ExtractionSnapshot(BaseModel):
+    """The extraction the researcher reviewed, sent back with the confirmed protocol."""
+
+    engine: ExtractionEngine
+    model: str | None = None
+    fallback_reason: str | None = None
+    fields: list[ExtractedField] = Field(default=[], max_length=200)
+
+
+class DraftField(BaseModel):
+    """Claude output: one condition value and the verbatim line it was read from."""
+
+    key: str
+    value: str
+    source_text: str
+
+
+class DraftStep(BaseModel):
+    """Claude output: one procedure step and the condition keys it uses."""
+
+    title: str
+    detail: str
+    condition_keys: list[str]
+
+
+class ProtocolExtractionDraft(BaseModel):
+    """Structured output requested from Claude (validated against the pasted text)."""
+
+    fields: list[DraftField]
+    steps: list[DraftStep]
+
+
+ReviewOutcome = Literal["accepted", "edited", "added", "cleared", "left_empty"]
+
+
+class ExtractionReviewItem(BaseModel):
+    """What the researcher did with one candidate (stored with the template)."""
+
+    key: str
+    label: str
+    candidate: str | float | None = None
+    candidate_status: ExtractionStatus
+    source_text: str | None = None
+    confirmed: Any = None
+    outcome: ReviewOutcome
+
+
+class ExtractionReview(BaseModel):
+    """Stored provenance: engine, candidates and the researcher's confirmation."""
+
+    engine: ExtractionEngine
+    model: str | None = None
+    fallback_reason: str | None = None
+    items: list[ExtractionReviewItem]
+    accepted_count: int
+    edited_count: int
+    added_count: int
+
+
 # ------------------------------------------------------------ protocol templates
 
 
 class ProtocolTemplateCreate(BaseModel):
-    """Reusable protocol. Saving an existing name creates a new version."""
+    """Reusable protocol. Saving an existing name creates a new version.
+
+    ``source_text`` (pasted original) and ``extraction`` (the reviewed candidates) are
+    stored unchanged with the template as its original record.
+    """
 
     name: str = Field(min_length=1, max_length=120)
     description: str = ""
@@ -477,6 +621,11 @@ class ProtocolTemplateCreate(BaseModel):
     condition_block: ConditionBlock | None = None
     source_experiment_id: int | None = None
     author: str = ""
+    #: Researcher-facing version name (``v1.1``); defaults to ``v<version>``.
+    version_label: str = Field(default="", max_length=20)
+    steps: list[ProtocolStep] | None = Field(default=None, max_length=60)
+    source_text: str | None = Field(default=None, max_length=MAX_PROTOCOL_TEXT)
+    extraction: ExtractionSnapshot | None = None
 
 
 class ProtocolTemplateOut(BaseModel):
@@ -492,12 +641,198 @@ class ProtocolTemplateOut(BaseModel):
     source_experiment_id: int | None
     author: str
     created_at: datetime
+    version_label: str = ""
+    #: ``version_label`` or ``v<version>`` — what the screens show.
+    display_version: str = ""
+    #: Executable steps (stored, or derived from the note when none were stored).
+    steps: list[ProtocolStep] = []
+    steps_derived: bool = False
+    #: Pasted original text (empty when the template was not created from a paste).
+    source_text: str = ""
+    extraction: ExtractionReview | None = None
 
 
 class ProtocolTemplateList(BaseModel):
     project_id: int
     total: int
     items: list[ProtocolTemplateOut]
+
+
+# ------------------------------------------------------------ protocol lineage
+
+
+class ProtocolVersionRef(BaseModel):
+    """Compact reference to one protocol template version."""
+
+    template_id: int
+    name: str
+    version: int
+    display_version: str
+    created_at: datetime
+    author: str
+    source_experiment_id: int | None = None
+    source_experiment_code: str | None = None
+
+
+class ConditionValueChange(BaseModel):
+    """One condition key that differs between two condition blocks (values copied)."""
+
+    key: str
+    label: str
+    unit: str | None = None
+    kind: Literal["added", "removed", "changed"]
+    before: Any = None
+    after: Any = None
+
+
+class ProtocolDiff(BaseModel):
+    """Condition-level difference between two protocol versions (``a`` → ``b``)."""
+
+    a: ProtocolVersionRef
+    b: ProtocolVersionRef
+    changes: list[ConditionValueChange]
+    unchanged_keys: list[str]
+
+
+class ProtocolUse(BaseModel):
+    """An experiment recorded with a protocol version, and where it departed from it."""
+
+    experiment_id: int
+    code: str
+    title: str
+    author: str
+    performed_on: date
+    deviations: list[ConditionValueChange] = []
+
+
+class ProtocolVersionNode(BaseModel):
+    """One version in a protocol's lineage."""
+
+    template: ProtocolVersionRef
+    description: str
+    changes_from_previous: list[ConditionValueChange]
+    experiments: list[ProtocolUse]
+    #: Earliest / latest ``performed_on`` of the experiments recorded with this version.
+    first_used_on: date | None = None
+    last_used_on: date | None = None
+
+
+class ProtocolLineageItem(BaseModel):
+    """All versions of one protocol name, oldest first."""
+
+    name: str
+    versions: list[ProtocolVersionNode]
+
+
+class ProtocolLineage(BaseModel):
+    project_id: int
+    lineages: list[ProtocolLineageItem]
+
+
+# ---------------------------------------------------------------- protocol runs
+
+RunStatus = Literal["in_progress", "completed"]
+#: ``check``/``uncheck`` a step, record an ``actual`` condition value (``value=None``
+#: reverts to the planned value), or a free ``note`` on what was done differently.
+RunEntryKind = Literal["check", "uncheck", "actual", "note"]
+
+
+class ProtocolRunCreate(BaseModel):
+    operator: str = Field(default="", max_length=100)
+
+
+class ProtocolRunEntryCreate(BaseModel):
+    """One append-only event of a run (stored immutably, audited)."""
+
+    kind: RunEntryKind
+    step_index: int = Field(ge=0)
+    key: str | None = Field(default=None, max_length=64)
+    value: str | float | None = None
+    note: str = Field(default="", max_length=1000)
+
+
+class RunCondition(BaseModel):
+    """Planned value of a condition in a step and, if recorded, the actual value."""
+
+    key: str
+    label: str
+    unit: str | None = None
+    value_type: Literal["number", "text", "choice"] = "text"
+    planned: Any = None
+    actual: Any = None
+    deviated: bool = False
+    note: str = ""
+
+
+class RunStep(BaseModel):
+    index: int
+    title: str
+    detail: str = ""
+    done: bool = False
+    done_at: datetime | None = None
+    conditions: list[RunCondition] = []
+    notes: list[str] = []
+
+
+class RunDeviation(BaseModel):
+    """One difference from the protocol: a changed value, a note, or a step not checked."""
+
+    step_index: int
+    step_title: str
+    kind: Literal["value", "note", "skipped"]
+    key: str | None = None
+    label: str | None = None
+    unit: str | None = None
+    planned: Any = None
+    actual: Any = None
+    note: str = ""
+
+
+class ProtocolRunOut(BaseModel):
+    """Current state of a run, folded from its append-only entries."""
+
+    id: int
+    project_id: int
+    template: ProtocolVersionRef
+    operator: str
+    status: RunStatus
+    started_at: datetime
+    completed_at: datetime | None = None
+    experiment_id: int | None = None
+    steps: list[RunStep]
+    #: Value changes and notes (and, once completed, unchecked steps).
+    deviations: list[RunDeviation]
+    done_count: int
+    step_count: int
+    entry_count: int
+    #: First step not yet checked (``None`` when every step is checked).
+    current_step_index: int | None = None
+
+
+class ProtocolRunList(BaseModel):
+    items: list[ProtocolRunOut]
+
+
+class ProtocolRunComplete(BaseModel):
+    """Turn a run into an experiment record. ``dry_run`` previews without saving."""
+
+    code: str = Field(min_length=1, max_length=32)
+    title: str = Field(min_length=1, max_length=200)
+    author: str = Field(default="", max_length=100)
+    performed_on: date
+    parent_experiment_id: int | None = None
+    observations: str = Field(default="", max_length=10_000)
+    dry_run: bool = False
+
+
+class ProtocolRunCompletion(BaseModel):
+    """The experiment the run becomes: condition block with actual values + note."""
+
+    run: ProtocolRunOut
+    experiment: ExperimentCreate
+    experiment_id: int | None = None
+    deviations: list[RunDeviation]
+    dry_run: bool
 
 
 # ------------------------------------------------------------- field metadata
