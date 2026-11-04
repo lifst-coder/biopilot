@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useDiff, useExperiment } from "@/api/queries";
+import { useAllProtocolTemplates, useDiff, useExperiment } from "@/api/queries";
 import { Badge, Card, Disclosure, EmptyState, QueryState } from "@/components";
 import { TABS } from "@/layout/tabs";
 import { formatDate } from "@/lib/format";
@@ -49,6 +49,11 @@ export function NotebookPage() {
   const { project } = useActiveProject();
   const { experiments, selectedId, select } = useSelectedExperiment();
   const experiment = useExperiment(selectedId);
+  const { data: templates } = useAllProtocolTemplates(project?.id ?? null);
+  const protocolLabel = (id: number) => {
+    const t = templates?.items.find((x) => x.id === id);
+    return t ? `프로토콜 ${t.name} ${t.display_version}` : `프로토콜 #${id}`;
+  };
   const [composer, setComposer] = useState<ComposerSource | null>(null);
   const [dialog, setDialogState] = useState<Dialog>(null);
   const [notice, setNotice] = useState<ComposerResult | null>(null);
@@ -145,7 +150,7 @@ export function NotebookPage() {
                     exp.cloned_from_experiment_id
                       ? `복제 원본 ${experiments.find((e) => e.id === exp.cloned_from_experiment_id)?.code ?? ""}`
                       : null,
-                    exp.protocol_template_id ? `템플릿 #${exp.protocol_template_id}` : null,
+                    exp.protocol_template_id ? protocolLabel(exp.protocol_template_id) : null,
                   ]
                     .filter(Boolean)
                     .join(" · ")}

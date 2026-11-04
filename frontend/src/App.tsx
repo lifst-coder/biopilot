@@ -10,6 +10,9 @@ const OverviewPage = lazy(() =>
 const NotebookPage = lazy(() =>
   import("@/features/notebook/NotebookPage").then((m) => ({ default: m.NotebookPage })),
 );
+const ProtocolsPage = lazy(() =>
+  import("@/features/protocols/ProtocolsPage").then((m) => ({ default: m.ProtocolsPage })),
+);
 const AnalysisPage = lazy(() =>
   import("@/features/analysis/AnalysisPage").then((m) => ({ default: m.AnalysisPage })),
 );
@@ -29,6 +32,7 @@ export function App() {
           <Route index element={<Navigate to="/overview" replace />} />
           <Route path="/overview" element={<OverviewPage />} />
           <Route path="/notebook" element={<NotebookPage />} />
+          <Route path="/protocols" element={<ProtocolsPage />} />
           <Route path="/analysis" element={<AnalysisPage />} />
           <Route path="/research-ai" element={<ResearchAIPage />} />
           <Route path="/records" element={<RecordsPage />} />

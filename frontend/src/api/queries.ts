@@ -13,6 +13,8 @@ type ConditionBlock = Schemas["ConditionBlock"];
 type ExperimentCreate = Schemas["ExperimentCreate"];
 type ExperimentMetadataUpdate = Schemas["ExperimentMetadataUpdate"];
 type ProtocolTemplateCreate = Schemas["ProtocolTemplateCreate"];
+type ProtocolRunEntryCreate = Schemas["ProtocolRunEntryCreate"];
+type ProtocolRunComplete = Schemas["ProtocolRunComplete"];
 type AskRequest = Schemas["AskRequest"];
 type AskResponse = Schemas["AskResponse"];
 type HypothesisStatusChange = Schemas["HypothesisStatusChange"];
@@ -310,7 +312,111 @@ export const useCreateProtocolTemplate = () => {
       ),
     onSuccess: (t) => {
       void qc.invalidateQueries({ queryKey: ["eln", "protocol-templates", t.project_id] });
+      void qc.invalidateQueries({ queryKey: ["eln", "protocol-lineage", t.project_id] });
       void qc.invalidateQueries({ queryKey: ["system", "audit"] });
+    },
+  });
+};
+
+// eln — protocols: paste extraction, lineage, runs at the bench.
+/** Condition-block candidates from pasted text (nothing is stored). */
+export const useExtractProtocol = () =>
+  useMutation({
+    mutationFn: (text: string) => unwrap(api.POST("/api/eln/protocol-extractions", { body: { text } })),
+  });
+
+export const useAllProtocolTemplates = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["eln", "protocol-templates", projectId, "all"],
+    enabled: enabled(projectId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/eln/projects/{project_id}/protocol-templates", {
+          params: { path: { project_id: projectId! }, query: { all_versions: true } },
+        }),
+      ),
+  });
+
+export const useProtocolLineage = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["eln", "protocol-lineage", projectId],
+    enabled: enabled(projectId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/eln/projects/{project_id}/protocol-lineage", {
+          params: { path: { project_id: projectId! } },
+        }),
+      ),
+  });
+
+export const useProtocolDiff = (a: number | null, b: number | null) =>
+  useQuery({
+    queryKey: ["eln", "protocol-diff", a, b],
+    enabled: enabled(a, b) && a !== b,
+    queryFn: () => unwrap(api.GET("/api/eln/protocol-diff", { params: { query: { a: a!, b: b! } } })),
+  });
+
+export const useProtocolRuns = (projectId: number | null, status?: "in_progress" | "completed") =>
+  useQuery({
+    queryKey: ["eln", "protocol-runs", projectId, status ?? null],
+    enabled: enabled(projectId),
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/eln/projects/{project_id}/protocol-runs", {
+          params: { path: { project_id: projectId! }, query: status ? { status } : {} },
+        }),
+      ),
+  });
+
+export const useProtocolRun = (runId: number | null) =>
+  useQuery({
+    queryKey: ["eln", "protocol-run", runId],
+    enabled: enabled(runId),
+    queryFn: () =>
+      unwrap(api.GET("/api/eln/protocol-runs/{run_id}", { params: { path: { run_id: runId! } } })),
+  });
+
+/** Store the new run state returned by a run mutation and refresh run lists + audit. */
+const storeRun = (qc: ReturnType<typeof useQueryClient>, run: Schemas["ProtocolRunOut"]) => {
+  qc.setQueryData(["eln", "protocol-run", run.id], run);
+  void qc.invalidateQueries({ queryKey: ["eln", "protocol-runs", run.project_id] });
+  void qc.invalidateQueries({ queryKey: ["system", "audit"] });
+};
+
+export const useStartProtocolRun = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ templateId, operator }: { templateId: number; operator: string }) =>
+      unwrap(
+        api.POST("/api/eln/protocol-templates/{template_id}/runs", {
+          params: { path: { template_id: templateId } },
+          body: { operator },
+        }),
+      ),
+    onSuccess: (run) => storeRun(qc, run),
+  });
+};
+
+export const useAddRunEntry = (runId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ProtocolRunEntryCreate) =>
+      unwrap(api.POST("/api/eln/protocol-runs/{run_id}/entries", { params: { path: { run_id: runId } }, body })),
+    onSuccess: (run) => storeRun(qc, run),
+  });
+};
+
+export const useCompleteRun = (runId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: ProtocolRunComplete) =>
+      unwrap(api.POST("/api/eln/protocol-runs/{run_id}/complete", { params: { path: { run_id: runId } }, body })),
+    onSuccess: (done) => {
+      if (done.dry_run) return;
+      storeRun(qc, done.run);
+      void qc.invalidateQueries({ queryKey: ["eln", "experiments"] });
+      void qc.invalidateQueries({ queryKey: ["eln", "protocol-lineage", done.run.project_id] });
+      void qc.invalidateQueries({ queryKey: ["analysis", "records"] });
     },
   });
 };
@@ -463,6 +569,15 @@ export const useCompare = (a: number | null, b: number | null) =>
     enabled: enabled(a, b),
     queryFn: () =>
       unwrap(api.GET("/api/analysis/compare", { params: { query: { a: a!, b: b! } } })),
+  });
+
+/** QC pass counts of the experiments recorded with each protocol version. */
+export const useProtocolRecords = (projectId: number | null) =>
+  useQuery({
+    queryKey: ["analysis", "records", "protocols", projectId],
+    enabled: enabled(projectId),
+    queryFn: () =>
+      unwrap(api.GET("/api/analysis/records/protocols", { params: { query: { project_id: [projectId!] } } })),
   });
 
 export const useTrend = (projectId: number | null) =>
