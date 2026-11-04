@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { useState } from "react";
 import { useCompare, useDiff, useRunAnalysis } from "@/api/queries";
 import type { ExperimentSummary, MetricsComparison } from "@/api/types";
-import { Badge, DataTable, EmptyState, ExperimentPicker, QueryState } from "@/components";
+import { Badge, DataTable, EmptyState, ErrorState, ExperimentPicker, QueryState, isDemoNotice } from "@/components";
 import { formatConditionValue, formatNumber, formatPValue, formatWithUnit } from "@/lib/format";
 import { Modal } from "./Modal";
 
@@ -183,7 +183,12 @@ function AnalysisStatus({ sides }: { sides: Side[] }) {
       {run.data && run.data.skipped.length > 0 && (
         <p className="text-xs text-ink-muted">건너뜀: {run.data.skipped.join(" · ")}</p>
       )}
-      {run.error && <p className="text-xs text-crit">분석 실행 실패: {String((run.error as Error).message ?? run.error)}</p>}
+      {run.error &&
+        (isDemoNotice(run.error) ? (
+          <ErrorState error={run.error} />
+        ) : (
+          <p className="text-xs text-crit">분석 실행 실패: {String((run.error as Error).message ?? run.error)}</p>
+        ))}
     </div>
   );
 }

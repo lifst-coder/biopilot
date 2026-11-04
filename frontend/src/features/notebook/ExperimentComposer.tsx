@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { isDemo } from "@/api/demo";
 import {
   useCheckConditions,
   useConditionFields,
@@ -92,7 +93,7 @@ export function ExperimentComposer({ projectId, experiments, source: initial, on
   const [staged, setStaged] = useState<StagedCsv[]>([]);
   const [files, setFiles] = useState<StagedFile[]>([]);
   const [saving, setSaving] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<unknown>(null);
   const seq = useRef(0);
 
   useEffect(() => {
@@ -141,7 +142,7 @@ export function ExperimentComposer({ projectId, experiments, source: initial, on
       });
     } catch (e) {
       setSaving(null);
-      setSaveError(errorMessage(e));
+      setSaveError(e);
       return;
     }
     const failures: string[] = [];
@@ -181,6 +182,12 @@ export function ExperimentComposer({ projectId, experiments, source: initial, on
       subtitle="저장하면 원본(메모·조건·CSV)은 불변이 됩니다 — 이후 수정은 보충 기록으로"
       actions={<Badge tone="brand">{sourceLabel}</Badge>}
     >
+      {isDemo && (
+        <p className="mb-4 rounded-md border border-warn/30 bg-warn-soft px-3 py-2 text-sm">
+          <span className="font-semibold text-warn">데모 · 읽기 전용</span> — 작성 양식은 볼 수 있지만 저장·CSV 검사는
+          되지 않습니다. 로컬 실행에서는 저장하는 순간 원본(메모·조건·CSV)이 불변 레코드가 됩니다.
+        </p>
+      )}
       <form
         className="space-y-5"
         onSubmit={(e) => {
@@ -352,7 +359,7 @@ export function ExperimentComposer({ projectId, experiments, source: initial, on
           ))}
         </section>
 
-        {saveError && <ErrorState error={saveError} />}
+        {saveError != null && <ErrorState error={saveError} />}
         <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
           {saving && <span className="mr-auto text-xs text-ink-muted">{saving}</span>}
           {hasConditionErrors && <span className="mr-auto text-xs text-crit">조건 블록 오류를 고쳐야 저장할 수 있습니다</span>}
