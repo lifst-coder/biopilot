@@ -274,6 +274,18 @@ class AnalysisFactProvider(FactProvider):
             )
         return out
 
+    def facts_many(
+        self, session: Session, experiment_ids: list[int]
+    ) -> tuple[dict[int, list[ResultFact]], dict[int, list[QCFact] | None]]:
+        """Result facts and QC flags from one read of the latest results."""
+        metrics, heads = analysis.get_metrics_and_heads_many(session, experiment_ids)
+        results = {
+            i: _result_facts(i, metrics[i], {k: h.id for k, h in heads[i].items()})
+            for i in experiment_ids
+        }
+        flags: dict[int, list[QCFact] | None] = {i: _qc_facts(i, heads[i]) for i in experiment_ids}
+        return results, flags
+
     def qc_flags(self, session: Session, experiment_id: int) -> list[QCFact] | None:
         """QC flags of the latest stored result of each kind."""
         refs = analysis.latest_result_refs_many(session, [experiment_id])[experiment_id]

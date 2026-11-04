@@ -193,6 +193,7 @@ def test_batched_reads_equal_per_item_reads(grown: Grown) -> None:
 
             qc = ports.qc_flags_many(s, ids)
             results = ports.results_many(s, ids)
+            assert ports.facts_many(s, ids) == (results, qc)
             for i in ids:
                 assert qc[i] == ports.qc_flags(s, i) == ref_provider.qc_flags(s, i)
                 assert results[i] == ports.results(s, i) == ref_provider.results(s, i)

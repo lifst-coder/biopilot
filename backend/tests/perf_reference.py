@@ -284,6 +284,13 @@ class RefAnalysisFactProvider(wiring.AnalysisFactProvider):
             return super().results_many(session, experiment_ids)
         return FactProvider.results_many(self, session, experiment_ids)
 
+    def facts_many(
+        self, session: Session, experiment_ids: list[int]
+    ) -> tuple[dict[int, list[ResultFact]], dict[int, list[QCFact] | None]]:
+        if not self.revert_results:
+            return super().facts_many(session, experiment_ids)
+        return FactProvider.facts_many(self, session, experiment_ids)
+
     def qc_flags(self, session: Session, experiment_id: int) -> list[QCFact] | None:
         if not self.revert_results:
             return super().qc_flags(session, experiment_id)
