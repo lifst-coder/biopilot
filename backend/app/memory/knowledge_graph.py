@@ -34,12 +34,12 @@ from sqlalchemy.orm import Session
 from app.core.audit import AuditEvent
 from app.core.errors import NotFoundError
 from app.eln import service as eln
-from app.eln.schemas import ExperimentOut
+from app.eln.schemas import DatasetOut, ExperimentOut
 from app.memory import ports
 from app.memory.conditions import (
     SAMPLE_KEYS,
     STRAIN_KEYS,
-    condition_changes,
+    changed_keys,
     condition_source,
     conditions,
     display,
@@ -47,7 +47,7 @@ from app.memory.conditions import (
     proposal_tests,
     similar_pairs,
 )
-from app.memory.facts import dataset_vocab
+from app.memory.facts import DatasetVocab, dataset_vocab, dataset_vocabs
 from app.memory.models import KnowledgeNote
 from app.memory.schemas import (
     EntityFacts,
@@ -78,6 +78,16 @@ TRACKED = frozenset(
         "partner.Decision",
         "memory.KnowledgeNote",
     }
+)
+
+
+#: Entity types whose labels/links come from fact providers (``ports.describe``).
+_DESCRIBED = (
+    "analysis.AnalysisResult",
+    "partner.Critique",
+    "partner.Hypothesis",
+    "partner.Proposal",
+    "partner.Decision",
 )
 
 
@@ -126,6 +136,36 @@ class _Builder:
         self.session = session
         self.s = state
         self.derived_dirty = False
+        # Read in batches by :meth:`prefetch` (one query per entity type, not per event).
+        self._prefetched = False
+        self._experiments: dict[int, ExperimentOut] = {}
+        self._datasets: dict[int, DatasetOut] = {}
+        self._vocabs: dict[int, DatasetVocab] = {}
+        self._event_facts: dict[int, EntityFacts | None] = {}
+        self._event_id: int | None = None
+
+    def prefetch(self, events: list[AuditEvent]) -> None:
+        """Read everything the handlers of ``events`` need, one batch per entity type.
+
+        Same records the handlers would read one by one (the database does not change
+        during a refresh); facts are fetched per *event*, since a provider may use the
+        event's payload.
+        """
+        by_type: dict[str, list[AuditEvent]] = {}
+        for ev in events:
+            if ev.entity_type in TRACKED:
+                by_type.setdefault(ev.entity_type, []).append(ev)
+        exp_ids = sorted({ev.entity_id for ev in by_type.get("eln.Experiment", [])})
+        self._experiments = eln.get_experiments(self.session, exp_ids)
+        ds_ids = sorted({ev.entity_id for ev in by_type.get("eln.Dataset", [])})
+        self._datasets = eln.get_datasets(self.session, ds_ids)
+        self._vocabs = dataset_vocabs(self.session, list(self._datasets.values()))
+        for ref_type in _DESCRIBED:
+            evs = by_type.get(ref_type, [])
+            items = [(ev.entity_id, dict(ev.payload or {})) for ev in evs]
+            facts = ports.describe_many(self.session, ref_type, items, self.s.project_id)
+            self._event_facts.update((ev.id, f) for ev, f in zip(evs, facts, strict=True))
+        self._prefetched = True
 
     # -- primitives
     def node(self, nid: str, kind: KGNodeType, lbl: str, **fields: Any) -> None:
@@ -165,15 +205,35 @@ class _Builder:
         owner = f"{ev.entity_type}:{ev.entity_id}"
         self.clear(owner)
         handler = getattr(self, "_" + ev.entity_type.replace(".", "_").lower())
+        self._event_id = ev.id
         handler(owner, ev.entity_id, dict(ev.payload or {}))
 
     def _facts(self, ref_type: str, ref_id: int, payload: dict[str, Any]) -> EntityFacts | None:
+        if self._event_id in self._event_facts:
+            return self._event_facts[self._event_id]
         return ports.describe(self.session, ref_type, ref_id, self.s.project_id, payload)
 
-    def _eln_experiment(self, owner: str, ref_id: int, _payload: dict[str, Any]) -> None:
+    def _experiment(self, ref_id: int) -> ExperimentOut | None:
+        if self._prefetched:
+            return self._experiments.get(ref_id)
         try:
-            exp = eln.get_experiment(self.session, ref_id)
+            return eln.get_experiment(self.session, ref_id)
         except NotFoundError:
+            return None
+
+    def _dataset(self, ref_id: int) -> tuple[DatasetOut, DatasetVocab] | None:
+        if self._prefetched:
+            meta = self._datasets.get(ref_id)
+            return (meta, self._vocabs[ref_id]) if meta is not None else None
+        try:
+            meta = eln.get_dataset(self.session, ref_id)
+        except NotFoundError:
+            return None
+        return meta, dataset_vocab(self.session, ref_id, meta)
+
+    def _eln_experiment(self, owner: str, ref_id: int, _payload: dict[str, Any]) -> None:
+        exp = self._experiment(ref_id)
+        if exp is None:
             return
         self.s.experiments[exp.id] = exp
         self.derived_dirty = True
@@ -191,7 +251,7 @@ class _Builder:
             pid = node_id("experiment", exp.parent_experiment_id)
             self.placeholder(pid, "experiment")
             parent = self.s.experiments.get(exp.parent_experiment_id)
-            changed = [c.key for c in condition_changes(parent, exp)] if parent else []
+            changed = changed_keys(parent, exp) if parent else []
             self.edge(
                 owner,
                 eid,
@@ -221,13 +281,12 @@ class _Builder:
             self.edge(owner, eid, cid, "uses_condition", src)
 
     def _eln_dataset(self, owner: str, ref_id: int, payload: dict[str, Any]) -> None:
-        try:
-            meta = eln.get_dataset(self.session, ref_id)
-        except NotFoundError:
+        found = self._dataset(ref_id)
+        if found is None:
             return
+        meta, vocab = found
         eid = node_id("experiment", meta.experiment_id)
         self.placeholder(eid, "experiment")
-        vocab = dataset_vocab(self.session, ref_id)
         for analyte in vocab.analytes:
             aid = node_id("analyte", analyte)
             self.node(aid, "analyte", analyte)
@@ -454,6 +513,7 @@ def refresh(session: Session, project_id: int) -> tuple[_State, GraphRefresh]:
             )
         )
         builder = _Builder(session, state)
+        builder.prefetch(events)
         for ev in events:
             builder.apply(ev)
         if events:

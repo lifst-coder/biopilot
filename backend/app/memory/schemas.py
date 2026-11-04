@@ -490,6 +490,12 @@ class FactProvider:
         """Stored headline results of one experiment."""
         return []
 
+    def results_many(
+        self, session: Session, experiment_ids: list[int]
+    ) -> dict[int, list[ResultFact]]:
+        """:meth:`results` of many experiments (every id a key). Override to batch reads."""
+        return {i: self.results(session, i) for i in experiment_ids}
+
     def result_deltas(self, session: Session, a_id: int, b_id: int) -> list[ResultDelta] | None:
         """Result comparison of two experiments, or ``None`` if not this provider's job."""
         return None
@@ -497,6 +503,12 @@ class FactProvider:
     def qc_flags(self, session: Session, experiment_id: int) -> list[QCFact] | None:
         """QC flags of the latest stored results, or ``None`` if not supported."""
         return None
+
+    def qc_flags_many(
+        self, session: Session, experiment_ids: list[int]
+    ) -> dict[int, list[QCFact] | None]:
+        """:meth:`qc_flags` of many experiments (every id a key). Override to batch reads."""
+        return {i: self.qc_flags(session, i) for i in experiment_ids}
 
     def describe(
         self,
@@ -508,6 +520,19 @@ class FactProvider:
     ) -> EntityFacts | None:
         """Labels/links for an audited entity this provider owns, else ``None``."""
         return None
+
+    def describe_many(
+        self,
+        session: Session,
+        ref_type: str,
+        items: list[tuple[int, dict[str, Any]]],
+        project_id: int,
+    ) -> list[EntityFacts | None]:
+        """:meth:`describe` of many ``(ref_id, payload)`` items of one type, in order.
+
+        Override to batch reads; the default asks :meth:`describe` per item.
+        """
+        return [self.describe(session, ref_type, i, project_id, p) for i, p in items]
 
     def proposals(self, session: Session, project_id: int) -> list[ProposalFact]:
         """Stored proposals of a project (for ``tests_proposal`` edges)."""

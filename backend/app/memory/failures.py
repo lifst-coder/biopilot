@@ -115,12 +115,13 @@ def load(session: Session, project_ids: Iterable[int] | None = None) -> dict[int
     for p in projects:
         if p.id not in wanted:
             continue
-        for e in eln.list_experiments_full(session, p.id):
+        exps = eln.list_experiments_full(session, p.id)
+        ids = [e.id for e in exps]
+        flags = ports.qc_flags_many(session, ids)  # batched: not one lookup per experiment
+        results = ports.results_many(session, ids)
+        for e in exps:
             items[e.id] = _Exp(
-                exp=e,
-                project_name=p.name,
-                flags=ports.qc_flags(session, e.id) or [],
-                results=ports.results(session, e.id),
+                exp=e, project_name=p.name, flags=flags[e.id] or [], results=results[e.id]
             )
     for item in items.values():
         pid = item.exp.parent_experiment_id
@@ -148,24 +149,23 @@ def _record(item: _Exp, items: dict[int, _Exp]) -> FailureRecord:
     )
 
 
-def _descends(item: _Exp, ancestor_id: int, items: dict[int, _Exp]) -> bool:
+def _ancestors(item: _Exp, items: dict[int, _Exp]) -> set[int]:
+    """Ids on ``item``'s parent chain (stops at a cycle or an experiment outside ``items``)."""
     seen: set[int] = set()
     cur = item.exp.parent_experiment_id
     while cur is not None and cur not in seen and cur in items:
-        if cur == ancestor_id:
-            return True
         seen.add(cur)
         cur = items[cur].exp.parent_experiment_id
-    return False
+    return seen
 
 
-def _same_base(earlier: _Exp, later: _Exp, items: dict[int, _Exp]) -> bool:
+def _same_base(earlier: _Exp, later: _Exp, later_ancestors: set[int]) -> bool:
     """``later`` re-applies ``earlier``'s change to the same parent, or inherits it."""
     same_parent = (
         earlier.exp.parent_experiment_id is not None
         and later.exp.parent_experiment_id == earlier.exp.parent_experiment_id
     )
-    return same_parent or _descends(later, earlier.exp.id, items)
+    return same_parent or earlier.exp.id in later_ancestors
 
 
 def _links(failures: list[_Exp], items: dict[int, _Exp]) -> list[FailurePatternLink]:
@@ -185,6 +185,8 @@ def _links(failures: list[_Exp], items: dict[int, _Exp]) -> list[FailurePatternL
                     ),
                 )
             )
+    # Each failure's parent chain is walked once, not once per (earlier, later) pair.
+    ancestors = {f.exp.id: _ancestors(f, items) for f in failures}
     for i, earlier in enumerate(failures):
         introduced = [c for c in earlier.changes if c.change != "removed"]
         if not introduced:
@@ -192,7 +194,7 @@ def _links(failures: list[_Exp], items: dict[int, _Exp]) -> list[FailurePatternL
         for later in failures[i + 1 :]:
             if later.exp.parent_experiment_id == earlier.exp.id:
                 continue  # already a retry link
-            if not _same_base(earlier, later, items):
+            if not _same_base(earlier, later, ancestors[later.exp.id]):
                 continue
             shared = sorted(set(earlier.failed_analytes) & set(later.failed_analytes))
             if not shared:

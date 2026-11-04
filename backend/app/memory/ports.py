@@ -44,6 +44,15 @@ def results(session: Session, experiment_id: int) -> list[ResultFact]:
     return [r for p in _providers.values() for r in p.results(session, experiment_id)]
 
 
+def results_many(session: Session, experiment_ids: list[int]) -> dict[int, list[ResultFact]]:
+    """:func:`results` of many experiments, each provider asked once (batched reads)."""
+    out: dict[int, list[ResultFact]] = {i: [] for i in experiment_ids}
+    for p in _providers.values():
+        for i, facts in p.results_many(session, experiment_ids).items():
+            out[i].extend(facts)
+    return out
+
+
 def result_deltas(session: Session, a_id: int, b_id: int) -> list[ResultDelta] | None:
     """Merged result comparison; ``None`` when no provider supports it."""
     merged: list[ResultDelta] | None = None
@@ -64,6 +73,16 @@ def qc_flags(session: Session, experiment_id: int) -> list[QCFact] | None:
     return merged
 
 
+def qc_flags_many(session: Session, experiment_ids: list[int]) -> dict[int, list[QCFact] | None]:
+    """:func:`qc_flags` of many experiments, each provider asked once (batched reads)."""
+    merged: dict[int, list[QCFact] | None] = dict.fromkeys(experiment_ids)
+    for p in _providers.values():
+        for i, part in p.qc_flags_many(session, experiment_ids).items():
+            if part is not None:
+                merged[i] = (merged[i] or []) + part
+    return merged
+
+
 def describe(
     session: Session, ref_type: str, ref_id: int, project_id: int, payload: dict[str, Any]
 ) -> EntityFacts | None:
@@ -73,6 +92,22 @@ def describe(
         if facts is not None:
             return facts
     return None
+
+
+def describe_many(
+    session: Session, ref_type: str, items: list[tuple[int, dict[str, Any]]], project_id: int
+) -> list[EntityFacts | None]:
+    """:func:`describe` of many ``(ref_id, payload)`` items of one type (aligned with
+    ``items``): each provider answers the items no earlier provider described."""
+    out: list[EntityFacts | None] = [None] * len(items)
+    for p in _providers.values():
+        todo = [i for i, f in enumerate(out) if f is None]
+        if not todo:
+            break
+        answers = p.describe_many(session, ref_type, [items[i] for i in todo], project_id)
+        for i, facts in zip(todo, answers, strict=True):
+            out[i] = facts
+    return out
 
 
 def proposals(session: Session, project_id: int) -> list[ProposalFact]:

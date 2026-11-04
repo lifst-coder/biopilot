@@ -28,6 +28,8 @@ from app.memory import failures as failure_archive_mod
 from app.memory import knowledge_graph as kg
 from app.memory import ports, search_index
 from app.memory.conditions import (
+    changed_condition_keys,
+    changed_keys,
     condition_changes,
     condition_source,
     conditions,
@@ -39,7 +41,7 @@ from app.memory.conditions import (
     similar_pairs,
     similarity,
 )
-from app.memory.facts import ExperimentVocab, experiment_vocab
+from app.memory.facts import ExperimentVocab, experiment_vocabs
 from app.memory.models import ExperimentDigest, KnowledgeNote
 from app.memory.schemas import (
     ConditionHistoryEntry,
@@ -146,9 +148,7 @@ def build_graph(experiments: list[ExperimentOut]) -> nx.DiGraph:
     for e in experiments:
         if e.parent_experiment_id is not None and e.parent_experiment_id in by_id:
             parent = by_id[e.parent_experiment_id]
-            graph.add_edge(
-                parent.id, e.id, changed_keys=[c.key for c in condition_changes(parent, e)]
-            )
+            graph.add_edge(parent.id, e.id, changed_keys=changed_keys(parent, e))
     return graph
 
 
@@ -182,13 +182,15 @@ def get_graph(
         ]
     by_id = {e.id: e for e in exps}
     if "shares_conditions" in wanted:
+        conds = {e.id: conditions(e) for e in exps}  # once per experiment, not per edge
+        order = {i: sorted(c) for i, c in conds.items()}
         for a, b, score in similar_pairs(exps, SHARES_CONDITIONS_THRESHOLD):
             edges.append(
                 GraphEdge(
                     source=a,
                     target=b,
                     relation="shares_conditions",
-                    changed_keys=[c.key for c in condition_changes(by_id[a], by_id[b])],
+                    changed_keys=changed_condition_keys(conds[a], conds[b], order[a], order[b]),
                     similarity=score,
                 )
             )
@@ -201,9 +203,7 @@ def get_graph(
                     source=exp.parent_experiment_id,
                     target=exp_id,
                     relation="tests_proposal",
-                    changed_keys=[
-                        c.key for c in condition_changes(by_id[exp.parent_experiment_id], exp)
-                    ],
+                    changed_keys=changed_keys(by_id[exp.parent_experiment_id], exp),
                     proposal_id=prop_id,
                 )
             )
@@ -252,7 +252,7 @@ def get_timeline(session: Session, project_id: int) -> list[TimelineEntry]:
     entries: list[TimelineEntry] = []
     for e in exps:
         parent = by_id.get(e.parent_experiment_id) if e.parent_experiment_id else None
-        changed = [c.key for c in condition_changes(parent, e)] if parent else []
+        changed = changed_keys(parent, e) if parent else []
         entries.append(
             TimelineEntry(
                 experiment_id=e.id,
@@ -651,7 +651,7 @@ def recall(session: Session, project_id: int, query: str, limit: int = 10) -> Re
     """
     terms = recall_terms(query)
     exps = eln.list_experiments_full(session, project_id)
-    vocabs = {e.id: experiment_vocab(session, e) for e in exps}
+    vocabs = experiment_vocabs(session, project_id, exps)
     by_id = {e.id: e for e in exps}
     matched: list[MatchedTerm] = []
     reasons: dict[int, list[SearchHit]] = {e.id: [] for e in exps}

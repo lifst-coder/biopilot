@@ -25,27 +25,39 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import delete, event, select, text
+from sqlalchemy import bindparam, delete, event, select, text
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from app.core.audit import AuditEvent
 from app.core.errors import NotFoundError
 from app.eln import service as eln
+from app.eln.schemas import DatasetOut, ExperimentOut
 from app.memory import ports
 from app.memory.conditions import conditions, display, label
-from app.memory.facts import dataset_vocab
+from app.memory.facts import DatasetVocab, dataset_vocab, dataset_vocabs
 from app.memory.models import ExperimentDigest, IndexState, KnowledgeNote
 from app.memory.schemas import SearchField, SearchHit, SourceRef
 
 logger = logging.getLogger(__name__)
 
 FTS_TABLE = "memory_search_fts"
+#: B-tree side table ``doc_key → FTS rowid``. ``doc_key`` is an UNINDEXED FTS5 column, so
+#: ``DELETE … WHERE doc_key = :k`` on the FTS table scans every row (PERFORMANCE.md);
+#: deleting by rowid through this indexed map is a point lookup. Created, dropped and
+#: rebuilt together with the FTS table (same ``memory_search_fts`` prefix, so Alembic
+#: autogenerate ignores both).
+ROWS_TABLE = "memory_search_fts_rows"
 _DDL = (
     f"CREATE VIRTUAL TABLE IF NOT EXISTS {FTS_TABLE} USING fts5("
     "text, doc_key UNINDEXED, project_id UNINDEXED, experiment_id UNINDEXED, "
     "field UNINDEXED, ref_type UNINDEXED, ref_id UNINDEXED, ref_field UNINDEXED, "
     "tokenize='trigram')"
+)
+_ROWS_DDL = (
+    f"CREATE TABLE IF NOT EXISTS {ROWS_TABLE} "
+    "(fts_rowid INTEGER PRIMARY KEY, doc_key TEXT NOT NULL)",
+    f"CREATE INDEX IF NOT EXISTS ix_{ROWS_TABLE}_doc_key ON {ROWS_TABLE} (doc_key)",
 )
 MIN_TRIGRAM = 3
 
@@ -67,10 +79,39 @@ class Doc:
 # --------------------------------------------------------------- documents
 
 
+@dataclass(frozen=True)
+class Prefetched:
+    """ELN originals of a batch of events, read with one query per kind (not per event)."""
+
+    experiments: dict[int, ExperimentOut]
+    datasets: dict[int, DatasetOut]
+    vocabs: dict[int, DatasetVocab]
+
+
+def prefetch(session: Session, events: list[AuditEvent]) -> Prefetched:
+    """Experiments and datasets (+ parsed vocabulary) that ``events`` refer to, batched."""
+    exp_ids = sorted({e.entity_id for e in events if e.entity_type == "eln.Experiment"})
+    ds_ids = sorted({e.entity_id for e in events if e.entity_type == "eln.Dataset"})
+    datasets = eln.get_datasets(session, ds_ids)
+    return Prefetched(
+        experiments=eln.get_experiments(session, exp_ids),
+        datasets=datasets,
+        vocabs=dataset_vocabs(session, list(datasets.values())),
+    )
+
+
 def documents_for(
-    session: Session, entity_type: str, entity_id: int, project_id: int, payload: dict[str, Any]
+    session: Session,
+    entity_type: str,
+    entity_id: int,
+    project_id: int,
+    payload: dict[str, Any],
+    pre: Prefetched | None = None,
 ) -> list[Doc]:
-    """Searchable documents contributed by one audited entity."""
+    """Searchable documents contributed by one audited entity.
+
+    ``pre`` (from :func:`prefetch` over the same events) replaces the per-entity reads.
+    """
     key = f"{entity_type}:{entity_id}"
 
     def doc(exp_id: int, fld: SearchField, ref_field: str, body: str) -> Doc:
@@ -78,7 +119,12 @@ def documents_for(
 
     try:
         if entity_type == "eln.Experiment":
-            exp = eln.get_experiment(session, entity_id)
+            found = (
+                pre.experiments.get(entity_id) if pre else eln.get_experiment(session, entity_id)
+            )
+            if found is None:
+                return []
+            exp = found
             out = [
                 doc(exp.id, "title", "title", exp.title),
                 doc(exp.id, "raw_note", "raw_note", exp.raw_note),
@@ -94,8 +140,13 @@ def documents_for(
                 )
             return out
         if entity_type == "eln.Dataset":
-            meta = eln.get_dataset(session, entity_id)
-            vocab = dataset_vocab(session, entity_id)
+            if pre is not None:
+                if entity_id not in pre.datasets:
+                    return []
+                meta, vocab = pre.datasets[entity_id], pre.vocabs[entity_id]
+            else:
+                meta = eln.get_dataset(session, entity_id)
+                vocab = dataset_vocab(session, entity_id, meta)
             parts = []
             if vocab.analytes:
                 parts.append("분석물: " + ", ".join(vocab.analytes))
@@ -204,27 +255,79 @@ def is_sqlite(session: Session) -> bool:
     return session.get_bind().dialect.name == "sqlite"
 
 
-def table_exists(session: Session) -> bool:
-    """Whether the FTS5 table exists (read-only check)."""
+def table_exists(session: Session, name: str = FTS_TABLE) -> bool:
+    """Whether the FTS5 table (or another table) exists (read-only check)."""
     return (
         session.execute(
-            text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:n"), {"n": FTS_TABLE}
+            text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:n"), {"n": name}
         ).first()
         is not None
     )
 
 
 def ensure_table(session: Session) -> bool:
-    """Create the FTS5 table if missing (write path only). Returns ``True`` if created.
+    """Create the FTS5 table and its rowid map if missing (write path only).
 
-    A freshly created table is empty, so every project's watermark is reset with it —
-    otherwise projects indexed into a dropped table would stay invisible to FTS.
+    Returns ``True`` if (re)created. Both are (re)built together: an FTS table without
+    its map (a database indexed before the map existed) is dropped and rebuilt. A fresh
+    table is empty, so every project's watermark is reset with it — otherwise projects
+    indexed into a dropped table would stay invisible to FTS.
     """
-    if table_exists(session):
+    if table_exists(session) and table_exists(session, ROWS_TABLE):
         return False
+    session.execute(text(f"DROP TABLE IF EXISTS {FTS_TABLE}"))
+    session.execute(text(f"DROP TABLE IF EXISTS {ROWS_TABLE}"))
     session.execute(text(_DDL))
+    for ddl in _ROWS_DDL:
+        session.execute(text(ddl))
     session.execute(delete(IndexState).where(IndexState.name.like("search:%")))
     return True
+
+
+_INSERT = text(
+    f"INSERT INTO {FTS_TABLE} (rowid, text, doc_key, project_id, experiment_id, field, "
+    "ref_type, ref_id, ref_field) VALUES (:rowid, :text, :doc_key, :project_id, "
+    ":experiment_id, :field, :ref_type, :ref_id, :ref_field)"
+)
+_KEYS_CHUNK = 500
+
+
+def _replace(session: Session, docs: dict[str, list[Doc]]) -> None:
+    """Replace the index rows of every entity in ``docs`` (doc_key → its documents).
+
+    Set-based: old rows are deleted by rowid through the indexed map (one statement per
+    500 keys) and new rows inserted with ``executemany``; rowids are assigned in ``docs``
+    order, so the rows end up as if each entity had been replaced one after the other.
+    """
+    keys = list(docs)
+    for start in range(0, len(keys), _KEYS_CHUNK):
+        chunk = {"keys": keys[start : start + _KEYS_CHUNK]}
+        session.execute(
+            text(
+                f"DELETE FROM {FTS_TABLE} WHERE rowid IN "
+                f"(SELECT fts_rowid FROM {ROWS_TABLE} WHERE doc_key IN :keys)"
+            ).bindparams(bindparam("keys", expanding=True)),
+            chunk,
+        )
+        session.execute(
+            text(f"DELETE FROM {ROWS_TABLE} WHERE doc_key IN :keys").bindparams(
+                bindparam("keys", expanding=True)
+            ),
+            chunk,
+        )
+    rows = [d for key in keys for d in docs[key]]
+    if not rows:
+        return
+    first = int(
+        session.execute(
+            text(f"SELECT coalesce(max(fts_rowid), 0) + 1 FROM {ROWS_TABLE}")
+        ).scalar_one()
+    )
+    session.execute(
+        text(f"INSERT INTO {ROWS_TABLE} (fts_rowid, doc_key) VALUES (:rowid, :doc_key)"),
+        [{"rowid": first + i, "doc_key": d.doc_key} for i, d in enumerate(rows)],
+    )
+    session.execute(_INSERT, [{"rowid": first + i, **d.__dict__} for i, d in enumerate(rows)])
 
 
 def sync(session: Session, project_id: int) -> int:
@@ -243,18 +346,24 @@ def sync(session: Session, project_id: int) -> int:
     state = session.get(IndexState, name, populate_existing=True)
     assert state is not None
     events = _events(session, project_id, state.last_event_id)
+    # An entity's rows are replaced on each of its events, so only its *last* event in
+    # this batch decides them; earlier ones are skipped (the order of last occurrence is
+    # kept, so the rows end up in the same order as replacing them event by event).
+    latest: dict[str, AuditEvent] = {}
     for ev in events:
         doc_key = f"{ev.entity_type}:{ev.entity_id}"
-        session.execute(text(f"DELETE FROM {FTS_TABLE} WHERE doc_key = :k"), {"k": doc_key})
-        for d in documents_for(session, ev.entity_type, ev.entity_id, project_id, ev.payload or {}):
-            session.execute(
-                text(
-                    f"INSERT INTO {FTS_TABLE} (text, doc_key, project_id, experiment_id, field, "
-                    "ref_type, ref_id, ref_field) VALUES (:text, :doc_key, :project_id, "
-                    ":experiment_id, :field, :ref_type, :ref_id, :ref_field)"
-                ),
-                d.__dict__,
+        latest.pop(doc_key, None)
+        latest[doc_key] = ev
+    pre = prefetch(session, list(latest.values()))
+    _replace(
+        session,
+        {
+            doc_key: documents_for(
+                session, ev.entity_type, ev.entity_id, project_id, ev.payload or {}, pre
             )
+            for doc_key, ev in latest.items()
+        },
+    )
     if events:
         state.last_event_id = events[-1].id
     session.flush()
@@ -302,8 +411,10 @@ def _scan(
     for ev in events:
         latest[f"{ev.entity_type}:{ev.entity_id}"] = ev
     out: list[tuple[Doc, float]] = []
+    pre = prefetch(session, list(latest.values()))
     for ev in latest.values():
-        for d in documents_for(session, ev.entity_type, ev.entity_id, project_id, ev.payload or {}):
+        payload = ev.payload or {}
+        for d in documents_for(session, ev.entity_type, ev.entity_id, project_id, payload, pre):
             low = d.text.lower()
             if all(t in low for t in terms):
                 out.append((d, float(sum(low.count(t) for t in terms))))
