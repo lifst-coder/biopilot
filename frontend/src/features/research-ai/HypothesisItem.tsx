@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useChangeHypothesisStatus } from "@/api/queries";
 import type { HypothesisOut } from "@/api/types";
-import { Badge } from "@/components";
+import { Badge, ErrorState } from "@/components";
 
 const NEXT: Record<HypothesisOut["status"], HypothesisOut["status"][]> = {
   proposed: ["open"],
@@ -64,7 +64,7 @@ export function HypothesisItem({ hypothesis, resultIds }: { hypothesis: Hypothes
               {LABEL[s]}
             </button>
           ))}
-          {change.isError && <span className="text-crit">{change.error.message}</span>}
+          {change.isError && <ErrorState error={change.error} />}
         </div>
       )}
     </li>

@@ -11,7 +11,7 @@ import {
 } from "@/api/queries";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Badge, Card, Disclosure, EmptyState, ExperimentPicker, PageHeader, QueryState } from "@/components";
+import { Badge, Card, Disclosure, EmptyState, ErrorState, ExperimentPicker, PageHeader, QueryState } from "@/components";
 import { TABS } from "@/layout/tabs";
 import { useActiveProject, useSelectedExperiment } from "@/lib/selection";
 import { CriticAssessmentView } from "./CriticAssessmentView";
@@ -96,7 +96,8 @@ export function ResearchAIPage() {
           </>
         }
       />
-      {run.isError && <p className="text-sm text-crit">{run.error.message}</p>}
+      {run.isError && <ErrorState error={run.error} />}
+      {runProject.isError && <ErrorState error={runProject.error} />}
 
       <div id="critic" className="scroll-mt-4 space-y-4">
         {precedents.data && <PrecedentCard data={precedents.data} currentProjectId={projectId} />}

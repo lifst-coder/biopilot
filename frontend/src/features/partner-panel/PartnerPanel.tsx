@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAskStream, useCritiques, useExchanges, usePartnerMode } from "@/api/queries";
-import { EngineBadge, SeverityBadge } from "@/components";
+import { EngineBadge, ErrorState, SeverityBadge } from "@/components";
 import { formatDateTime } from "@/lib/format";
 import { useActiveProject, useSelectedExperiment } from "@/lib/selection";
 import { AnswerView } from "./AnswerView";
@@ -97,7 +97,7 @@ export function PartnerPanel() {
         <p className="text-sm text-ink-faint">
           답변의 각 문장은 사실·판단·추정으로 표시됩니다. 근거 없는 문장은 항상 &lsquo;추정&rsquo;입니다.
         </p>
-        {ask.isError && <p className="text-sm text-crit">{ask.error.message}</p>}
+        {ask.isError && <ErrorState error={ask.error} />}
         {ask.stream.replaced && (
           <p className="text-sm text-warn">임시 답변을 검증하지 못해 규칙 모드 답변으로 교체했습니다.</p>
         )}

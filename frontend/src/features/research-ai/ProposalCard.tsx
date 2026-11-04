@@ -1,8 +1,9 @@
 import clsx from "clsx";
 import { useState } from "react";
+import { isDemo } from "@/api/demo";
 import { useDecideProposal, useProposalExperimentDraft } from "@/api/queries";
 import type { DecisionCreate, ProposalOut } from "@/api/types";
-import { Badge, EngineBadge } from "@/components";
+import { Badge, EngineBadge, ErrorState } from "@/components";
 import { formatConditionValue, formatDate, formatDateTime } from "@/lib/format";
 import { DesignDetails } from "./DesignDetails";
 
@@ -13,7 +14,7 @@ const ACTION_LABEL = { accept: "채택", modify: "수정", reject: "기각" } as
 function DraftPreview({ proposalId }: { proposalId: number }) {
   const { data, isPending, isError, error } = useProposalExperimentDraft(proposalId);
   if (isPending) return <p className="text-ink-faint">초안 생성 중…</p>;
-  if (isError) return <p className="text-crit">{error.message}</p>;
+  if (isError) return <ErrorState error={error} />;
   return (
     <div className="space-y-1 rounded-md border border-border p-3 text-sm">
       <p>
@@ -159,7 +160,13 @@ export function ProposalCard({ proposal, codeOf }: { proposal: ProposalOut; code
           >
             결정 기록
           </button>
-          {decide.isError && <p className="text-crit">{decide.error.message}</p>}
+          {isDemo && (
+            <p className="text-xs text-ink-muted">
+              데모는 읽기 전용이라 결정이 저장되지 않습니다. 이미 기록된 결정과 그 사유가 다음 제안에 어떻게 반영됐는지는
+              다른 제안 카드의 ‘기각 사유 반영’과 Critic의 ‘반영된 연구자 결정’에서 볼 수 있습니다.
+            </p>
+          )}
+          {decide.isError && <ErrorState error={decide.error} />}
         </div>
       )}
     </article>
