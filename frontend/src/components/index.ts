@@ -12,7 +12,7 @@ export { ExperimentChip, QcMark } from "./ExperimentChip";
 export type { QcStatus } from "./ExperimentChip";
 export { FlagMark } from "./FlagMark";
 export { ExperimentPicker } from "./ExperimentPicker";
-export { EmptyState, ErrorState, LoadingState, QueryState } from "./QueryState";
+export { EmptyState, ErrorState, LoadingState, QueryState, isDemoNotice } from "./QueryState";
 export { PageHeader } from "./PageHeader";
 export { StatTile } from "./StatTile";
 export { Term } from "./Term";

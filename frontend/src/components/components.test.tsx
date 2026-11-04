@@ -1,14 +1,25 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { ApiError } from "@/api/client";
 import { GLOSSARY } from "@/lib/glossary";
 import { DataTable } from "./DataTable";
 import { Disclosure } from "./Disclosure";
 import { EvidenceChip } from "./EvidenceChip";
 import { FlagMark } from "./FlagMark";
+import { ErrorState } from "./QueryState";
 import { StatTile } from "./StatTile";
 import { Term } from "./Term";
 
 describe("common components", () => {
+  it("ErrorState shows the demo's read-only answer as a notice, real failures as errors", () => {
+    const { rerender } = render(<ErrorState error={new ApiError(403, "demo_read_only", "저장되지 않습니다")} />);
+    expect(screen.getByRole("status").textContent).toContain("데모 · 읽기 전용");
+    expect(screen.queryByText(/오류:/)).toBeNull();
+    rerender(<ErrorState error={new ApiError(500, "internal_error", "boom")} />);
+    expect(screen.getByText("오류: boom")).toBeTruthy();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("EvidenceChip renders the stored value with unit, not prose", () => {
     render(
       <EvidenceChip

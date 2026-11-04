@@ -84,7 +84,9 @@ export function GuideBar({ open, onClose }: { open: boolean; onClose: () => void
     },
     {
       key: "reject",
-      label: "제안 기각해보기",
+      // The demo cannot store a decision: point at the recorded decisions instead of
+      // inviting a write that can only be refused.
+      label: isDemo ? "결정·기각 사유 보기" : "제안 기각해보기",
       to: `/research-ai?exp=${focus.id}#proposals`,
       active: pathname === "/research-ai" && onFocus && hash === "#proposals",
     },
@@ -98,7 +100,11 @@ export function GuideBar({ open, onClose }: { open: boolean; onClose: () => void
     >
       <p className="min-w-0 text-ink">
         <span className="font-semibold text-brand-strong">이 데모에서 볼 것</span>
-        <span className="text-ink-muted"> — 조건을 바꾼 {focus.code}의 결과가 왜 나빠졌는지, 기록 → 계산 → AI 비판 → 결정 순으로</span>
+        <span className="text-ink-muted">
+          {" "}
+          — 조건을 바꾼 {focus.code}의 결과가 왜 나빠졌는지 기록 → 계산 → AI 비판으로 따라가고, 연구자가 기각한 이유를 AI가
+          기억해 다음 제안을 바꾸는 것까지
+        </span>
       </p>
       <ol className="flex flex-wrap items-center gap-x-1 gap-y-1.5" aria-label="권장 순서">
         {steps.map((s, i) => (
@@ -117,11 +123,6 @@ export function GuideBar({ open, onClose }: { open: boolean; onClose: () => void
               {"①②③④"[i]} {s.label}
               <span aria-hidden>›</span>
             </Link>
-            {s.key === "reject" && isDemo && (
-              <span className="text-xs text-ink-faint" title="데모는 읽기 전용입니다. 기각과 사유 기록은 로컬 실행에서 저장됩니다.">
-                (데모: 읽기 전용)
-              </span>
-            )}
           </li>
         ))}
       </ol>

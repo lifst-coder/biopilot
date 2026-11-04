@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { useEffect, useRef } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { demoProfile, isDemo, switchDemoProfile } from "@/api/demo";
 import { usePartnerMode } from "@/api/queries";
@@ -16,8 +17,18 @@ import { TABS } from "./tabs";
  */
 export function AppShell() {
   const { data: mode } = usePartnerMode();
-  const { search } = useLocation();
+  const { pathname, search } = useLocation();
   const guide = useGuideBar();
+  const nav = useRef<HTMLElement>(null);
+  // Narrow screens scroll the tab row sideways: keep the active tab visible (e.g. after a
+  // guide-bar step jumps to Research AI, which starts off-screen at 390 px).
+  useEffect(() => {
+    const row = nav.current;
+    const active = row?.querySelector<HTMLElement>("[aria-current='page']");
+    if (!row || !active || row.scrollWidth <= row.clientWidth) return;
+    const offset = active.getBoundingClientRect().left - row.getBoundingClientRect().left;
+    row.scrollLeft += offset - (row.clientWidth - active.offsetWidth) / 2;
+  }, [pathname]);
   return (
     <div className="flex min-h-full flex-col lg:h-full">
       <header className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-surface px-4 py-2 sm:px-5 lg:h-[var(--bp-header-height)] lg:flex-nowrap lg:py-0">
@@ -27,7 +38,7 @@ export function AppShell() {
           </span>
           <span className="font-semibold">BioPilot</span>
         </div>
-        <nav className="-mx-1 flex max-w-full gap-1 overflow-x-auto px-1" aria-label="주요 탭">
+        <nav ref={nav} className="-mx-1 flex max-w-full gap-1 overflow-x-auto px-1" aria-label="주요 탭">
           {TABS.map((tab) => (
             <NavLink
               key={tab.path}

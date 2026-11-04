@@ -12,7 +12,15 @@ const SCENARIO = {
     "/api/memory/projects/1/search?q=%EC%B6%94%EC%B6%9C+%EC%8B%9C%EA%B0%84": [{ code: "#024" }],
   },
   errors: { "/api/partner/proposals/3/experiment-draft": { status: 400, body: { code: "validation_failed", message: "decided" } } },
+  text: {
+    "/api/analysis/experiments/7/report?format=csv": {
+      body: "a,b\n1,2\n",
+      content_type: "text/csv; charset=utf-8",
+      content_disposition: 'attachment; filename="report-024.csv"',
+    },
+  },
   ask: { "1|7|회수율이 왜 낮나?": { answer: "stored", engine: "rules" } },
+  protocol_example: { text: "SOP\n1. 사과 10 g\n", extraction: { engine: "rules", field_count: 1 } },
 };
 
 async function load() {
@@ -69,6 +77,25 @@ describe("demo scenario adapter", () => {
       body: JSON.stringify({ project_id: 1, experiment_id: 7, question: "임의 질문" }),
     });
     expect(other.status).toBe(403);
+  });
+
+  it("replays recorded text downloads with their headers", async () => {
+    const { demoFetch } = await load();
+    const res = await demoFetch("/api/analysis/experiments/7/report?format=csv");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("a,b\n1,2\n");
+    expect(res.headers.get("content-disposition")).toContain("report-024.csv");
+  });
+
+  it("answers protocol extraction only for the recorded example paste", async () => {
+    const { demoFetch } = await load();
+    const post = (text: string) =>
+      demoFetch("/api/eln/protocol-extractions", { method: "POST", body: JSON.stringify({ text }) });
+    const example = await post("SOP\r\n1. 사과 10 g");
+    expect(await example.json()).toEqual({ engine: "rules", field_count: 1 });
+    const other = await post("다른 원문");
+    expect(other.status).toBe(403);
+    expect((await other.json()).code).toBe("demo_read_only");
   });
 
   it("passes non-API URLs to the network", async () => {
