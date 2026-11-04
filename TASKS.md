@@ -37,6 +37,11 @@ API 변경 시 `openapi.json`/`schema.d.ts` 재생성, 새 쓰기 경로는 Audi
   벤더 CSV(wide 형식)를 long 형식 계약으로 변환하는 순수 함수 + 미리보기 엔드포인트.
   완료 기준: 샘플 파일 2종 변환 테스트, 원본 파일도 그대로 보관.
 
+- [x] **ELN-10 프로토콜: 붙여넣기 추출 · 실행 · 계보** (2026-11-04)
+  `POST /protocol-extractions`(규칙 기본·Claude 근거 검증, 못 읽은 키는 비움), 템플릿에 원문·검토 결과·단계 저장,
+  `protocol-runs`(append-only 기록 → 실험 생성), `protocol-lineage`/`protocol-diff`, Analysis `records/protocols`,
+  Protocols 탭, lab 시드 SOP v1→v1.1→v1.2→v2, E2E `e2e/protocols.lab.spec.ts`. 화면 비교 `docs/screenshots/protocols/`.
+
 ## Memory (`backend/app/memory/**`)
 
 > MEM-1–8 완료 (feature/memory, 2026-11-03). 같은 브랜치에서 지식 그래프·결과/QC diff·recall/Q&A·유사 실험 추천도 추가.

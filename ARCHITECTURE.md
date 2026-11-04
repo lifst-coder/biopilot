@@ -32,7 +32,7 @@ BioPilot = **ELN + Research Memory + Scientific Analysis + AI Partner**.
 | 모듈 | 소유 테이블 | 책임 | 의존 |
 |---|---|---|---|
 | `core` | `core_audit_events` | 설정, DB, 감사 로그, 불변성 가드, LLM 게이트웨이, 도메인 에러 | — |
-| `eln` | `eln_projects`, `eln_experiments`, `eln_datasets` | 원본 기록 생성·조회, CSV 수집 검증(`DATASET_COLUMNS`), 조건 키 라벨 | core |
+| `eln` | `eln_projects`, `eln_experiments`, `eln_datasets`, `eln_protocol_templates`, `eln_protocol_runs`, `eln_protocol_run_entries` | 원본 기록 생성·조회, CSV 수집 검증(`DATASET_COLUMNS`), 조건 키 라벨, 프로토콜(붙여넣기 추출·단계·실행·버전 계보) | core |
 | `memory` | `memory_digests` | 실험 계보 그래프(NetworkX, `parent_experiment_id`), 타임라인, 두 실험 diff(조건·메모·데이터셋·관계), 검색, AI 정리본 | core, eln |
 | `analysis` | `analysis_results` | 검량선(WLS 1, 1/x, 1/x²), 역산 정확도, 회수율, IS 응답, 매트릭스 효과(기울기 비), Welch t-test 비교, QC 플래그(SANTE/11312/2021) | core, eln |
 | `partner` | `partner_critiques`, `partner_hypotheses`, `partner_proposals`, `partner_decisions` | 근거 컨텍스트 구성, 규칙/Claude 비판, 가설·제안 저장, 연구자 결정(accept/modify/reject + rationale), Q&A | core, eln, memory, analysis |
@@ -94,6 +94,18 @@ Partner.run_critique:
 | GET | `/api/eln/datasets/{dataset_id}?limit` | `DatasetPreview` |
 | GET | `/api/eln/datasets/{dataset_id}/content` | `text/csv` 원문 |
 | GET | `/api/eln/condition-fields` | `ConditionField[]` (조건 키 라벨) |
+| POST | `/api/eln/protocol-extractions` | `ProtocolExtraction` (붙여넣은 텍스트·표 → 조건 후보 + 근거 줄, **저장하지 않음**; 규칙 기본, Claude는 근거 검증 후 사용) |
+| GET/POST | `/api/eln/projects/{project_id}/protocol-templates?all_versions` | `ProtocolTemplateList` / `ProtocolTemplateOut` (`version_label`, `steps`, 원문 `source_text`, 검토 결과 `extraction`) |
+| GET | `/api/eln/projects/{project_id}/protocol-lineage` | `ProtocolLineage` (버전별 이전 대비 조건 변경, 그 버전으로 기록된 실험과 이탈 조건, 사용 기간) |
+| GET | `/api/eln/protocol-diff?a&b` | `ProtocolDiff` (두 버전의 조건값 단위 차이) |
+| POST | `/api/eln/protocol-templates/{template_id}/runs` | `ProtocolRunOut` (실행 시작) |
+| GET | `/api/eln/projects/{project_id}/protocol-runs?status` · `/api/eln/protocol-runs/{run_id}` | `ProtocolRunList` · `ProtocolRunOut` (append-only 기록을 접은 현재 상태, `deviations`) |
+| POST | `/api/eln/protocol-runs/{run_id}/entries` | `ProtocolRunOut` (`check`/`uncheck`/`actual`/`note`, 각 1건 불변 + 감사) |
+| POST | `/api/eln/protocol-runs/{run_id}/complete` | `ProtocolRunCompletion` (실제 값 조건 블록 + "프로토콜과 다른 점" 메모로 실험 생성, `dry_run` 미리보기) |
+
+프로토콜 추출 원칙(`eln/protocols.py`): 원문에 적힌 값만 후보가 된다 — 범위·서로 다른 값·단위 불일치는 비워 두고
+(`ambiguous`/`unrecognized`) 이유를 단다. Claude 출력은 값마다 원문 줄 인용이 필요하고, 인용이 원문에 없거나
+값의 숫자가 인용에 없으면 규칙 결과로 대체(`fallback_reason`). 후보는 연구자가 확인·수정한 뒤에만 저장된다.
 
 CSV 계약(`eln/schemas.py: DATASET_COLUMNS`):
 - `calibration`: injection_id, level_ng_ml, analyte, analyte_area, is_area
@@ -140,6 +152,7 @@ Memory는 eln에만 의존한다. Analysis 결과·QC 플래그·Partner 레코�
 | GET | `/api/analysis/records/conditions?key&contains&project_id*` | `ConditionRecords` (조건값별 묶음: 저장 회수율 최소/중앙/최대, QC 불합격 비율, 근거 실험) |
 | GET | `/api/analysis/records/operators?window_days&project_id*` | `OperatorRecords` (작업자별 묶음 + 조건 블록 동일·기간 내 작업자 쌍의 `compare` 결과) |
 | GET | `/api/analysis/records/periods?gap_days&project_id*` | `PeriodRecords` (월별 묶음 + 실험 없는 공백) |
+| GET | `/api/analysis/records/protocols?project_id*` | `ProtocolRecords` (프로토콜 버전별 묶음: 저장된 QC 통과 수 `pass_count`/`pass_ratio`, 통과율 높은 순) |
 
 결과 종류(`kind`): `calibration`(slope, intercept, weighted R², back_calc, points, fit_line,
 weighting_comparison) · `recovery`(groups, rows) · `is_response`(injections, flagged_count) · `matrix_effect`.
@@ -186,6 +199,7 @@ frontend/src/
   features/
     overview/     프로젝트 KPI, 회수율 추이, 타임라인, 감사 로그
     notebook/     원본 메모·조건 블록·CSV 미리보기·AI 정리본·Memory diff
+    protocols/    Protocols 탭: 버전 계보(QC 통과) · 붙여넣기→조건 추출→확인→저장 · 단계별 실행(390px 우선)
     analysis/     검량선/회수율/IS/ME 패널, QC 플래그, 수치 비교
     research-ai/  비판(근거 칩), 가설, 제안 + 결정 폼
     partner-panel/ 우측 패널: 모드, 최근 비판, 질문
