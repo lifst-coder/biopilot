@@ -1,6 +1,6 @@
 """Records across projects: stored outcomes grouped by condition value, author and month.
 
-Every number is read from stored results (:func:`service.get_metrics`) or computed here
+Every number is read from stored results (:func:`service.get_metrics_many`) or computed here
 deterministically from them (count, min/median/max, fail ratio); author differences use
 the existing comparison (:func:`service.compare`, Welch t-test). No new analytical
 metric is introduced and nothing is interpreted.
@@ -55,10 +55,17 @@ def _project_ids(session: Session, project_ids: Iterable[int] | None) -> list[in
 
 
 def _rows(session: Session, project_ids: list[int]) -> list[_Row]:
+    """Every experiment of the projects with its stored headline metrics.
+
+    Batched: one experiment listing per project and one result query per 500
+    experiments (:func:`service.get_metrics_many`) — not a lookup per experiment.
+    """
     rows: list[_Row] = []
     for pid in project_ids:
-        for exp in eln.list_experiments_full(session, pid):
-            m = service.get_metrics(session, exp.id)
+        exps = eln.list_experiments_full(session, pid)
+        metrics = service.get_metrics_many(session, [e.id for e in exps])
+        for exp in exps:
+            m = metrics[exp.id]
             rows.append(
                 _Row(
                     exp=exp,

@@ -383,6 +383,16 @@ AnalysisOutput = Annotated[
 ]
 
 
+class ResultHead(BaseModel):
+    """A stored result without its output: identity, method version and QC flags."""
+
+    id: int
+    experiment_id: int
+    kind: ResultKind
+    method_version: str
+    flags: list[QCFlag]
+
+
 class AnalysisResultOut(BaseModel):
     """An immutable, stored analysis result with full provenance."""
 

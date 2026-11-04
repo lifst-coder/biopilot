@@ -8,12 +8,12 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 from pydantic import TypeAdapter
-from sqlalchemy import func, select
+from sqlalchemy import Text, func, select, type_coerce
 from sqlalchemy.orm import Session
 
 from app.analysis import calculations as calc
@@ -37,6 +37,16 @@ from app.analysis.methods import (
     all_method_docs,
     comparison_doc,
     method_doc,
+)
+from app.analysis.metrics_view import (
+    OUTPUT_VIEW,
+    CalibrationView,
+    IonRatioView,
+    ISResponseView,
+    LimitsView,
+    MatrixEffectView,
+    RecoveryView,
+    ResultView,
 )
 from app.analysis.models import AnalysisCriteriaVersion, AnalysisResult
 from app.analysis.report import render_csv, render_markdown
@@ -77,6 +87,7 @@ from app.analysis.schemas import (
     RecoveryTTest,
     ReportFormat,
     ResidualOut,
+    ResultHead,
     ResultKind,
     RunResponse,
     TrendPoint,
@@ -841,10 +852,141 @@ def latest_results(session: Session, experiment_id: int) -> dict[ResultKind, Ana
     return out
 
 
+#: Experiment ids per batched ``IN (...)`` query.
+_IN_CHUNK = 500
+
+
+def _latest_ids(experiment_ids: list[int]) -> Any:
+    """``SELECT`` of the newest result id per (experiment, kind) of ``experiment_ids``."""
+    return (
+        select(func.max(AnalysisResult.id))
+        .where(AnalysisResult.experiment_id.in_(experiment_ids))
+        .group_by(AnalysisResult.experiment_id, AnalysisResult.kind)
+    )
+
+
+def latest_result_ids_many(
+    session: Session, experiment_ids: list[int]
+) -> dict[int, dict[ResultKind, int]]:
+    """Id of the latest result of each kind for many experiments (no JSON column read).
+
+    Every requested id is a key; kinds in the order of :func:`latest_results`.
+    """
+    out: dict[int, dict[ResultKind, int]] = {i: {} for i in experiment_ids}
+    unique = sorted(set(experiment_ids))
+    for start in range(0, len(unique), _IN_CHUNK):
+        rows = session.execute(
+            select(AnalysisResult.id, AnalysisResult.experiment_id, AnalysisResult.kind)
+            .where(AnalysisResult.id.in_(_latest_ids(unique[start : start + _IN_CHUNK])))
+            .order_by(AnalysisResult.experiment_id, AnalysisResult.kind)
+        )
+        for rid, exp_id, kind in rows:
+            out[exp_id][cast(ResultKind, kind)] = rid
+    return out
+
+
+_HEAD_COLUMNS = (
+    AnalysisResult.id,
+    AnalysisResult.experiment_id,
+    AnalysisResult.kind,
+    AnalysisResult.method_version,
+    type_coerce(AnalysisResult.flags, Text),  # JSON text, validated in one pass
+)
+_FLAGS: TypeAdapter[list[QCFlag]] = TypeAdapter(list[QCFlag])
+
+
+def _head(row: Any) -> ResultHead:
+    rid, exp_id, kind, method_version, flags = row
+    return ResultHead(
+        id=rid,
+        experiment_id=exp_id,
+        kind=kind,
+        method_version=method_version,
+        flags=_FLAGS.validate_json(flags),
+    )
+
+
+def get_result_heads(session: Session, result_ids: list[int]) -> dict[int, ResultHead]:
+    """Stored results by id without their (large) outputs, batched; missing ids are absent."""
+    out: dict[int, ResultHead] = {}
+    for start in range(0, len(result_ids), _IN_CHUNK):
+        chunk = result_ids[start : start + _IN_CHUNK]
+        for row in session.execute(select(*_HEAD_COLUMNS).where(AnalysisResult.id.in_(chunk))):
+            head = _head(row)
+            out[head.id] = head
+    return out
+
+
+def latest_result_refs_many(
+    session: Session, experiment_ids: list[int]
+) -> dict[int, dict[ResultKind, ResultHead]]:
+    """The latest result of each kind (without output) for many experiments.
+
+    Every requested id is a key (``{}`` without stored results). Per experiment the kinds
+    come in the order of :func:`latest_results`.
+    """
+    out: dict[int, dict[ResultKind, ResultHead]] = {i: {} for i in experiment_ids}
+    unique = sorted(set(experiment_ids))
+    for start in range(0, len(unique), _IN_CHUNK):
+        rows = session.execute(
+            select(*_HEAD_COLUMNS)
+            .where(AnalysisResult.id.in_(_latest_ids(unique[start : start + _IN_CHUNK])))
+            .order_by(AnalysisResult.experiment_id, AnalysisResult.kind)
+        )
+        for row in rows:
+            head = _head(row)
+            out[head.experiment_id][head.kind] = head
+    return out
+
+
+def _result_views_many(
+    session: Session, experiment_ids: list[int]
+) -> dict[int, dict[ResultKind, ResultView]]:
+    """Metric views of the latest result of each kind (kinds in :func:`latest_results` order).
+
+    The stored output JSON is read as text and validated straight into the light views of
+    :mod:`app.analysis.metrics_view` — one query per 500 experiments.
+    """
+    out: dict[int, dict[ResultKind, ResultView]] = {i: {} for i in experiment_ids}
+    unique = sorted(set(experiment_ids))
+    for start in range(0, len(unique), _IN_CHUNK):
+        rows = session.execute(
+            select(
+                AnalysisResult.id,
+                AnalysisResult.experiment_id,
+                AnalysisResult.kind,
+                AnalysisResult.parameters,
+                type_coerce(AnalysisResult.flags, Text),
+                type_coerce(AnalysisResult.output, Text),
+            )
+            .where(AnalysisResult.id.in_(_latest_ids(unique[start : start + _IN_CHUNK])))
+            .order_by(AnalysisResult.experiment_id, AnalysisResult.kind)
+        )
+        for rid, exp_id, kind, parameters, flags, output in rows:
+            out[exp_id][kind] = ResultView(
+                id=rid,
+                kind=kind,
+                parameters=parameters,
+                flags=_FLAGS.validate_json(flags),
+                output=OUTPUT_VIEW.validate_json(output),
+            )
+    return out
+
+
 def get_metrics(session: Session, experiment_id: int) -> ExperimentMetrics:
     """Headline metrics assembled from the latest stored results (no recomputation)."""
     eln.get_experiment(session, experiment_id)
-    latest = latest_results(session, experiment_id)
+    return _metrics(experiment_id, _result_views_many(session, [experiment_id])[experiment_id])
+
+
+def get_metrics_many(session: Session, experiment_ids: list[int]) -> dict[int, ExperimentMetrics]:
+    """:func:`get_metrics` of many existing experiments, read in batches (no per-id query)."""
+    views = _result_views_many(session, experiment_ids)
+    return {i: _metrics(i, views[i]) for i in experiment_ids}
+
+
+def _metrics(experiment_id: int, latest: dict[ResultKind, ResultView]) -> ExperimentMetrics:
+    """Headline metrics of an experiment from its latest stored result of each kind."""
     if not latest:
         return ExperimentMetrics(experiment_id=experiment_id, analyzed=False)
     flags = [f for r in latest.values() for f in r.flags]
@@ -863,7 +1005,7 @@ def get_metrics(session: Session, experiment_id: int) -> ExperimentMetrics:
         ),
     )
     analytes: set[str] = {f.analyte for f in flags if f.analyte}
-    if (rec := latest.get("recovery")) and isinstance(rec.output, RecoveryOutput):
+    if (rec := latest.get("recovery")) and isinstance(rec.output, RecoveryView):
         m.recovery_mean_pct = rec.output.overall_mean_pct
         m.recovery_rsd_pct = rec.output.overall_rsd_pct
         m.recovery_n = rec.output.n
@@ -876,20 +1018,20 @@ def get_metrics(session: Session, experiment_id: int) -> ExperimentMetrics:
             analytes.add(analyte)
         m.expanded_uncertainty_pct = {u.analyte: u.expanded_pct for u in rec.output.uncertainty}
         m.outlier_count = sum(1 for g in rec.output.groups if g.grubbs and g.grubbs.is_outlier)
-    if (cal := latest.get("calibration")) and isinstance(cal.output, CalibrationOutput):
+    if (cal := latest.get("calibration")) and isinstance(cal.output, CalibrationView):
         m.min_r_squared = min(a.r_squared for a in cal.output.analytes)
         m.max_abs_back_calc_error_pct = max(
             a.max_abs_back_calc_error_pct for a in cal.output.analytes
         )
         m.calibration_weighting = cal.output.weighting
         analytes.update(a.analyte for a in cal.output.analytes)
-    if (isr := latest.get("is_response")) and isinstance(isr.output, ISResponseOutput):
+    if (isr := latest.get("is_response")) and isinstance(isr.output, ISResponseView):
         m.is_injections_total = len(isr.output.injections)
         m.is_injections_flagged = isr.output.flagged_count
-    if (me := latest.get("matrix_effect")) and isinstance(me.output, MatrixEffectOutput):
+    if (me := latest.get("matrix_effect")) and isinstance(me.output, MatrixEffectView):
         m.matrix_effect_pct = {a.analyte: a.matrix_effect_pct for a in me.output.analytes}
         analytes.update(m.matrix_effect_pct)
-    if (lim := latest.get("limits")) and isinstance(lim.output, LimitsOutput):
+    if (lim := latest.get("limits")) and isinstance(lim.output, LimitsView):
         m.limits = [
             AnalyteLimitsSummary(
                 analyte=a.analyte,
@@ -900,7 +1042,7 @@ def get_metrics(session: Session, experiment_id: int) -> ExperimentMetrics:
             )
             for a in lim.output.analytes
         ]
-    if (ion := latest.get("ion_ratio")) and isinstance(ion.output, IonRatioOutput):
+    if (ion := latest.get("ion_ratio")) and isinstance(ion.output, IonRatioView):
         m.ion_ratio_injections_flagged = ion.output.flagged_count
     m.qc_verdicts = verdicts(analytes, flags)
     return m
