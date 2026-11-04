@@ -16,7 +16,12 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.analysis import service as analysis
-from app.analysis.schemas import AnalysisResultOut, ResultKind
+from app.analysis.schemas import (
+    AnalysisResultOut,
+    ExperimentMetrics,
+    ResultHead,
+    ResultKind,
+)
 from app.core.errors import NotFoundError
 from app.memory import service as memory
 from app.memory.schemas import (
@@ -48,6 +53,128 @@ def _src(result: AnalysisResultOut | None, field: str, experiment_id: int) -> li
     ]
 
 
+def _result_facts(
+    experiment_id: int, m: ExperimentMetrics, result_ids: dict[ResultKind, int]
+) -> list[ResultFact]:
+    """Result facts of one experiment: its metrics, each sourced to the latest result id."""
+    out: list[ResultFact] = []
+
+    def add(
+        kind: ResultKind,
+        metric: str,
+        lbl: str,
+        value: float | None,
+        unit: str | None,
+        field: str,
+        analyte: str | None = None,
+    ) -> None:
+        rid = result_ids.get(kind)
+        if rid is None or value is None:
+            return
+        out.append(
+            ResultFact(
+                metric=metric,
+                label=lbl,
+                analyte=analyte,
+                value=value,
+                unit=unit,
+                source=SourceRef(
+                    ref_type=RESULT_REF, ref_id=rid, field=field, experiment_id=experiment_id
+                ),
+            )
+        )
+
+    add(
+        "recovery",
+        "recovery_mean_pct",
+        "평균 회수율",
+        m.recovery_mean_pct,
+        "%",
+        "output.overall_mean_pct",
+    )
+    add(
+        "recovery",
+        "recovery_rsd_pct",
+        "회수율 RSD",
+        m.recovery_rsd_pct,
+        "%",
+        "output.overall_rsd_pct",
+    )
+    for a in m.per_analyte_recovery:
+        add(
+            "recovery",
+            "analyte_recovery_mean_pct",
+            f"{a.analyte} 평균 회수율",
+            a.mean_pct,
+            "%",
+            f"output.rows[analyte={a.analyte}].recovery_pct",
+            a.analyte,
+        )
+    add(
+        "calibration",
+        "min_r_squared",
+        "최소 R²",
+        m.min_r_squared,
+        None,
+        "output.analytes[].r_squared",
+    )
+    if m.is_injections_flagged is not None:
+        add(
+            "is_response",
+            "is_injections_flagged",
+            "IS 이상 주입 수",
+            float(m.is_injections_flagged),
+            "회",
+            "output.flagged_count",
+        )
+    for analyte, me in m.matrix_effect_pct.items():
+        add(
+            "matrix_effect",
+            "matrix_effect_pct",
+            f"{analyte} 매트릭스 효과",
+            me,
+            "%",
+            f"output.analytes[analyte={analyte}].matrix_effect_pct",
+            analyte,
+        )
+    return out
+
+
+def _qc_facts(experiment_id: int, refs: dict[ResultKind, ResultHead]) -> list[QCFact]:
+    """QC flags of the latest stored result of each kind, each with its source path."""
+    out: list[QCFact] = []
+    for res in refs.values():
+        for i, f in enumerate(res.flags):
+            out.append(
+                QCFact(
+                    code=f.code,
+                    severity=f.severity,
+                    analyte=f.analyte,
+                    value=f.value,
+                    context=f.context,
+                    source=SourceRef(
+                        ref_type=RESULT_REF,
+                        ref_id=res.id,
+                        field=f"flags[{i}]",
+                        experiment_id=experiment_id,
+                    ),
+                )
+            )
+    return out
+
+
+def _result_entity(res: ResultHead) -> EntityFacts:
+    """Knowledge-graph label and flagged analytes of one stored result."""
+    return EntityFacts(
+        ref_type=RESULT_REF,
+        ref_id=res.id,
+        label=f"{_KIND_LABELS.get(res.kind, res.kind)} 결과 ({res.method_version})",
+        experiment_id=res.experiment_id,
+        kind=res.kind,
+        flagged_analytes=sorted({f.analyte for f in res.flags if f.analyte}),
+    )
+
+
 class AnalysisFactProvider(FactProvider):
     """Stored analysis results, comparisons and QC flags (read-only)."""
 
@@ -56,86 +183,16 @@ class AnalysisFactProvider(FactProvider):
     def results(self, session: Session, experiment_id: int) -> list[ResultFact]:
         """Headline metrics of the latest stored results with their result ids."""
         m = analysis.get_metrics(session, experiment_id)
-        latest = analysis.latest_results(session, experiment_id)
-        out: list[ResultFact] = []
+        ids = analysis.latest_result_ids_many(session, [experiment_id])[experiment_id]
+        return _result_facts(experiment_id, m, ids)
 
-        def add(
-            kind: ResultKind,
-            metric: str,
-            lbl: str,
-            value: float | None,
-            unit: str | None,
-            field: str,
-            analyte: str | None = None,
-        ) -> None:
-            res = latest.get(kind)
-            if res is None or value is None:
-                return
-            out.append(
-                ResultFact(
-                    metric=metric,
-                    label=lbl,
-                    analyte=analyte,
-                    value=value,
-                    unit=unit,
-                    source=_src(res, field, experiment_id)[0],
-                )
-            )
-
-        add(
-            "recovery",
-            "recovery_mean_pct",
-            "평균 회수율",
-            m.recovery_mean_pct,
-            "%",
-            "output.overall_mean_pct",
-        )
-        add(
-            "recovery",
-            "recovery_rsd_pct",
-            "회수율 RSD",
-            m.recovery_rsd_pct,
-            "%",
-            "output.overall_rsd_pct",
-        )
-        for a in m.per_analyte_recovery:
-            add(
-                "recovery",
-                "analyte_recovery_mean_pct",
-                f"{a.analyte} 평균 회수율",
-                a.mean_pct,
-                "%",
-                f"output.rows[analyte={a.analyte}].recovery_pct",
-                a.analyte,
-            )
-        add(
-            "calibration",
-            "min_r_squared",
-            "최소 R²",
-            m.min_r_squared,
-            None,
-            "output.analytes[].r_squared",
-        )
-        if m.is_injections_flagged is not None:
-            add(
-                "is_response",
-                "is_injections_flagged",
-                "IS 이상 주입 수",
-                float(m.is_injections_flagged),
-                "회",
-                "output.flagged_count",
-            )
-        for analyte, me in m.matrix_effect_pct.items():
-            add(
-                "matrix_effect",
-                "matrix_effect_pct",
-                f"{analyte} 매트릭스 효과",
-                me,
-                "%",
-                f"output.analytes[analyte={analyte}].matrix_effect_pct",
-                analyte,
-            )
-        return out
+    def results_many(
+        self, session: Session, experiment_ids: list[int]
+    ) -> dict[int, list[ResultFact]]:
+        """:meth:`results` of many experiments with batched reads (two queries per 500)."""
+        metrics = analysis.get_metrics_many(session, experiment_ids)
+        ids = analysis.latest_result_ids_many(session, experiment_ids)
+        return {i: _result_facts(i, metrics[i], ids[i]) for i in experiment_ids}
 
     def result_deltas(self, session: Session, a_id: int, b_id: int) -> list[ResultDelta] | None:
         """Pairs of stored metrics; deltas/p-values exactly as ``analysis.compare`` returns."""
@@ -219,25 +276,15 @@ class AnalysisFactProvider(FactProvider):
 
     def qc_flags(self, session: Session, experiment_id: int) -> list[QCFact] | None:
         """QC flags of the latest stored result of each kind."""
-        out: list[QCFact] = []
-        for res in analysis.latest_results(session, experiment_id).values():
-            for i, f in enumerate(res.flags):
-                out.append(
-                    QCFact(
-                        code=f.code,
-                        severity=f.severity,
-                        analyte=f.analyte,
-                        value=f.value,
-                        context=f.context,
-                        source=SourceRef(
-                            ref_type=RESULT_REF,
-                            ref_id=res.id,
-                            field=f"flags[{i}]",
-                            experiment_id=experiment_id,
-                        ),
-                    )
-                )
-        return out
+        refs = analysis.latest_result_refs_many(session, [experiment_id])[experiment_id]
+        return _qc_facts(experiment_id, refs)
+
+    def qc_flags_many(
+        self, session: Session, experiment_ids: list[int]
+    ) -> dict[int, list[QCFact] | None]:
+        """:meth:`qc_flags` of many experiments with one batched read."""
+        refs = analysis.latest_result_refs_many(session, experiment_ids)
+        return {i: _qc_facts(i, refs[i]) for i in experiment_ids}
 
     def describe(
         self,
@@ -248,20 +295,20 @@ class AnalysisFactProvider(FactProvider):
         payload: dict[str, Any],
     ) -> EntityFacts | None:
         """Label and flagged analytes of a stored analysis result."""
+        return self.describe_many(session, ref_type, [(ref_id, payload)], project_id)[0]
+
+    def describe_many(
+        self,
+        session: Session,
+        ref_type: str,
+        items: list[tuple[int, dict[str, Any]]],
+        project_id: int,
+    ) -> list[EntityFacts | None]:
+        """:meth:`describe` of many results, read in one batch (outputs are not read)."""
         if ref_type != RESULT_REF:
-            return None
-        try:
-            res = analysis.get_result(session, ref_id)
-        except NotFoundError:
-            return None
-        return EntityFacts(
-            ref_type=ref_type,
-            ref_id=ref_id,
-            label=f"{_KIND_LABELS.get(res.kind, res.kind)} 결과 ({res.method_version})",
-            experiment_id=res.experiment_id,
-            kind=res.kind,
-            flagged_analytes=sorted({f.analyte for f in res.flags if f.analyte}),
-        )
+            return [None] * len(items)
+        heads = analysis.get_result_heads(session, sorted({i for i, _ in items}))
+        return [_result_entity(heads[i]) if i in heads else None for i, _ in items]
 
 
 class PartnerFactProvider(FactProvider):
