@@ -13,9 +13,9 @@ from collections import defaultdict
 from datetime import UTC, date, datetime
 from typing import Any, cast
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from app.core.audit import Actor, AuditEvent, AuditEventOut, record_event
 from app.core.errors import (
@@ -218,9 +218,15 @@ def check_conditions(session: Session, project_id: int, block: ConditionBlock) -
 # ------------------------------------------------------------- experiments
 
 
-def _dataset_kinds(session: Session, experiment_ids: list[int]) -> dict[int, list[DatasetKind]]:
+#: An explicit id list, or a ``SELECT`` of ids (e.g. all experiments of a project).
+IdFilter = list[int] | Select[Any]
+#: Ids per explicit ``IN (...)`` list (well under SQLite's bound-parameter limit).
+_IN_CHUNK = 500
+
+
+def _dataset_kinds(session: Session, experiment_ids: IdFilter) -> dict[int, list[DatasetKind]]:
     kinds: dict[int, list[DatasetKind]] = defaultdict(list)
-    if not experiment_ids:
+    if isinstance(experiment_ids, list) and not experiment_ids:
         return kinds
     rows = session.execute(
         select(Dataset.experiment_id, Dataset.kind)
@@ -252,36 +258,63 @@ def _file_out(row: AttachmentFile) -> AttachmentFileOut:
     )
 
 
-def _to_out(session: Session, exp: Experiment, kinds: list[DatasetKind]) -> ExperimentOut:
-    addenda = session.scalars(
+def _to_outs(session: Session, exps: list[Experiment], ids: IdFilter) -> list[ExperimentOut]:
+    """``ExperimentOut`` of ``exps`` with four set-based queries in total.
+
+    ``ids`` selects (at least) the ids of ``exps``: dataset kinds, revision counts,
+    addenda and attachment files are each read with one ``IN`` query — not per experiment.
+    """
+    if not exps:
+        return []
+    kinds = _dataset_kinds(session, ids)
+    revisions: dict[int, int] = {
+        exp_id: count
+        for exp_id, count in session.execute(
+            select(ExperimentRevision.experiment_id, func.count())
+            .where(ExperimentRevision.experiment_id.in_(ids))
+            .group_by(ExperimentRevision.experiment_id)
+        )
+    }
+    addenda: dict[int, list[ExperimentAddendum]] = defaultdict(list)
+    for a in session.scalars(
         select(ExperimentAddendum)
-        .where(ExperimentAddendum.experiment_id == exp.id)
+        .where(ExperimentAddendum.experiment_id.in_(ids))
         .order_by(ExperimentAddendum.id)
-    )
-    files = session.scalars(
+    ):
+        addenda[a.experiment_id].append(a)
+    files: dict[int, list[AttachmentFile]] = defaultdict(list)
+    for f in session.scalars(
         select(AttachmentFile)
-        .where(AttachmentFile.experiment_id == exp.id)
+        .where(AttachmentFile.experiment_id.in_(ids))
         .order_by(AttachmentFile.id)
-    )
-    return ExperimentOut(
-        id=exp.id,
-        project_id=exp.project_id,
-        code=exp.code,
-        title=exp.title,
-        author=exp.author,
-        performed_on=exp.performed_on,
-        parent_experiment_id=exp.parent_experiment_id,
-        dataset_kinds=kinds,
-        raw_note=exp.raw_note,
-        condition_block=ConditionBlock.model_validate(exp.condition_block),
-        attachments=[Attachment.model_validate(a) for a in exp.attachments],
-        created_at=exp.created_at,
-        cloned_from_experiment_id=exp.cloned_from_experiment_id,
-        protocol_template_id=exp.protocol_template_id,
-        revision=_revision_count(session, exp.id),
-        addenda=[ExperimentAddendumOut.model_validate(a) for a in addenda],
-        attachment_files=[_file_out(f) for f in files],
-    )
+    ):
+        files[f.experiment_id].append(f)
+    return [
+        ExperimentOut(
+            id=exp.id,
+            project_id=exp.project_id,
+            code=exp.code,
+            title=exp.title,
+            author=exp.author,
+            performed_on=exp.performed_on,
+            parent_experiment_id=exp.parent_experiment_id,
+            dataset_kinds=kinds.get(exp.id, []),
+            raw_note=exp.raw_note,
+            condition_block=ConditionBlock.model_validate(exp.condition_block),
+            attachments=[Attachment.model_validate(a) for a in exp.attachments],
+            created_at=exp.created_at,
+            cloned_from_experiment_id=exp.cloned_from_experiment_id,
+            protocol_template_id=exp.protocol_template_id,
+            revision=1 + revisions.get(exp.id, 0),
+            addenda=[ExperimentAddendumOut.model_validate(a) for a in addenda[exp.id]],
+            attachment_files=[_file_out(f) for f in files[exp.id]],
+        )
+        for exp in exps
+    ]
+
+
+def _to_out(session: Session, exp: Experiment) -> ExperimentOut:
+    return _to_outs(session, [exp], [exp.id])[0]
 
 
 def _experiment_query(
@@ -368,8 +401,17 @@ def list_experiments_full(session: Session, project_id: int) -> list[ExperimentO
             .order_by(Experiment.performed_on, Experiment.code)
         )
     )
-    kinds = _dataset_kinds(session, [e.id for e in exps])
-    return [_to_out(session, e, kinds.get(e.id, [])) for e in exps]
+    return _to_outs(session, exps, select(Experiment.id).where(Experiment.project_id == project_id))
+
+
+def get_experiments(session: Session, experiment_ids: list[int]) -> dict[int, ExperimentOut]:
+    """Experiments with originals by id, read in one batch (missing ids are absent)."""
+    out: dict[int, ExperimentOut] = {}
+    for start in range(0, len(experiment_ids), _IN_CHUNK):
+        chunk = sorted(set(experiment_ids[start : start + _IN_CHUNK]))
+        exps = list(session.scalars(select(Experiment).where(Experiment.id.in_(chunk))))
+        out.update((e.id, e) for e in _to_outs(session, exps, chunk))
+    return out
 
 
 def _get_experiment_row(session: Session, experiment_id: int) -> Experiment:
@@ -381,8 +423,7 @@ def _get_experiment_row(session: Session, experiment_id: int) -> Experiment:
 
 def get_experiment(session: Session, experiment_id: int) -> ExperimentOut:
     """One experiment with originals; raises :class:`NotFoundError`."""
-    exp = _get_experiment_row(session, experiment_id)
-    return _to_out(session, exp, _dataset_kinds(session, [exp.id]).get(exp.id, []))
+    return _to_out(session, _get_experiment_row(session, experiment_id))
 
 
 def _same_project(session: Session, experiment_id: int, project_id: int, what: str) -> None:
@@ -837,6 +878,29 @@ def validate_csv_upload(
     )
 
 
+def _dataset_outs(session: Session, rows: list[Dataset]) -> list[DatasetOut]:
+    """``DatasetOut`` of ``rows`` with the successors of all of them read in one query."""
+    successors: dict[int, int] = {}
+    ids = [r.id for r in rows]
+    for start in range(0, len(ids), _IN_CHUNK):
+        for old, new in session.execute(
+            select(Dataset.supersedes_dataset_id, func.min(Dataset.id))
+            .where(Dataset.supersedes_dataset_id.in_(ids[start : start + _IN_CHUNK]))
+            .group_by(Dataset.supersedes_dataset_id)
+        ):
+            if old is not None:
+                successors[old] = new
+    return [
+        DatasetOut.model_validate(row).model_copy(
+            update={
+                "schema_ref": f"{row.kind}@{row.schema_version}",
+                "superseded_by_dataset_id": successors.get(row.id),
+            }
+        )
+        for row in rows
+    ]
+
+
 def _dataset_out(session: Session, row: Dataset) -> DatasetOut:
     successor = session.scalar(
         select(Dataset.id).where(Dataset.supersedes_dataset_id == row.id).order_by(Dataset.id)
@@ -962,6 +1026,44 @@ def list_datasets(session: Session, experiment_id: int) -> list[DatasetOut]:
     return [_dataset_out(session, d) for d in rows]
 
 
+def get_datasets(session: Session, dataset_ids: list[int]) -> dict[int, DatasetOut]:
+    """Dataset metadata by id, batched; missing ids are absent. CSV text is not loaded."""
+    out: dict[int, DatasetOut] = {}
+    for start in range(0, len(dataset_ids), _IN_CHUNK):
+        chunk = dataset_ids[start : start + _IN_CHUNK]
+        rows = list(
+            session.scalars(
+                select(Dataset).options(defer(Dataset.content)).where(Dataset.id.in_(chunk))
+            )
+        )
+        out.update((d.id, d) for d in _dataset_outs(session, rows))
+    return out
+
+
+def list_project_datasets(session: Session, project_id: int) -> dict[int, list[DatasetOut]]:
+    """Datasets of every experiment of a project (experiment id → upload order), batched.
+
+    Same items as :func:`list_datasets` per experiment; the CSV text is not loaded.
+    """
+    get_project(session, project_id)
+    rows = list(
+        session.scalars(
+            select(Dataset)
+            .options(defer(Dataset.content))
+            .where(
+                Dataset.experiment_id.in_(
+                    select(Experiment.id).where(Experiment.project_id == project_id)
+                )
+            )
+            .order_by(Dataset.id)
+        )
+    )
+    out: dict[int, list[DatasetOut]] = defaultdict(list)
+    for d in _dataset_outs(session, rows):
+        out[d.experiment_id].append(d)
+    return dict(out)
+
+
 def _get_dataset_row(session: Session, dataset_id: int) -> Dataset:
     dataset = session.get(Dataset, dataset_id)
     if dataset is None:
@@ -977,6 +1079,18 @@ def get_dataset(session: Session, dataset_id: int) -> DatasetOut:
 def get_dataset_content(session: Session, dataset_id: int) -> str:
     """Raw CSV text exactly as uploaded."""
     return _get_dataset_row(session, dataset_id).content
+
+
+def get_dataset_contents(session: Session, dataset_ids: list[int]) -> dict[int, str]:
+    """Raw CSV text of several datasets by id, batched (missing ids are absent)."""
+    out: dict[int, str] = {}
+    for start in range(0, len(dataset_ids), _IN_CHUNK):
+        chunk = dataset_ids[start : start + _IN_CHUNK]
+        for dataset_id, content in session.execute(
+            select(Dataset.id, Dataset.content).where(Dataset.id.in_(chunk))
+        ):
+            out[dataset_id] = content
+    return out
 
 
 def preview_dataset(session: Session, dataset_id: int, limit: int = 50) -> DatasetPreview:

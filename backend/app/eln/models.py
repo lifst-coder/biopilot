@@ -123,8 +123,9 @@ class Dataset(ImmutableMixin, Base):
     columns: Mapped[list[str]] = mapped_column(JSON)
     schema_version: Mapped[int] = mapped_column(Integer, default=1)
     source_encoding: Mapped[str] = mapped_column(String(16), default="utf-8")
+    # Indexed: every DatasetOut looks up its successor by this column.
     supersedes_dataset_id: Mapped[int | None] = mapped_column(
-        ForeignKey("eln_datasets.id"), nullable=True
+        ForeignKey("eln_datasets.id"), nullable=True, index=True
     )
     source_attachment_id: Mapped[int | None] = mapped_column(
         ForeignKey("eln_attachment_files.id"), nullable=True
