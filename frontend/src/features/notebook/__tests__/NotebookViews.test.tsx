@@ -339,9 +339,12 @@ describe("NotebookPage", () => {
     renderWithProviders(<NotebookPage />);
     const list = await screen.findByRole("list", { name: "실험" });
     await waitFor(() => expect(within(list).getAllByRole("button")).toHaveLength(7));
-    expect(await screen.findByText("#024 원본 메모")).toBeTruthy(); // defaults to most recent
+    // The raw note is shown as recorded; only the experiment code in it becomes a link.
+    const note = (code: string) => (_: string, el: Element | null) => el?.tagName === "PRE" && el.textContent === `${code} 원본 메모`;
+    expect(await screen.findByText(note("#024"))).toBeTruthy(); // defaults to most recent
+    expect(within(screen.getByText(note("#024"))).getByRole("link", { name: "#024" })).toBeTruthy();
     fireEvent.click(within(list).getByRole("button", { name: /#020/ }));
-    expect(await screen.findByText("#020 원본 메모")).toBeTruthy();
+    expect(await screen.findByText(note("#020"))).toBeTruthy();
     fireEvent.change(screen.getByLabelText("데이터셋 종류 필터"), { target: { value: "matrix_effect" } });
     expect(within(list).getAllByRole("button")).toHaveLength(1);
     expect(screen.getByText("1/7개")).toBeTruthy();

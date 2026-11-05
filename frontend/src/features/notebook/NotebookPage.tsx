@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAllProtocolTemplates, useDiff, useExperiment } from "@/api/queries";
-import { Badge, Card, Disclosure, EmptyState, QueryState } from "@/components";
+import { Badge, Card, Disclosure, EmptyState, ExperimentLink, QueryState } from "@/components";
 import { TABS } from "@/layout/tabs";
 import { formatDate } from "@/lib/format";
 import { useActiveProject, useSelectedExperiment } from "@/lib/selection";
@@ -37,6 +37,53 @@ function RecordDetails({ exp }: { exp: ExperimentOut }) {
         <HistoryPanel experimentId={exp.id} />
       </Disclosure>
     </div>
+  );
+}
+
+/**
+ * "날짜 · 작성자 · 부모 #018 · 복제 원본 #… · 프로토콜 …" — the parent, the clone source and the
+ * protocol version are links (to that experiment, and to the version in Protocols).
+ */
+function RecordLine({
+  exp,
+  codeOf,
+  protocol,
+}: {
+  exp: ExperimentOut;
+  codeOf: (id: number) => string | null;
+  protocol: string | null;
+}) {
+  const parts: React.ReactNode[] = [formatDate(exp.performed_on), exp.author || "작성자 미기재"];
+  const link = (label: string, id: number) => (
+    <>
+      {label}{" "}
+      <ExperimentLink id={id} projectId={exp.project_id}>
+        {codeOf(id) ?? `#${id}`}
+      </ExperimentLink>
+    </>
+  );
+  parts.push(exp.parent_experiment_id ? link("부모", exp.parent_experiment_id) : "루트 실험");
+  if (exp.cloned_from_experiment_id) parts.push(link("복제 원본", exp.cloned_from_experiment_id));
+  if (protocol && exp.protocol_template_id) {
+    parts.push(
+      <Link
+        to={{ pathname: "/protocols", search: `?project=${exp.project_id}`, hash: `#protocol-${exp.protocol_template_id}` }}
+        className="text-brand underline decoration-brand/30 underline-offset-2 hover:decoration-brand"
+        title="이 버전의 계보 · 버전별 QC 통과"
+      >
+        {protocol}
+      </Link>,
+    );
+  }
+  return (
+    <>
+      {parts.map((p, i) => (
+        <span key={i}>
+          {i > 0 && " · "}
+          {p}
+        </span>
+      ))}
+    </>
   );
 }
 
@@ -141,19 +188,13 @@ export function NotebookPage() {
                       {(exp.revision ?? 1) > 1 && <Badge tone="warn">메타데이터 v{exp.revision}</Badge>}
                     </span>
                   }
-                  subtitle={[
-                    formatDate(exp.performed_on),
-                    exp.author || "작성자 미기재",
-                    exp.parent_experiment_id
-                      ? `부모 ${experiments.find((e) => e.id === exp.parent_experiment_id)?.code ?? ""}`
-                      : "루트 실험",
-                    exp.cloned_from_experiment_id
-                      ? `복제 원본 ${experiments.find((e) => e.id === exp.cloned_from_experiment_id)?.code ?? ""}`
-                      : null,
-                    exp.protocol_template_id ? protocolLabel(exp.protocol_template_id) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  subtitle={
+                    <RecordLine
+                      exp={exp}
+                      codeOf={(id) => experiments.find((e) => e.id === id)?.code ?? null}
+                      protocol={exp.protocol_template_id ? protocolLabel(exp.protocol_template_id) : null}
+                    />
+                  }
                   actions={
                     <div className="flex flex-wrap gap-1">
                       <button type="button" className="bp-btn-ghost px-2 py-1 text-xs" onClick={() => setDialog("compare")}>

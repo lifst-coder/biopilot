@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { useState } from "react";
 import { useCompare, useDiff, useRunAnalysis } from "@/api/queries";
 import type { ExperimentSummary, MetricsComparison } from "@/api/types";
-import { Badge, DataTable, EmptyState, ErrorState, ExperimentPicker, QueryState, isDemoNotice } from "@/components";
+import { Badge, DataTable, EmptyState, ErrorState, ExperimentLink, ExperimentPicker, QueryState } from "@/components";
 import { formatConditionValue, formatNumber, formatPValue, formatWithUnit } from "@/lib/format";
 import { Modal } from "./Modal";
 
@@ -57,8 +57,14 @@ export function CompareModal({ experiments, current, defaultBaseline, onClose }:
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Badge tone="brand">{RELATION[d.relation] ?? d.relation}</Badge>
-                  <span>
-                    {d.a.code} → {d.b.code}
+                  <span title="실험 코드를 누르면 그 실험의 기록으로 이동합니다">
+                    <ExperimentLink id={d.a.id} projectId={d.a.project_id}>
+                      {d.a.code}
+                    </ExperimentLink>{" "}
+                    →{" "}
+                    <ExperimentLink id={d.b.id} projectId={d.b.project_id}>
+                      {d.b.code}
+                    </ExperimentLink>
                   </span>
                   <span className="text-ink-faint">
                     조건 차이 {d.condition_changes.length}개 · 동일 조건 {d.unchanged_keys.length}개
@@ -183,12 +189,7 @@ function AnalysisStatus({ sides }: { sides: Side[] }) {
       {run.data && run.data.skipped.length > 0 && (
         <p className="text-xs text-ink-muted">건너뜀: {run.data.skipped.join(" · ")}</p>
       )}
-      {run.error &&
-        (isDemoNotice(run.error) ? (
-          <ErrorState error={run.error} />
-        ) : (
-          <p className="text-xs text-crit">분석 실행 실패: {String((run.error as Error).message ?? run.error)}</p>
-        ))}
+      {run.error && <ErrorState error={run.error} />}
     </div>
   );
 }

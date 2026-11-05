@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { Link, useLocation } from "react-router-dom";
 import { useCriteria, useDiff, useMetrics } from "@/api/queries";
 import type { ExperimentSummary } from "@/api/types";
-import { Badge, type BadgeTone } from "@/components";
+import { Badge, ExperimentLink, type BadgeTone } from "@/components";
 import { formatConditionValue, formatWithUnit } from "@/lib/format";
 import { josa } from "@/lib/korean";
 import type { ExperimentOut } from "./types";
@@ -50,7 +50,16 @@ export function ExperimentHeadline({
         {!m ? (
           <p className="text-sm text-ink-faint">분석 결과를 불러오는 중이거나 없습니다.</p>
         ) : !m.analyzed ? (
-          <p className="text-sm text-ink-muted">아직 분석되지 않았습니다.</p>
+          <p className="text-sm text-ink-muted">
+            아직 분석되지 않았습니다 —{" "}
+            {exp.dataset_kinds.length > 0 ? (
+              <Link to={{ pathname: "/analysis", search }} className="text-brand hover:underline">
+                Analysis에서 분석 실행 →
+              </Link>
+            ) : (
+              "아래 ‘데이터셋 (CSV)’에서 검량선·회수율 CSV를 올리면 분석할 수 있습니다."
+            )}
+          </p>
         ) : (
           <>
             <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-base">
@@ -65,9 +74,13 @@ export function ExperimentHeadline({
                     — 기준({criteria.recovery_min_pct}–{criteria.recovery_max_pct}%) {low ? "미달" : high ? "초과" : "충족"}
                   </>
                 )}
-                {baselineCode && base?.recovery_mean_pct != null && (
+                {baselineCode && baselineId && base?.recovery_mean_pct != null && (
                   <>
-                    , 기준 실험 {josa(baselineCode, "은/는")} {formatWithUnit(base.recovery_mean_pct, "%")}
+                    , 기준 실험{" "}
+                    <ExperimentLink id={baselineId} projectId={exp.project_id}>
+                      {baselineCode}
+                    </ExperimentLink>
+                    {josa(baselineCode, "은/는").slice(baselineCode.length)} {formatWithUnit(base.recovery_mean_pct, "%")}
                   </>
                 )}
               </span>
@@ -84,7 +97,17 @@ export function ExperimentHeadline({
 
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
-          {baselineCode ? `기준 실험 ${josa(baselineCode, "과/와")} 다른 조건` : "조건"}
+          {baselineCode && baselineId ? (
+            <>
+              기준 실험{" "}
+              <ExperimentLink id={baselineId} projectId={exp.project_id}>
+                {baselineCode}
+              </ExperimentLink>
+              {josa(baselineCode, "과/와").slice(baselineCode.length)} 다른 조건
+            </>
+          ) : (
+            "조건"
+          )}
         </h3>
         {!baselineId ? (
           <p className="text-sm text-ink-muted">루트 실험 — 다른 실험의 기준입니다. 전체 조건은 아래 원본에 있습니다.</p>

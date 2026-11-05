@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCreateDigest, useDigests, useSystemInfo } from "@/api/queries";
-import { Badge, ConditionTable, EmptyState, EngineBadge, ErrorState, OriginalBadge, QueryState } from "@/components";
+import { Badge, CodeText, ConditionTable, EmptyState, EngineBadge, ErrorState, OriginalBadge, QueryState } from "@/components";
 import { formatDateTime } from "@/lib/format";
 import { AddendumSection } from "./AddendumSection";
 import type { ExperimentOut } from "./types";
@@ -35,7 +35,9 @@ export function OriginalVsDigest({ exp, changedKeys }: { exp: ExperimentOut; cha
           <h2 className="text-sm font-semibold">원본</h2>
           <OriginalBadge />
         </header>
-        <pre className="bp-prose whitespace-pre-wrap rounded-md bg-subtle p-3 font-sans">{exp.raw_note}</pre>
+        <pre className="bp-prose whitespace-pre-wrap rounded-md bg-subtle p-3 font-sans">
+          <CodeText text={exp.raw_note} projectId={exp.project_id} />
+        </pre>
         <details className="mt-3 text-sm">
           <summary className="cursor-pointer select-none font-semibold text-ink-muted">
             조건 블록 전체 ({Object.values(exp.condition_block).filter((v) => v !== null && v !== undefined).length}개)
@@ -85,11 +87,15 @@ export function OriginalVsDigest({ exp, changedKeys }: { exp: ExperimentOut; cha
                     </select>
                   )}
                 </div>
-                <p className="rounded-md bg-ai-soft/40 bp-prose p-3">{current.summary}</p>
+                <p className="rounded-md bg-ai-soft/40 bp-prose p-3">
+                  <CodeText text={current.summary} projectId={exp.project_id} />
+                </p>
                 {current.key_points.length > 0 && (
                   <ul className="list-disc space-y-0.5 pl-4 text-sm leading-relaxed text-ink-muted">
                     {current.key_points.map((k) => (
-                      <li key={k}>{k}</li>
+                      <li key={k}>
+                        <CodeText text={k} projectId={exp.project_id} />
+                      </li>
                     ))}
                   </ul>
                 )}
