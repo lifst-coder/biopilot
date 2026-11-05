@@ -1,5 +1,5 @@
 import type { Schemas } from "@/api/client";
-import { Badge, EngineBadge, EvidenceChip } from "@/components";
+import { Badge, CodeText, EngineBadge, EvidenceChip } from "@/components";
 import type { BadgeTone } from "@/components";
 
 type AskResponse = Schemas["AskResponse"];
@@ -24,7 +24,7 @@ function StatementList({ statements }: { statements: Statement[] }) {
             <Badge tone={KIND[s.kind].tone}>{KIND[s.kind].label}</Badge>
           </span>
           <span>
-            {s.text}
+            <CodeText text={s.text} />
             {s.evidence_keys.length > 0 && (
               <span className="ml-1 font-mono text-xs text-ink-faint">[{s.evidence_keys.join(", ")}]</span>
             )}

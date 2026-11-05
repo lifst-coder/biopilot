@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAskStream, useCritiques, useExchanges, usePartnerMode } from "@/api/queries";
-import { EngineBadge, ErrorState, SeverityBadge } from "@/components";
+import { CodeText, EngineBadge, ErrorState, ExperimentLink, SeverityBadge } from "@/components";
 import { formatDateTime } from "@/lib/format";
 import { useActiveProject, useSelectedExperiment } from "@/lib/selection";
 import { AnswerView } from "./AnswerView";
@@ -34,7 +34,17 @@ export function PartnerPanel() {
         {mode && <EngineBadge engine={mode.mode} model={mode.model} />}
       </header>
       <p className="text-sm text-ink-muted">
-        컨텍스트: {selected ? `${selected.code} · ${selected.title}` : "실험 미선택 (프로젝트 수준)"}
+        컨텍스트:{" "}
+        {selected ? (
+          <>
+            <ExperimentLink id={selected.id} projectId={selected.project_id}>
+              {selected.code}
+            </ExperimentLink>{" "}
+            · {selected.title}
+          </>
+        ) : (
+          "실험 미선택 (프로젝트 수준)"
+        )}
       </p>
 
       <section className="space-y-2">
@@ -42,7 +52,9 @@ export function PartnerPanel() {
         {latest ? (
           <>
             {latest.assessments[0] && (
-              <p className="bp-prose rounded-md bg-warn-soft/60 px-3 py-2">판정: {latest.assessments[0].verdict_reason}</p>
+              <p className="bp-prose rounded-md bg-warn-soft/60 px-3 py-2">
+                판정: <CodeText text={latest.assessments[0].verdict_reason} />
+              </p>
             )}
             <ul className="space-y-2">
               {latest.findings.slice(0, 4).map((f) => (
@@ -50,13 +62,32 @@ export function PartnerPanel() {
                   <span className="shrink-0">
                     <SeverityBadge severity={f.severity} />
                   </span>
-                  <span>{f.title}</span>
+                  <span>
+                    <CodeText text={f.title} />
+                  </span>
                 </li>
               ))}
             </ul>
+            {selected && (
+              <p className="text-sm">
+                <ExperimentLink id={selected.id} projectId={selected.project_id} tab="/research-ai" hash="#critic">
+                  근거·누락 대조군·제안 보기 → Research AI
+                </ExperimentLink>
+              </p>
+            )}
           </>
         ) : (
-          <p className="text-sm text-ink-faint">이 실험에 저장된 비판이 없습니다.</p>
+          <p className="text-sm text-ink-faint">
+            이 실험에 저장된 비판이 없습니다
+            {selected && (
+              <>
+                {" — "}
+                <ExperimentLink id={selected.id} projectId={selected.project_id} tab="/research-ai">
+                  Research AI에서 비판적 검토 실행
+                </ExperimentLink>
+              </>
+            )}
+          </p>
         )}
       </section>
 
