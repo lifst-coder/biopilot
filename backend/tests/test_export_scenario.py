@@ -52,3 +52,32 @@ def test_protocol_example_extraction_leaves_the_range_empty(client: TestClient) 
     fields = {f["key"]: f for f in res.json()["fields"]}
     assert fields["cleanup_sorbent"]["status"] == "recognized"
     assert fields["extraction_time_min"]["value"] is None  # "5~10분" is a range: not guessed
+
+
+def test_records_navigation_targets_are_recorded(client: TestClient) -> None:
+    """Records links (operator pair → compare, repeated failure → conditions) replay in the demo."""
+    from app.scripts.export_scenario import _record_navigation_pairs
+
+    rec = Recorder(client)
+    pair = {"experiment_a": {"experiment_id": 1}, "experiment_b": {"experiment_id": 2}}
+    operators = {"pairs": [pair]}
+    archive = {
+        "archive": {
+            "patterns": [
+                {
+                    "experiment_ids": [1, 7],
+                    "links": [{"from_experiment_id": 1, "to_experiment_id": 7}],
+                    "resolution": {"id": 6},
+                }
+            ]
+        }
+    }
+    _record_navigation_pairs(rec, operators, archive)
+    for a, b in ((1, 2), (1, 7)):
+        assert request_key("/api/memory/diff", {"a": a, "b": b}) in rec.responses
+        assert request_key("/api/analysis/compare", {"a": a, "b": b}) in rec.responses
+    # The key the frontend builds for useConditionMatrix([1, 7, 6]).
+    key = "/api/memory/compare-conditions?ids=1%2C7%2C6&varying_only=true"
+    assert key in rec.responses
+    assert [e["id"] for e in rec.responses[key]["experiments"]] == [1, 7, 6]
+    assert rec.failures == []

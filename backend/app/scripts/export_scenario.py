@@ -252,10 +252,11 @@ def _record_cross_project(rec: Recorder, projects: list[dict[str, Any]], terms: 
     keys = sorted({f["key"] for f in fields})
     for scope in [None, *(p["id"] for p in projects)]:
         query = {"project_id": scope}
-        rec.get("/api/analysis/records/operators", query)
+        operators = rec.get("/api/analysis/records/operators", query) or {"pairs": []}
         rec.get("/api/analysis/records/periods", query)
-        rec.get("/api/partner/failure-archive", query)
+        archive = rec.get("/api/partner/failure-archive", query) or {"archive": {"patterns": []}}
         rec.get("/api/memory/failures", query)
+        _record_navigation_pairs(rec, operators, archive)
         for key in keys:
             rec.get("/api/analysis/records/conditions", {**query, "key": key})
             if key not in RECORD_CONTAINS_KEYS:
@@ -264,6 +265,30 @@ def _record_cross_project(rec: Recorder, projects: list[dict[str, Any]], terms: 
                 rec.get(
                     "/api/analysis/records/conditions", {**query, "key": key, "contains": value}
                 )
+
+
+def _record_navigation_pairs(
+    rec: Recorder, operators: dict[str, Any], archive: dict[str, Any]
+) -> None:
+    """Comparisons the Records tab links to: operator pairs, failure-pattern links and the
+    conditions of each repeated failure next to the experiment that escaped it."""
+    for pair in operators.get("pairs", []):
+        a, b = pair["experiment_a"]["experiment_id"], pair["experiment_b"]["experiment_id"]
+        rec.get("/api/memory/diff", {"a": a, "b": b})
+        rec.get("/api/analysis/compare", {"a": a, "b": b})
+    for pattern in archive["archive"].get("patterns", []):
+        for link in pattern.get("links", []):
+            a, b = link["from_experiment_id"], link["to_experiment_id"]
+            rec.get("/api/memory/diff", {"a": a, "b": b})
+            rec.get("/api/analysis/compare", {"a": a, "b": b})
+        ids = [*pattern["experiment_ids"]]
+        if pattern.get("resolution"):
+            ids.append(pattern["resolution"]["id"])
+        # Same spelling as the UI's query (`ids=1,2,3&varying_only=true`).
+        rec.get(
+            "/api/memory/compare-conditions",
+            {"ids": ",".join(str(i) for i in ids), "varying_only": "true"},
+        )
 
 
 def _ask_key(project_id: int, experiment_id: int | None, question: str) -> str:
