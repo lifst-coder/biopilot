@@ -1,9 +1,10 @@
-import { useCompare, useCriteria, useMetrics, useResults } from "@/api/queries";
-import type { AnalysisResultOut } from "@/api/types";
-import { Card, Disclosure, EmptyState, ExperimentPicker, PageHeader, QueryState, Term } from "@/components";
+import { Link } from "react-router-dom";
+import { useCompare, useCriteria, useMetrics, useResults, useRunAnalysis } from "@/api/queries";
+import type { AnalysisResultOut, ExperimentSummary } from "@/api/types";
+import { Card, CodeText, Disclosure, EmptyState, ErrorState, ExperimentPicker, PageHeader, QueryState, Term } from "@/components";
 import { TABS } from "@/layout/tabs";
 import { formatPValue, formatWithUnit } from "@/lib/format";
-import { useSelectedExperiment } from "@/lib/selection";
+import { experimentSearch, useSelectedExperiment } from "@/lib/selection";
 import { CalibrationPanel } from "./CalibrationPanel";
 import { ComparePanel } from "./ComparePanel";
 import { CriteriaPanel } from "./CriteriaPanel";
@@ -24,6 +25,49 @@ export function latestByKind(results: AnalysisResultOut[]) {
   const map = new Map<AnalysisResultOut["kind"], AnalysisResultOut>();
   for (const r of results) map.set(r.kind, r);
   return map;
+}
+
+/**
+ * No stored result for this experiment: say what is missing and how to fill it — run the
+ * analysis on its stored CSVs, or upload CSVs in the Notebook first.
+ */
+function NotAnalyzed({ experiment }: { experiment: ExperimentSummary | null }) {
+  const run = useRunAnalysis();
+  if (!experiment) {
+    return <EmptyState>이 프로젝트에 실험이 없습니다 — Notebook의 ‘+ 새 실험’으로 첫 기록을 남기세요.</EmptyState>;
+  }
+  const notebook = { pathname: "/notebook", search: experimentSearch(experiment.id, experiment.project_id) };
+  return (
+    <Card>
+      <p className="bp-prose text-ink-muted">
+        {experiment.code}에는 저장된 분석 결과가 없습니다.{" "}
+        {experiment.dataset_kinds.length > 0
+          ? `저장된 CSV(${experiment.dataset_kinds.join(" · ")})로 계산하면 결과가 불변 레코드로 남습니다.`
+          : "검량선·회수율 CSV가 아직 없습니다 — Notebook의 ‘데이터셋 (CSV)’에서 올린 뒤 분석하세요."}
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {experiment.dataset_kinds.length > 0 ? (
+          <button
+            type="button"
+            className="bp-btn-primary"
+            disabled={run.isPending}
+            onClick={() => run.mutate(experiment.id)}
+          >
+            {run.isPending ? "분석 중…" : `${experiment.code} 분석 실행`}
+          </button>
+        ) : (
+          <Link to={notebook} className="bp-btn-primary">
+            CSV 올리러 Notebook으로 →
+          </Link>
+        )}
+      </div>
+      {run.isError && (
+        <div className="mt-2">
+          <ErrorState error={run.error} />
+        </div>
+      )}
+    </Card>
+  );
 }
 
 /**
@@ -64,7 +108,7 @@ export function AnalysisPage() {
       <QueryState query={metrics}>
         {(m) =>
           !m.analyzed ? (
-            <EmptyState>저장된 분석 결과가 없습니다.</EmptyState>
+            <NotAnalyzed experiment={selected} />
           ) : (
             <VerdictSummary
               metrics={m}
@@ -116,7 +160,7 @@ export function AnalysisPage() {
               {
                 <Disclosure
                   lazy
-                  title={baselineCode ? `기준 실험 ${baselineCode} 대비 비교` : "다른 실험과 비교"}
+                  title={baselineCode ? <CodeText text={`기준 실험 ${baselineCode} 대비 비교`} /> : "다른 실험과 비교"}
                   summary={
                     cmp
                       ? `평균 회수율 ${formatWithUnit(cmp.recovery_delta_pct_points, "%p")}${t ? ` · Welch ${formatPValue(t.p_value)}` : ""}`

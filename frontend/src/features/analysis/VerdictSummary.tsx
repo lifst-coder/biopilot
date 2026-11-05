@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { Link, useLocation } from "react-router-dom";
 import type { ExperimentMetrics } from "@/api/types";
-import { StatTile, Term } from "@/components";
+import { CodeText, StatTile, Term } from "@/components";
 import { formatNumber, formatWithUnit } from "@/lib/format";
 import { GLOSSARY, type GlossaryKey } from "@/lib/glossary";
 import { josa } from "@/lib/korean";
@@ -250,7 +250,7 @@ export function VerdictSummary({ metrics: m, criteria, baseline }: Props) {
           label="평균 회수율"
           value={formatWithUnit(mean, "%")}
           tone={meanTone}
-          meaning={meanMeaning || undefined}
+          meaning={meanMeaning ? <CodeText text={meanMeaning} /> : undefined}
           hint={m.recovery_n ? `n=${m.recovery_n}` : undefined}
           help={GLOSSARY.recovery}
         />
