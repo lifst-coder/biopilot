@@ -208,10 +208,13 @@ Partner 출력 구조: `CritiqueOut.assessments[]`(Research Critic: 지지/반�
 frontend/src/
   api/            client.ts (openapi-fetch), schema.d.ts (생성), types.ts (별칭), queries.ts (React Query 훅),
                   demo.ts (VITE_DEMO 빌드: 모든 /api 요청을 내보낸 시나리오 JSON에서 응답 — 아래)
-  layout/         AppShell (헤더 + 6개 탭 + 우측 Research Partner 패널), GuideBar (첫 방문 안내 ①→④), tabs.ts
+  layout/         AppShell (헤더 + 6개 탭 + 우측 Research Partner 패널), GuideBar (첫 방문 안내 ①→④), tabs.ts,
+                  ContextBar (화면 상단 맥락 줄 + "← 이전 화면"), Shortcuts (키보드, "?" 목록)
   components/     Card, Badge(Severity/Engine/Original), StatTile, DataTable, QueryState,
-                  ExperimentPicker, ConditionTable, EvidenceChip
-  lib/            format.ts (포맷 전용), selection.ts (?exp= URL 상태), chartColors.ts
+                  ExperimentPicker, ConditionTable, EvidenceChip, ExperimentChip,
+                  CodeText (문장 속 실험 코드 → 그 실험 링크, 원문은 그대로)
+  lib/            format.ts (포맷 전용), selection.ts (?exp= URL 상태), chartColors.ts,
+                  experimentIndex.ts (모든 프로젝트의 코드 → 실험), trail.ts (기록 위치별 화면 이름 = 돌아가기)
   styles/         tokens.css (디자인 토큰 = CSS 변수) → tailwind.config.js 가 참조
   features/
     overview/     프로젝트 KPI, 회수율 추이, 타임라인, 감사 로그
@@ -227,6 +230,11 @@ frontend/src/
   제목 아래에 둔다(`layout/tabs.ts`). 1024px 미만에서는 패널이 본문 아래로 내려가고 탭 줄은 가로로 스크롤된다.
 - 활성 프로젝트는 URL `?project=<id>`(헤더 전환). 없으면 `?exp=`의 프로젝트, 그것도 없으면 첫 프로젝트.
 - 선택된 실험은 URL `?exp=<id>`로 탭/패널 간 공유된다.
+- 화면 사이 이동: 실험 코드는 어디에 보이든(칩·문장·원본 메모·결정 사유) `CodeText`/`ExperimentLink`로 그 실험을
+  **그 실험의 프로젝트**(`?project=&exp=`)에서 연다. 모든 화면 위 `ContextBar`가 "프로젝트 · 코드 · 날짜 · 프로토콜 버전 · QC"를
+  각각 해당 화면 링크로 보여 주고, 브라우저 기록 한 칸 뒤가 다른 화면이면 "← <그 화면>"(= 뒤로)을 단다.
+  키보드: `1`–`6` 탭, `[` `]` 이전/다음 실험, `/` 검색, `?` 목록. 막힘 지점 목록과 전후 비교는
+  [docs/screenshots/navigation](docs/screenshots/navigation/README.md).
 - 각 탭은 lazy chunk. 탭 간 import 금지(공통은 `components/`·`lib/`로).
 - 색은 `tokens.css` 변수만 사용(Tailwind `bg-surface`, `text-ink-muted`, `bg-crit-soft` …).
 

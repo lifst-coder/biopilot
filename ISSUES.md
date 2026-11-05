@@ -7,13 +7,13 @@ Protocols 작업 반영). 제출 전 최종 점검(2026-11-04)에서 고친 것�
 
 ## 검증 상태
 
-| 검사 | 결과 (2026-11-04 최종 점검, [FINAL_CHECK.md](FINAL_CHECK.md) §3) |
+| 검사 | 결과 (2026-11-05 화면 사이 이동 작업 후, [docs/screenshots/navigation](docs/screenshots/navigation/README.md)) |
 |---|---|
 | backend `ruff check` · `ruff format --check` · `mypy app` (strict) | 통과 |
-| backend `pytest` | 510 passed, 실패·건너뜀·xfail 0 |
+| backend `pytest` | 511 passed, 실패·건너뜀·xfail 0 |
 | `export_openapi --check` · frontend `check:api` | 통과 |
-| frontend `tsc` · `vitest` · `vite build` · `build:demo` | 통과 (vitest 88) |
-| Playwright E2E (`npm run e2e`, reference 1 + lab 6) | 7 passed |
+| frontend `tsc` · `vitest` · `vite build` · `build:demo` | 통과 (vitest 94) |
+| Playwright E2E (`npm run e2e`, reference 1 + lab 7) | 8 passed (화면 사이 이동 1건 추가) |
 | `alembic upgrade head && alembic check` | 통과 |
 | GitHub Actions CI | 2026-11-04 전까지 main에서 **실패**하고 있었다(`pip-audit`가 러너의 setuptools 79.0.1을 잡음 → Alembic 단계·e2e 잡이 건너뛰어짐). `ci.yml` 수정으로 해결(FINAL_CHECK §2.1). Pages 배포 워크플로는 계속 성공 |
 
