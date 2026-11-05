@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { demoProfile, isDemo, switchDemoProfile } from "@/api/demo";
 import {
   useAllProtocolTemplates,
@@ -8,7 +9,7 @@ import {
   useProtocolRuns,
 } from "@/api/queries";
 import type { RecordExperiment } from "@/api/types";
-import { Badge, Card, Disclosure, EmptyState, ErrorState, ExperimentChip, LoadingState } from "@/components";
+import { Badge, Card, CodeText, Disclosure, EmptyState, ErrorState, ExperimentChip, ExperimentLink, LoadingState } from "@/components";
 import { formatDate, formatRatio, formatShortDate, formatWithUnit } from "@/lib/format";
 import { conditionText } from "./format";
 import { StartRun } from "./StartRun";
@@ -125,6 +126,9 @@ export function LineageView({ projectId, go }: { projectId: number; go: Protocol
   const records = useProtocolRecords(projectId);
   const runs = useProtocolRuns(projectId, "in_progress");
   const templates = useAllProtocolTemplates(projectId);
+  // `#protocol-<id>` (the context line's protocol link): open that version and scroll to it.
+  const { hash } = useLocation();
+  const target = hash.startsWith("#protocol-") ? Number(hash.slice("#protocol-".length)) : null;
 
   const rows: VersionRow[] = useMemo(() => {
     const groups = new Map((records.data?.groups ?? []).map((g) => [Number(g.value), g]));
@@ -137,6 +141,11 @@ export function LineageView({ projectId, go }: { projectId: number; go: Protocol
     for (const g of records.data?.groups ?? []) for (const e of g.experiments) out.set(e.experiment_id, e);
     return out;
   }, [records.data]);
+
+  const loaded = !lineage.isLoading && !records.isLoading;
+  useEffect(() => {
+    if (loaded && target !== null) document.getElementById(`protocol-${target}`)?.scrollIntoView({ block: "start" });
+  }, [loaded, target]);
 
   if (lineage.isLoading || records.isLoading) return <LoadingState />;
   if (lineage.error) return <ErrorState error={lineage.error} />;
@@ -246,6 +255,7 @@ export function LineageView({ projectId, go }: { projectId: number; go: Protocol
             stepTitles={(stepsOf.get(r.node.template.template_id) ?? []).map((s) => s.title)}
             projectId={projectId}
             go={go}
+            open={r.node.template.template_id === target}
           />
         ))}
         {rows.length > 1 && <CompareVersions rows={rows} />}
@@ -261,7 +271,10 @@ function VersionDetail({
   stepTitles,
   projectId,
   go,
+  open,
 }: {
+  /** Start expanded (linked to with `#protocol-<id>`). */
+  open: boolean;
   row: VersionRow;
   first: boolean;
   recordsById: Map<number, RecordExperiment>;
@@ -277,13 +290,27 @@ function VersionDetail({
       ? `바뀐 조건: ${node.changes_from_previous.map((c) => c.label).join(", ")}`
       : "조건 변경 없음";
   return (
-    <Disclosure title={`${row.name} ${t.display_version}`} summary={summary} tone={row.group && row.group.fail_count > 0 ? "warn" : "default"}>
+    <Disclosure
+      id={`protocol-${t.template_id}`}
+      className="scroll-mt-4"
+      defaultOpen={open}
+      title={`${row.name} ${t.display_version}`}
+      summary={summary}
+      tone={row.group && row.group.fail_count > 0 ? "warn" : "default"}
+    >
       <div className="space-y-4">
         <p className="bp-prose text-ink-muted">
-          {node.description || "설명 없음"}
+          {node.description ? <CodeText text={node.description} projectId={projectId} /> : "설명 없음"}
           <span className="block text-sm">
             {usedRange(node)} 사용 · 등록 {formatDate(t.created_at)} · {t.author || "작성자 미기재"}
-            {t.source_experiment_code && ` · 계기 실험 ${t.source_experiment_code}`}
+            {t.source_experiment_code && t.source_experiment_id != null && (
+              <>
+                {" · 계기 실험 "}
+                <ExperimentLink id={t.source_experiment_id} projectId={projectId}>
+                  {t.source_experiment_code}
+                </ExperimentLink>
+              </>
+            )}
           </span>
         </p>
         {!first && (
@@ -318,6 +345,18 @@ function VersionDetail({
                     >
                       {e.deviations.length === 0 ? "프로토콜 그대로" : `다른 조건: ${deviationSummary(e.deviations)}`}
                     </span>
+                    {rec?.qc_status === "fail" && (
+                      <span className="text-sm">
+                        왜 실패?{" "}
+                        <ExperimentLink id={e.experiment_id} projectId={projectId} tab="/analysis">
+                          판정 근거
+                        </ExperimentLink>
+                        {" · "}
+                        <ExperimentLink id={e.experiment_id} projectId={projectId} tab="/research-ai" hash="#critic">
+                          AI 비판
+                        </ExperimentLink>
+                      </span>
+                    )}
                   </li>
                 );
               })}
