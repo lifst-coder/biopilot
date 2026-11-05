@@ -274,6 +274,15 @@ function PairRow({ pair, labels }: { pair: OperatorPair; labels: ProjectLabels }
         <span className="sr-only">대</span>
         {chip(pair.experiment_b)}
         <span className="text-xs text-ink-faint">{pair.days_apart}일 간격</span>
+        <Link
+          className="text-sm text-brand hover:underline"
+          to={{
+            pathname: "/notebook",
+            search: `?project=${pair.experiment_b.project_id}&exp=${pair.experiment_b.experiment_id}&compare=${pair.experiment_a.experiment_id}`,
+          }}
+        >
+          두 실험 비교 →
+        </Link>
       </div>
       <div className="text-sm tabular-nums sm:text-right">
         <span className="text-ink-muted sm:hidden">Δ </span>
