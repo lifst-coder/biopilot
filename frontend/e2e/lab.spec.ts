@@ -8,6 +8,8 @@
  * - Records: the operator difference (#029/#030), the maintenance gap and the repeated
  *   failure (#014 → #015 → #016) are shown from stored data.
  * - the Critic for #024 cites a rejection reason recorded months earlier (#009 2×2, workload).
+ * - moving between screens: Records → condition diff → compare → "← back"; a code in the
+ *   Critic opens another project's experiment; missing control → its proposal; keyboard.
  */
 import { expect, test } from "@playwright/test";
 import { experimentIds, getJson, projects } from "./helpers";
@@ -145,4 +147,40 @@ test("lab: Records shows what only the accumulated records reveal", async ({ pag
   await page.getByText(/실패 기록 \d+건/).click();
   await expect(page.getByText("원인 가설 (규칙 기반)").first()).toBeVisible();
   await expect(page.getByText(/MgSO4 새 lot/).first()).toBeVisible();
+});
+
+test("lab: moving between screens keeps the context and a way back", async ({ page }) => {
+  // Records → a repeated failure → the conditions that differed → the record, and back.
+  await page.goto("/records?view=failures");
+  const headline = page.getByRole("region", { name: /미달이 이어진 실험에서 되풀이됐다/ });
+  await headline.getByText("조건 차이 비교").click();
+  await expect(headline.getByText("정제 흡착제 (d-SPE)").first()).toBeVisible();
+  await headline.getByRole("link", { name: "나란히 비교" }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "닫기", exact: true }).click();
+  const context = page.getByTestId("context-bar");
+  await expect(context).toContainText("QC 불합격");
+  await context.getByRole("button", { name: /Records · 실패 아카이브/ }).click();
+  await expect(page).toHaveURL(/view=failures/);
+
+  // A code inside a critique sentence opens that experiment; one from another project
+  // switches the project, and the context line names it.
+  await page.goto("/research-ai?project=1&exp=24");
+  await expect(page.getByTestId("verdict-reason")).toBeVisible();
+  await page.getByTestId("precedents").getByRole("link", { name: /#OA10/ }).first().click();
+  await expect(page).toHaveURL(/project=2/);
+  await expect(page.getByTestId("context-bar")).toContainText("#OA10");
+  await expect(page.getByTestId("context-bar")).toContainText("발효식품");
+  await page.getByTestId("context-bar").getByRole("button", { name: /Research AI · #024/ }).click();
+  await expect(page).toHaveURL(/exp=24/);
+
+  // A missing control → the proposal that includes it.
+  await page.getByRole("link", { name: /^P\d+ · 결정 대기 →$/ }).first().click();
+  await expect(page.locator("article[id^=proposal-]:focus")).toBeVisible();
+
+  // Keyboard: "]" moves to the next experiment, "?" lists the keys.
+  await page.keyboard.press("]");
+  await expect(page).toHaveURL(/exp=25/);
+  await page.keyboard.press("?");
+  await expect(page.getByRole("dialog", { name: "키보드 단축키" })).toBeVisible();
 });
