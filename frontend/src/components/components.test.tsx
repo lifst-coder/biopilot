@@ -16,8 +16,18 @@ describe("common components", () => {
     expect(screen.getByRole("status").textContent).toContain("데모 · 읽기 전용");
     expect(screen.queryByText(/오류:/)).toBeNull();
     rerender(<ErrorState error={new ApiError(500, "internal_error", "boom")} />);
-    expect(screen.getByText("오류: boom")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("잠시 후 다시 시도");
+    expect(screen.getByText("서버 응답: boom")).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("ErrorState says what to do next: unreachable server, missing record", () => {
+    const { container, rerender } = render(<ErrorState error={new TypeError("Failed to fetch")} />);
+    const alert = () => within(container).getByRole("alert").textContent ?? "";
+    expect(alert()).toContain("백엔드(uvicorn)가 켜져 있는지");
+    expect(alert()).not.toContain("Failed to fetch");
+    rerender(<ErrorState error={new ApiError(404, "not_found", "experiment 99 not found")} />);
+    expect(alert()).toContain("다른 실험을 고르거나");
   });
 
   it("EvidenceChip renders the stored value with unit, not prose", () => {

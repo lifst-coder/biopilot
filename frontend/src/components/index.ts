@@ -1,6 +1,8 @@
 export { Badge, EngineBadge, OriginalBadge, SeverityBadge } from "./Badge";
 export type { BadgeTone } from "./Badge";
 export { Card } from "./Card";
+export { CodeText, ExperimentLink } from "./CodeText";
+export type { ExperimentTab } from "./CodeText";
 export { ConditionTable } from "./ConditionTable";
 export { DecisionLine } from "./DecisionLine";
 export { DataTable } from "./DataTable";

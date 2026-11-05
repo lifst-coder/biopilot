@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { Link } from "react-router-dom";
 import { useCritiques, useMetrics } from "@/api/queries";
 import type { AcceptanceCriteria, ExperimentSummary, HypothesisOut, ProposalOut, TrendPoint } from "@/api/types";
-import { Term } from "@/components";
+import { CodeText, ExperimentLink, Term } from "@/components";
 import { formatWithUnit } from "@/lib/format";
 import { josa } from "@/lib/korean";
 
@@ -108,9 +108,13 @@ export function FocusCard({ focus, experiments, criteria, proposals, hypotheses 
               — 기준({criteria.recovery_min_pct}–{criteria.recovery_max_pct}%) {low ? "미달" : high ? "초과" : "충족"}
             </>
           )}
-          {baselineCode && base?.recovery_mean_pct != null && (
+          {baselineCode && baselineId && base?.recovery_mean_pct != null && (
             <>
-              , 기준 실험 {josa(baselineCode, "은/는")} {formatWithUnit(base.recovery_mean_pct, "%")}
+              , 기준 실험{" "}
+              <ExperimentLink id={baselineId} projectId={exp?.project_id}>
+                {baselineCode}
+              </ExperimentLink>
+              {josa(baselineCode, "은/는").slice(baselineCode.length)} {formatWithUnit(base.recovery_mean_pct, "%")}
             </>
           )}
         </span>
@@ -125,7 +129,9 @@ export function FocusCard({ focus, experiments, criteria, proposals, hypotheses 
       {assessment && (
         <div className="mt-3 rounded-md border border-border bg-surface/80 px-3 py-2 text-sm">
           <p className="text-sm text-ink-muted">해결되지 않은 질문</p>
-          <p className="font-medium">{assessment.question}</p>
+          <p className="font-medium">
+            <CodeText text={assessment.question} />
+          </p>
           <p className="bp-prose mt-1">
             <span className="font-semibold text-warn">{VERDICT_WORD[assessment.verdict]}</span>
             {assessment.missing_controls.length > 0 && (

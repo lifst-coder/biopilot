@@ -19,13 +19,21 @@ interface Props {
 }
 
 /** Line of stored mean recoveries with the acceptance band from the criteria API. */
-export function RecoveryTrendChart({ points, criteria }: Props) {
+export function RecoveryTrendChart({ points, criteria, onSelect }: Props & { onSelect?: (experimentId: number) => void }) {
   const data = points.filter((p) => p.recovery_mean_pct !== null);
-  if (data.length === 0) return <EmptyState>회수율 결과가 있는 실험이 없습니다.</EmptyState>;
+  if (data.length === 0) return <EmptyState>아직 회수율 결과가 있는 실험이 없습니다 — 회수율 CSV를 올리고 분석하면 실험별 평균이 여기에 쌓입니다.</EmptyState>;
   return (
     <div className="h-64">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: -8 }}>
+        <LineChart
+          data={data}
+          margin={{ top: 8, right: 16, bottom: 0, left: -8 }}
+          className={onSelect ? "cursor-pointer" : undefined}
+          onClick={(state) => {
+            const point = state?.activePayload?.[0]?.payload as TrendPoint | undefined;
+            if (point && onSelect) onSelect(point.experiment_id);
+          }}
+        >
           <CartesianGrid strokeDasharray="3 3" stroke="#e0e4ea" />
           <XAxis dataKey="code" tick={{ fontSize: CHART_FONT_SIZE }} />
           <YAxis tick={{ fontSize: CHART_FONT_SIZE }} domain={["auto", "auto"]} unit="%" />

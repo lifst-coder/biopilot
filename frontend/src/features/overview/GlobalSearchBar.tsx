@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMemorySearch, useMemorySearchAll, useProjects, useRecall, useRecallAll } from "@/api/queries";
-import { Badge } from "@/components";
+import { Badge, ErrorState } from "@/components";
 import { experimentSearch, projectShortName } from "@/lib/selection";
 import { Highlighted } from "./highlight";
 
@@ -67,6 +67,7 @@ export function GlobalSearchBar({ projectId }: { projectId: number | null }) {
       </label>
       <input
         id={`${listId}-input`}
+        data-global-search
         type="search"
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -134,9 +135,9 @@ export function GlobalSearchBar({ projectId }: { projectId: number | null }) {
           )}
           <p className="px-1 pb-1 font-medium text-ink-muted">본문 일치</p>
           {search.isLoading && <p className="px-1 py-2 text-ink-faint">검색 중…</p>}
-          {search.isError && <p className="px-1 py-2 text-crit">검색 실패: {String(search.error)}</p>}
+          {search.isError && <ErrorState error={search.error} />}
           {search.isSuccess && hits.length === 0 && (
-            <p className="px-1 py-2 text-ink-faint">일치하는 기록이 없습니다.</p>
+            <p className="px-1 py-2 text-ink-faint">일치하는 기록이 없습니다 — 분석물·조건값(예: GCB)이나 실험 코드(예: #024)로 찾아보세요.</p>
           )}
           <ul id={listId} role="listbox" aria-label="검색 결과" className="max-h-72 space-y-0.5 overflow-y-auto">
             {hits.map((h, i) => (

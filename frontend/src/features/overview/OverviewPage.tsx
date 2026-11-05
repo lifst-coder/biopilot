@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   useAudit,
   useCriteria,
@@ -9,10 +10,10 @@ import {
   useTimeline,
   useTrend,
 } from "@/api/queries";
-import { Badge, Card, DataTable, Disclosure, PageHeader, QueryState } from "@/components";
+import { Badge, Card, CodeText, DataTable, Disclosure, PageHeader, QueryState } from "@/components";
 import { TABS } from "@/layout/tabs";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { useActiveProject } from "@/lib/selection";
+import { experimentSearch, useActiveProject } from "@/lib/selection";
 import { FocusCard, pickFocus } from "./FocusCard";
 import { GlobalSearchBar } from "./GlobalSearchBar";
 import { KnowledgeGraphView } from "./KnowledgeGraphView";
@@ -36,7 +37,15 @@ export function OverviewPage() {
   const { data: proposals = [] } = useProposals(projectId);
   const { data: hypotheses = [] } = useHypotheses(projectId);
   const { data: experiments = [] } = useExperiments(projectId);
-  const { search } = useLocation();
+  const { search, hash } = useLocation();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  // `?exp=` came with the link (context line date → "#timeline"): mark that row.
+  const marked = Number(params.get("exp")) || null;
+  const timelineReady = timeline.isSuccess;
+  useEffect(() => {
+    if (hash === "#timeline" && timelineReady) document.getElementById("timeline")?.scrollIntoView({ block: "start" });
+  }, [hash, timelineReady]);
   const knowledge = useKnowledgeGraph(projectId);
 
   const unresolved = new Set<number>([
@@ -53,6 +62,22 @@ export function OverviewPage() {
   return (
     <div className="space-y-4">
       <PageHeader title={project.name} question={QUESTION} />
+
+      {project.experiment_count === 0 && (
+        <section className="rounded-card border border-border bg-surface px-5 py-4">
+          <p className="bp-prose">
+            이 프로젝트에는 아직 실험이 없습니다 — 첫 실험을 기록하면 여기에 지금 봐야 할 실험과 회수율 추이가 나옵니다.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-sm">
+            <Link to={{ pathname: "/notebook", search }} className="bp-btn-primary px-3 py-1.5">
+              + 새 실험 기록 → Notebook
+            </Link>
+            <Link to={{ pathname: "/protocols", search }} className="bp-btn-ghost px-3 py-1.5">
+              프로토콜 붙여넣어 시작 → Protocols
+            </Link>
+          </div>
+        </section>
+      )}
 
       {focus && (
         <FocusCard
@@ -79,55 +104,70 @@ export function OverviewPage() {
         {project.objective && <span className="text-ink-faint">목표: {project.objective}</span>}
       </p>
 
-      <Card title="회수율 추이" subtitle="실험별 평균 회수율 (저장된 분석 결과) · 초록 띠 = 허용 기준">
+      <Card title="회수율 추이" subtitle="실험별 평균 회수율 (저장된 분석 결과) · 초록 띠 = 허용 기준 · 점을 누르면 그 실험 기록">
         <QueryState query={trend}>
-          {(data) => <RecoveryTrendChart points={data} criteria={criteria ?? null} />}
-        </QueryState>
-      </Card>
-
-      <Card title="실험 타임라인" subtitle="부모 실험 대비 변경된 조건">
-        <QueryState query={timeline}>
-          {(rows) => (
-            <DataTable
-              rows={rows}
-              rowKey={(r) => r.experiment_id}
-              rowClassName={(r) => (focus && r.experiment_id === focus.experiment_id ? "bg-warn-soft/40" : undefined)}
-              columns={[
-                {
-                  key: "code",
-                  header: "실험",
-                  render: (r) => (
-                    <Link
-                      className="font-medium text-brand hover:underline"
-                      to={{ pathname: "/notebook", search: `?exp=${r.experiment_id}` }}
-                    >
-                      {r.code}
-                    </Link>
-                  ),
-                },
-                { key: "title", header: "제목", render: (r) => r.title },
-                { key: "date", header: "일자", render: (r) => formatDate(r.performed_on) },
-                {
-                  key: "changes",
-                  header: "변경",
-                  render: (r) =>
-                    r.changed_keys_vs_parent.length ? (
-                      <div className="flex flex-wrap gap-1">
-                        {r.changed_keys_vs_parent.map((k) => (
-                          <Badge key={k} tone="warn">
-                            {k}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-ink-faint">기준</span>
-                    ),
-                },
-              ]}
+          {(data) => (
+            <RecoveryTrendChart
+              points={data}
+              criteria={criteria ?? null}
+              onSelect={(id) => navigate({ pathname: "/notebook", search: experimentSearch(id, projectId) })}
             />
           )}
         </QueryState>
       </Card>
+
+      <div id="timeline" className="scroll-mt-4">
+        <Card title="실험 타임라인" subtitle="부모 실험 대비 변경된 조건">
+          <QueryState query={timeline}>
+            {(rows) => (
+              <DataTable
+                rows={rows}
+                rowKey={(r) => r.experiment_id}
+                empty="아직 기록된 실험이 없습니다 — Notebook의 ‘+ 새 실험’으로 시작하세요."
+                rowClassName={(r) =>
+                  r.experiment_id === marked
+                    ? "bg-brand-soft/70 font-medium"
+                    : focus && r.experiment_id === focus.experiment_id
+                      ? "bg-warn-soft/40"
+                      : undefined
+                }
+                columns={[
+                  {
+                    key: "code",
+                    header: "실험",
+                    render: (r) => (
+                      <Link
+                        className="font-medium text-brand hover:underline"
+                        to={{ pathname: "/notebook", search: `?exp=${r.experiment_id}` }}
+                      >
+                        {r.code}
+                      </Link>
+                    ),
+                  },
+                  { key: "title", header: "제목", render: (r) => <CodeText text={r.title} projectId={projectId} /> },
+                  { key: "date", header: "일자", render: (r) => formatDate(r.performed_on) },
+                  {
+                    key: "changes",
+                    header: "변경",
+                    render: (r) =>
+                      r.changed_keys_vs_parent.length ? (
+                        <div className="flex flex-wrap gap-1">
+                          {r.changed_keys_vs_parent.map((k) => (
+                            <Badge key={k} tone="warn">
+                              {k}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-ink-faint">기준</span>
+                      ),
+                  },
+                ]}
+              />
+            )}
+          </QueryState>
+        </Card>
+      </div>
 
       <div className="space-y-2">
         <h2 className="px-1 pt-4 text-sm font-semibold text-ink-muted">자세히</h2>

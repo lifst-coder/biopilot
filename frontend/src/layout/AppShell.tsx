@@ -1,12 +1,14 @@
 import clsx from "clsx";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { demoProfile, isDemo, switchDemoProfile } from "@/api/demo";
 import { usePartnerMode } from "@/api/queries";
 import { Badge } from "@/components";
 import { PartnerPanel } from "@/features/partner-panel/PartnerPanel";
 import { useActiveProject } from "@/lib/selection";
+import { ContextBar } from "./ContextBar";
 import { GuideBar, useGuideBar } from "./GuideBar";
+import { Shortcuts } from "./Shortcuts";
 import { TABS } from "./tabs";
 
 /**
@@ -20,6 +22,7 @@ export function AppShell() {
   const { pathname, search } = useLocation();
   const guide = useGuideBar();
   const nav = useRef<HTMLElement>(null);
+  const [keysOpen, setKeysOpen] = useState(false);
   // Narrow screens scroll the tab row sideways: keep the active tab visible (e.g. after a
   // guide-bar step jumps to Research AI, which starts off-screen at 390 px).
   useEffect(() => {
@@ -31,14 +34,16 @@ export function AppShell() {
   }, [pathname]);
   return (
     <div className="flex min-h-full flex-col lg:h-full">
-      <header className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-surface px-4 py-2 sm:px-5 lg:h-[var(--bp-header-height)] lg:flex-nowrap lg:py-0">
+      {/* Wraps instead of clipping: every tab stays reachable when the project/demo controls
+          need the room (e.g. 1024–1300 px with the guide bar closed). */}
+      <header className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-surface px-4 py-2 sm:px-5 lg:min-h-[var(--bp-header-height)]">
         <div className="flex items-center gap-2">
           <span className="grid h-7 w-7 place-items-center rounded-md bg-brand text-xs font-bold text-white">
             BP
           </span>
           <span className="font-semibold">BioPilot</span>
         </div>
-        <nav ref={nav} className="-mx-1 flex max-w-full gap-1 overflow-x-auto px-1" aria-label="주요 탭">
+        <nav ref={nav} className="-mx-1 flex max-w-full gap-1 overflow-x-auto px-1 lg:shrink-0" aria-label="주요 탭">
           {TABS.map((tab) => (
             <NavLink
               key={tab.path}
@@ -59,7 +64,7 @@ export function AppShell() {
           {!guide.open && (
             <button
               type="button"
-              className="rounded-md border border-brand/40 px-2 py-1 font-medium text-brand hover:bg-brand-soft"
+              className="shrink-0 whitespace-nowrap rounded-md border border-brand/40 px-2 py-1 font-medium text-brand hover:bg-brand-soft"
               onClick={guide.show}
             >
               안내
@@ -71,8 +76,10 @@ export function AppShell() {
         </div>
       </header>
       <GuideBar open={guide.open} onClose={guide.dismiss} />
+      <Shortcuts open={keysOpen} setOpen={setKeysOpen} />
       <div className="flex flex-1 flex-col lg:min-h-0 lg:flex-row">
         <main className="min-w-0 flex-1 p-4 sm:p-5 lg:overflow-y-auto">
+          <ContextBar onShortcuts={() => setKeysOpen(true)} />
           <Outlet />
         </main>
         <aside className="shrink-0 border-t border-border bg-surface lg:w-partner lg:overflow-y-auto lg:border-l lg:border-t-0">

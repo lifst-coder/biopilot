@@ -2,7 +2,7 @@
  * React Query hooks — the only way UI code talks to the backend.
  * Query keys are namespaced by backend module so invalidation stays local.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ApiError, api, apiFetch, unwrap, type Schemas } from "./client";
 import type { DecisionCreate } from "./types";
@@ -421,6 +421,23 @@ export const useCompleteRun = (runId: number) => {
   });
 };
 
+/**
+ * Experiment lists of several projects at once (same cache entries as `useExperiments`), so
+ * an experiment code seen anywhere can be resolved to its id and project.
+ */
+export const useExperimentsOf = (projectIds: number[]) =>
+  useQueries({
+    queries: projectIds.map((projectId) => ({
+      queryKey: ["eln", "experiments", projectId],
+      queryFn: () =>
+        unwrap(
+          api.GET("/api/eln/projects/{project_id}/experiments", {
+            params: { path: { project_id: projectId } },
+          }),
+        ),
+    })),
+  });
+
 // ---------------------------------------------------------------- memory
 export const useTimeline = (projectId: number | null) =>
   useQuery({
@@ -524,6 +541,19 @@ export const useRecallAll = (q: string, projectIds: number[] | null = null) =>
       unwrap(
         api.GET("/api/memory/recall", {
           params: { query: { q: q.trim(), ...(projectIds ? { project_id: projectIds } : {}) } },
+        }),
+      ),
+  });
+
+/** Condition values of several experiments side by side (`varying_only` keeps differing keys). */
+export const useConditionMatrix = (ids: number[], varyingOnly = true) =>
+  useQuery({
+    queryKey: ["memory", "compare-conditions", ids.join(","), varyingOnly],
+    enabled: ids.length >= 2,
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/memory/compare-conditions", {
+          params: { query: { ids: ids.join(","), varying_only: varyingOnly } },
         }),
       ),
   });

@@ -1,3 +1,4 @@
+import { CodeText } from "./CodeText";
 import type { Evidence } from "@/api/types";
 import { formatEvidenceValue } from "@/lib/format";
 
@@ -9,7 +10,9 @@ export function EvidenceChip({ evidence }: { evidence: Evidence }) {
       className="inline-flex items-center gap-1 rounded border border-border bg-subtle px-1.5 py-0.5 text-xs"
     >
       <span className="font-mono text-ink-faint">{evidence.key}</span>
-      <span className="text-ink-muted">{evidence.label}</span>
+      <span className="text-ink-muted">
+        <CodeText text={evidence.label} />
+      </span>
       {evidence.value !== null && evidence.value !== undefined && (
         <span className="font-medium tabular-nums text-ink">
           {formatEvidenceValue(evidence.value, evidence.unit)}
