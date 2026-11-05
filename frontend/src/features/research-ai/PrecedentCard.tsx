@@ -1,6 +1,6 @@
 import { useProjects } from "@/api/queries";
 import type { ConditionUsage, PrecedentCase, PrecedentsOut } from "@/api/types";
-import { Badge, DecisionLine, Disclosure, ExperimentChip } from "@/components";
+import { Badge, CodeText, DecisionLine, Disclosure, ExperimentChip } from "@/components";
 import { formatDate, formatWithUnit } from "@/lib/format";
 import { projectShortName } from "@/lib/selection";
 
@@ -41,7 +41,7 @@ export function PrecedentCard({ data, currentProjectId }: { data: PrecedentsOut;
       ))}
 
       {rest.length > 0 && (
-        <Disclosure className="mt-3" title={`다른 사례 ${rest.length}건`} summary={rest.map((c) => c.experiment.code).join(" · ")}>
+        <Disclosure className="mt-3" title={`다른 사례 ${rest.length}건`} summary={<CodeText text={rest.map((c) => c.experiment.code).join(" · ")} />}>
           <div className="space-y-4">
             {rest.map((c) => (
               <CaseView key={c.experiment.id} c={c} short={short} nested />
@@ -66,7 +66,9 @@ function CaseView({ c, short, nested = false }: { c: PrecedentCase; short: (id: 
           qc="fail"
           value={c.recovery_mean_pct != null ? formatWithUnit(c.recovery_mean_pct, "%") : null}
         />
-        <span className="text-sm font-medium">{c.experiment.title}</span>
+        <span className="text-sm font-medium">
+          <CodeText text={c.experiment.title} projectId={c.experiment.project_id} />
+        </span>
         <span className="text-sm text-ink-faint">
           {label ? `${label} 프로젝트 · ` : ""}
           {formatDate(c.experiment.performed_on)}
@@ -101,7 +103,9 @@ function CaseView({ c, short, nested = false }: { c: PrecedentCase; short: (id: 
                 qc={c.resolution.qc_status}
                 value={c.resolution.recovery_mean_pct != null ? formatWithUnit(c.resolution.recovery_mean_pct, "%") : null}
               />
-              <span className="min-w-0 text-ink-muted">{c.resolution.title}</span>
+              <span className="min-w-0 text-ink-muted">
+                <CodeText text={c.resolution.title} projectId={c.experiment.project_id} />
+              </span>
             </li>
           )}
         </ul>

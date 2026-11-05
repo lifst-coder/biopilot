@@ -142,7 +142,7 @@ describe("Research AI tab", () => {
     expect(screen.getByText("사유: 블랭크 확보 불가")).toBeTruthy();
     expect(screen.getByText("반영된 비판: #2")).toBeTruthy();
     rerender(<DecisionHistoryCard entries={[]} />);
-    expect(screen.getByText("기록된 결정이 없습니다.")).toBeTruthy();
+    expect(screen.getByText(/^기록된 결정이 없습니다 — /)).toBeTruthy();
   });
 
   it("proposal card shows priority, superseded proposals and the recorded decision", () => {

@@ -1,4 +1,4 @@
-import { Badge, Card, EmptyState } from "@/components";
+import { Badge, Card, CodeText, EmptyState, ExperimentLink } from "@/components";
 import { formatDateTime } from "@/lib/format";
 import type { DecisionHistoryEntry } from "./types";
 
@@ -10,7 +10,7 @@ export function DecisionHistoryCard({ entries }: { entries: DecisionHistoryEntry
   return (
     <Card title="결정 이력" subtitle="기각·수정 사유는 이후 비판과 제안에 반영됩니다">
       {entries.length === 0 ? (
-        <EmptyState>기록된 결정이 없습니다.</EmptyState>
+        <EmptyState>기록된 결정이 없습니다 — 아래 제안 카드에서 채택·수정·기각을 사유와 함께 남기면 여기에 쌓입니다.</EmptyState>
       ) : (
         <ul className="space-y-2">
           {entries.map((e) => (
@@ -18,12 +18,20 @@ export function DecisionHistoryCard({ entries }: { entries: DecisionHistoryEntry
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={TONE[e.decision.action]}>{LABEL[e.decision.action]}</Badge>
                 <span className="text-ink-faint">
-                  P{e.proposal_id} · {e.experiment_code} · {formatDateTime(e.decision.created_at)}
+                  P{e.proposal_id} ·{" "}
+                  <ExperimentLink id={e.experiment_id} tab="/research-ai">
+                    {e.experiment_code}
+                  </ExperimentLink>{" "}
+                  · {formatDateTime(e.decision.created_at)}
                 </span>
                 <Badge>{e.decision.reason_category}</Badge>
               </div>
-              <p className="mt-1 font-medium">{e.proposal_title}</p>
-              <p className="bp-prose text-ink-muted">사유: {e.decision.rationale}</p>
+              <p className="mt-1 font-medium">
+                <CodeText text={e.proposal_title} />
+              </p>
+              <p className="bp-prose text-ink-muted">
+                사유: <CodeText text={e.decision.rationale} />
+              </p>
               <p className="text-ink-faint">
                 {e.reflected_in_critique_ids.length > 0
                   ? `반영된 비판: ${e.reflected_in_critique_ids.map((id) => `#${id}`).join(", ")}`

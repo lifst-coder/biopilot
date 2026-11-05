@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
-import { Badge, Card, Term } from "@/components";
+import type { ProposalOut } from "@/api/types";
+import { Badge, Card, CodeText, Term } from "@/components";
 import type { BadgeTone } from "@/components";
 import { EvidenceList } from "./EvidenceList";
 import {
@@ -55,10 +56,49 @@ function ArgumentItem({
         <span className="mr-1.5 inline-block align-[0.1em]">
           <Badge tone={BASIS_TONE[arg.basis]}>{BASIS_LABEL[arg.basis]}</Badge>
         </span>
-        {arg.statement}
+        <CodeText text={arg.statement} />
       </p>
       <EvidenceList keys={arg.evidence_keys} evidence={evidence} max={maxChips} />
     </li>
+  );
+}
+
+const PROPOSAL_STATUS: Record<ProposalOut["status"], string> = {
+  pending: "결정 대기",
+  accepted: "채택",
+  modified: "수정 채택",
+  rejected: "기각",
+};
+
+/**
+ * "이 대조군을 포함한 제안 →": the proposals whose design addresses this missing control
+ * (`design.addresses_controls`), each a jump to its card in the Next Experiment Designer.
+ */
+function ControlProposals({ controlId, proposals }: { controlId: string; proposals: ProposalOut[] }) {
+  const matching = proposals.filter((p) => p.design?.addresses_controls.includes(controlId));
+  if (matching.length === 0) {
+    return <p className="mt-1.5 text-sm text-ink-faint">이 대조군을 포함한 제안은 아직 없습니다.</p>;
+  }
+  return (
+    <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+      <span className="text-ink-muted">이 대조군을 포함한 제안</span>
+      {matching.map((p) => (
+        <a
+          key={p.id}
+          href={`#proposal-${p.id}`}
+          onClick={(e) => {
+            const card = document.getElementById(`proposal-${p.id}`);
+            if (!card) return;
+            e.preventDefault();
+            card.scrollIntoView({ block: "start", behavior: "smooth" });
+            card.focus({ preventScroll: true });
+          }}
+          className="font-medium text-brand underline decoration-brand/30 underline-offset-2 hover:decoration-brand"
+        >
+          P{p.id} · {PROPOSAL_STATUS[p.status]} →
+        </a>
+      ))}
+    </p>
   );
 }
 
@@ -96,10 +136,13 @@ export function CriticAssessmentView({
   assessment,
   evidence,
   feedback,
+  proposals = [],
 }: {
   assessment: CriticAssessment;
   evidence: Evidence[];
   feedback: DecisionFeedback[];
+  /** This experiment's proposals — each missing control links to the ones that include it. */
+  proposals?: ProposalOut[];
 }) {
   const byKey = new Map(evidence.map((e) => [e.key, e]));
   const [reasonHead, reasonDetail] = splitReason(assessment.verdict_reason);
@@ -108,18 +151,24 @@ export function CriticAssessmentView({
     assessment.opposing_evidence.length +
     assessment.alternative_explanations.length;
   return (
-    <Card title="Research Critic" subtitle={assessment.question}>
+    <Card title="Research Critic" subtitle={<CodeText text={assessment.question} />}>
       <div className={clsx("mb-5 rounded-md border px-4 py-3.5", VERDICT_FRAME[assessment.verdict])}>
         <p className={clsx("text-lg font-bold", VERDICT_TEXT[assessment.verdict])}>
           <span>{VERDICT_LABEL[assessment.verdict]}</span>
         </p>
         <div className="bp-prose mt-1.5 text-ink" data-testid="verdict-reason">
-          <p className="font-semibold">판정: {reasonHead}</p>
-          {reasonDetail && <p className="mt-0.5">{reasonDetail}</p>}
+          <p className="font-semibold">
+            판정: <CodeText text={reasonHead} />
+          </p>
+          {reasonDetail && (
+            <p className="mt-0.5">
+              <CodeText text={reasonDetail} />
+            </p>
+          )}
         </div>
         <p className="bp-prose mt-2.5 border-t border-ink/10 pt-2 text-ink-muted">
           <span className="font-semibold">검토한 주장 · </span>
-          {assessment.claim}
+          <CodeText text={assessment.claim} />
         </p>
       </div>
       <div className="grid gap-x-5 gap-y-6 xl:grid-cols-2">
@@ -143,9 +192,16 @@ export function CriticAssessmentView({
             {assessment.missing_controls.map((m) => (
               <li key={m.id} className="rounded-md border border-brand/30 bg-brand-soft/50 p-3">
                 <p className="text-sm font-semibold text-brand-strong">{m.name}</p>
-                <p className="bp-prose mt-0.5 text-ink-muted">{m.purpose}</p>
-                {m.decision_note && <p className="bp-prose mt-1 text-ink">결정 이력: {m.decision_note}</p>}
+                <p className="bp-prose mt-0.5 text-ink-muted">
+                  <CodeText text={m.purpose} />
+                </p>
+                {m.decision_note && (
+                  <p className="bp-prose mt-1 text-ink">
+                    결정 이력: <CodeText text={m.decision_note} />
+                  </p>
+                )}
                 <EvidenceList keys={m.evidence_keys} evidence={byKey} max={3} />
+                <ControlProposals controlId={m.id} proposals={proposals} />
               </li>
             ))}
           </ul>
@@ -161,7 +217,7 @@ export function CriticAssessmentView({
                     <span className="mr-1.5 inline-block align-[0.1em]">
                       <Badge tone="neutral">P{f.proposal_id}</Badge>
                     </span>
-                    {f.note}
+                    <CodeText text={f.note} />
                   </p>
                 </li>
               ))}
@@ -200,15 +256,17 @@ export function CriticAssessmentView({
                       <Badge tone={alt.status === "weakened" ? "neutral" : "ai"}>{STATUS_LABEL[alt.status]}</Badge>
                       <Badge tone="warn">추정</Badge>
                     </div>
-                    <p className="mt-0.5 text-ink-muted">{alt.mechanism}</p>
+                    <p className="mt-0.5 text-ink-muted">
+                      <CodeText text={alt.mechanism} />
+                    </p>
                     {alt.supporting.map((a) => (
                       <p key={`s-${a.statement}`} className="mt-1">
-                        <span className="font-semibold text-ok">＋ 지지</span> {a.statement}
+                        <span className="font-semibold text-ok">＋ 지지</span> <CodeText text={a.statement} />
                       </p>
                     ))}
                     {alt.opposing.map((a) => (
                       <p key={`o-${a.statement}`} className="mt-1">
-                        <span className="font-semibold text-crit">－ 반대</span> {a.statement}
+                        <span className="font-semibold text-crit">－ 반대</span> <CodeText text={a.statement} />
                       </p>
                     ))}
                   </li>

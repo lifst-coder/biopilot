@@ -3,7 +3,7 @@ import { useState } from "react";
 import { isDemo } from "@/api/demo";
 import { useDecideProposal, useProposalExperimentDraft } from "@/api/queries";
 import type { DecisionCreate, ProposalOut } from "@/api/types";
-import { Badge, EngineBadge, ErrorState } from "@/components";
+import { Badge, CodeText, EngineBadge, ErrorState, ExperimentLink } from "@/components";
 import { formatConditionValue, formatDate, formatDateTime } from "@/lib/format";
 import { DesignDetails } from "./DesignDetails";
 
@@ -18,7 +18,9 @@ function DraftPreview({ proposalId }: { proposalId: number }) {
   return (
     <div className="space-y-1 rounded-md border border-border p-3 text-sm">
       <p>
-        <b>{data.draft.code}</b> · 기준 {data.base_experiment_code} {!data.ready && <Badge tone="warn">미리보기</Badge>}
+        <b>{data.draft.code}</b> · 기준{" "}
+        <ExperimentLink id={data.base_experiment_id}>{data.base_experiment_code}</ExperimentLink>{" "}
+        {!data.ready && <Badge tone="warn">미리보기</Badge>}
       </p>
       {data.notes.map((n) => (
         <p key={n} className="text-ink-muted">
@@ -51,7 +53,10 @@ export function ProposalCard({ proposal, codeOf }: { proposal: ProposalOut; code
 
   return (
     <article
+      id={`proposal-${proposal.id}`}
+      tabIndex={-1}
       className={clsx(
+        "scroll-mt-4 outline-none focus-visible:ring-2 focus-visible:ring-brand/50",
         "flex min-w-0 flex-col gap-3 rounded-md border p-4 text-sm",
         proposal.status === "pending" ? "border-border bg-surface" : "border-border bg-subtle/60",
       )}
@@ -65,8 +70,12 @@ export function ProposalCard({ proposal, codeOf }: { proposal: ProposalOut; code
         </span>
       </header>
       <div>
-        <h3 className="text-base font-semibold leading-snug">{proposal.title}</h3>
-        <p className="bp-prose mt-1 text-ink-muted">{proposal.description}</p>
+        <h3 className="text-base font-semibold leading-snug">
+          <CodeText text={proposal.title} />
+        </h3>
+        <p className="bp-prose mt-1 text-ink-muted">
+          <CodeText text={proposal.description} />
+        </p>
       </div>
       {proposal.supersedes_proposal_ids.length > 0 && (
         <p className="text-ai">기각 사유 반영: {proposal.supersedes_proposal_ids.map((id) => `P${id}`).join(", ")} 대체</p>
@@ -114,7 +123,9 @@ export function ProposalCard({ proposal, codeOf }: { proposal: ProposalOut; code
           {proposal.decision.decided_on
             ? `${formatDate(proposal.decision.decided_on)} 결정`
             : formatDateTime(proposal.decision.created_at)}
-          <p className="bp-prose mt-1 text-ink-muted">사유: {proposal.decision.rationale}</p>
+          <p className="bp-prose mt-1 text-ink-muted">
+            사유: <CodeText text={proposal.decision.rationale} />
+          </p>
           {proposal.decision.constraints.length > 0 && (
             <p className="text-ink-faint">인식된 제약: {proposal.decision.constraints.join(", ")}</p>
           )}

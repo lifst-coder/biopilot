@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useChangeHypothesisStatus } from "@/api/queries";
 import type { HypothesisOut } from "@/api/types";
-import { Badge, ErrorState } from "@/components";
+import { Badge, CodeText, ErrorState } from "@/components";
 
 const NEXT: Record<HypothesisOut["status"], HypothesisOut["status"][]> = {
   proposed: ["open"],
@@ -28,8 +28,14 @@ export function HypothesisItem({ hypothesis, resultIds }: { hypothesis: Hypothes
         <Badge>{LABEL[hypothesis.status]}</Badge>
         <span className="text-ink-faint">H{hypothesis.id}</span>
       </div>
-      <p className="bp-prose font-medium">{hypothesis.statement}</p>
-      {hypothesis.rationale && <p className="bp-prose mt-0.5 text-ink-muted">{hypothesis.rationale}</p>}
+      <p className="bp-prose font-medium">
+        <CodeText text={hypothesis.statement} />
+      </p>
+      {hypothesis.rationale && (
+        <p className="bp-prose mt-0.5 text-ink-muted">
+          <CodeText text={hypothesis.rationale} />
+        </p>
+      )}
       {hypothesis.transitions.map((t) => (
         <p key={t.id} className="mt-0.5 text-ink-faint">
           {LABEL[t.from_status]} → {LABEL[t.to_status]}: {t.rationale}
