@@ -46,6 +46,29 @@
 - 제안: dev 의존성 `pytest-cov`, CI `pytest app/eln --cov=app/eln --cov-fail-under=90`, `.gitignore`에 `.coverage`.
 - 완료 기준: CI에서 ELN 커버리지 게이트 동작. (TASKS에 근거가 없는 선택 항목 — REVIEW §ELN-5)
 
+## [OPEN] CI — qc-validator 시험 잡
+- 요청자: qc-validator · 날짜: 2026-11-11
+- 필요 이유: `qc-validator/`는 외부 패키지 없는 Node 프로젝트인데 CI에서 시험이 돌지 않는다. 지금은 로컬 실행으로만 확인한다.
+- 제안: `.github/workflows/ci.yml`에 잡 추가 — `actions/setup-node@v4`(node 22), `working-directory: qc-validator`,
+  `node --test tests/*.test.mjs`. `tests/eln.test.mjs`가 커밋된 `dist/index.html`과 소스의 일치도 검사한다.
+  브라우저 시험(`node tests/browser.mjs`)은 Chrome 경로를 `CHROME_PATH`로 받으며 Linux 러너에서는 아직 실행해 보지 않았다.
+- 완료 기준: PR에서 qc-validator 잡이 초록, 시험 122개 통과.
+
+## [OPEN] Pages — qc-validator를 데모 사이트 `/qc/`에 배포
+- 요청자: qc-validator · 날짜: 2026-11-11
+- 필요 이유: 도구는 단일 HTML이라 정적 호스팅만 있으면 되는데, 데모 사이트에서 열 수 없다.
+- 제안: `.github/workflows/pages.yml`의 빌드 뒤에 `mkdir -p frontend/dist/qc && cp qc-validator/dist/index.html frontend/dist/qc/index.html`.
+  도구는 상대 경로나 `/api` 호출을 쓰지 않으므로 SPA의 404 대체와 충돌하지 않는다.
+- 완료 기준: `https://lifst-coder.github.io/biopilot/qc/`에서 도구가 열리고 README에 링크 추가.
+
+## [OPEN] CLAUDE.md — qc-validator 영역 등록
+- 요청자: qc-validator · 날짜: 2026-11-11
+- 필요 이유: §3 담당 표와 §4 커밋 접두사 목록에 `qc-validator`가 없다. 병합 커밋은 `qc-validator:` 접두사를 썼다.
+  §1 "수치 계산은 Python"은 본편 화면의 숫자에 대한 원칙이고, 이 도구는 본편에 계산값을 넘기지 않는 독립 도구라는 점을 문서에 밝혀야 혼동이 없다.
+- 제안: §3 표에 `QC Validator | qc-validator/**` 행, §4 접두사에 `qc-validator`, §5에 `cd qc-validator && node --test tests/*.test.mjs && node scripts/build.mjs`,
+  §1 아래에 "qc-validator는 본편에 원자료만 내보낸다(계산값을 본편 화면에 쓰지 않는다)" 한 줄.
+- 완료 기준: 문서 반영.
+
 ### 계약 문서
 
 ## [DONE] docs — ARCHITECTURE.md 갱신 (3건 → 1건)
@@ -104,6 +127,16 @@
   `result_changes[].sources`(분석 결과 id)를 표시한다.
 - 완료 기준: #018 vs #024에서 회수율 Δ와 출처, 새로 생긴 QC 플래그, "10"→"5" 단어 강조가 화면에 보임.
 
+## [OPEN] eln — 배치(시퀀스) 데이터셋 kind
+- 요청자: qc-validator · 날짜: 2026-11-11
+- 필요 이유: 본편의 `calibration`·`recovery` 계약에는 시료 유형, 머무름 시간, 희석배수, 반복, 주입 순서가 없다.
+  그래서 qc-validator가 검증한 배치에서 QC 시료·바탕·중복·미지 시료를 본편으로 옮기지 못한다(`qc-validator/src/eln.js`의 notes).
+- 제안하는 계약: `sequence@1` — 필수 `injection_id, sample_id, sample_type, analyte, analyte_area`,
+  선택 `is_area, level_ng_ml, retention_time_min, dilution_factor, replicate, injection_order, parent_sample_id`,
+  `sample_type` enum `standard|cal_blank|method_blank|qc|spike|duplicate|sample`.
+  열 이름과 유형 동의어는 `qc-validator/src/parse.js`의 FIELDS·TYPE_SYN, 값 검증 규칙은 같은 파일의 `buildRecords`를 참고.
+- 완료 기준: 업로드 검증·sha256·감사 이벤트는 기존 kind와 동일, `qc-validator/data/scenarios/*.csv`를 변환한 파일이 통과.
+
 ### Memory
 
 ## [OPEN] memory — 연구자 결정 사유를 Research Memory 검색에 반영 (wiring pull로 통일)
@@ -159,6 +192,22 @@
 - 제안: `RecoveryOutput.by_is_flag: {flagged, normal, welch_p}`(추가 필드), result kind `factorial`
   (조건 블록 `design = factorial 2x2`, `factor_<key>`).
 - 완료 기준: 시드 #024에서 by_is_flag 생성, 요인 실험 단위 테스트.
+
+## [OPEN] analysis — 배치 QC 점검과 검량선 진단을 L3로 포팅
+- 요청자: qc-validator · 날짜: 2026-11-11
+- 필요 이유: 아래 점검은 지금 qc-validator(JavaScript)에만 있다. 본편 화면에 쓰려면 "수치 계산은 Python" 원칙에 따라 L3에 있어야 한다.
+- 제안 (QCFlag 코드와 참고 구현):
+  - `blank_signal_high` — 바탕 시료의 분석물 면적 / LLOQ 표준 평균 면적 (`qc-validator/src/qc.js` 1절, 기준 ICH M10 3.2.1의 20%)
+  - `retention_time_shift` — 검량 표준 평균 대비 머무름 시간 차이 (같은 파일 6절, 기준 SANTE/11312/2021 ±0.1분)
+  - `duplicate_rpd_high` — 중복 시료 RPD (3절)
+  - `required_qc_missing` — 배치에 필요한 QC 구성 (7절)
+  - `calibration_nonlinear`, `calibration_outlier_candidate` — 2차 항 F 검정 + 크기 조건, 스튜던트화 잔차·제외 후 재적합
+    (`qc-validator/src/calibration.js`, `src/stats.js`의 `curvatureTest`·`studentized`)
+  - 검량선 적합성을 역산 정확도·수준 수·범위 끝점으로 판정하는 기준(`cal.minLevels`, `cal.minPassPct` 등, `qc-validator/docs/QC-규칙-명세.md` 4절)
+- 선행 조건: 위 eln `sequence@1` kind(시료 유형·머무름 시간 열).
+- 검증 자료: `qc-validator/data/answer_key.json`의 오류 시나리오 8종과 정답표, 경계값 시험 `qc-validator/tests/qc.test.mjs`.
+  같은 원자료에서 두 구현의 가중 회귀 결과는 이미 일치한다(`qc-validator/scripts/verify_eln_bridge.py`).
+- 완료 기준: 시나리오 8종에서 정답표의 플래그가 나오고, 포팅한 값이 qc-validator 값과 상대 오차 1e-9 안에서 일치.
 
 ### Partner
 

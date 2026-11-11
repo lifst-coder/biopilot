@@ -1,0 +1,107 @@
+<title>BIOPILOT</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/*__CSS__*/
+</style>
+
+<header class="topbar">
+  <div class="wrapx">
+    <div class="brand">BIOPILOT<small>LC-MS/MS 정량 데이터 품질 검증</small></div>
+    <nav class="tabs" role="tablist" aria-label="화면">
+      <button class="tab" role="tab" id="tab-dashboard" data-view="dashboard">Dashboard</button>
+      <button class="tab" role="tab" id="tab-import" data-view="import">Data Import</button>
+      <button class="tab" role="tab" id="tab-calibration" data-view="calibration">Calibration</button>
+      <button class="tab" role="tab" id="tab-qc" data-view="qc">QC Review <span class="count" id="tab-qc-count" hidden></span></button>
+      <button class="tab" role="tab" id="tab-assistant" data-view="assistant">AI Research Assistant</button>
+      <button class="tab" role="tab" id="tab-report" data-view="report">Report</button>
+    </nav>
+  </div>
+</header>
+<div class="source"><div class="wrapx" id="source-strip"></div></div>
+
+<main class="wrapx">
+  <section class="view" id="view-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+    <div class="view-head"><h1>배치 현황</h1><p class="lead" id="dash-lead"></p></div>
+    <div class="tiles" id="dash-tiles"></div>
+    <div id="dash-banners" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="panel"><h2>배치 × 분석물 판정 <small>칸을 누르면 해당 QC 검토로 이동</small></h2><div class="table-wrap" id="dash-matrix"></div>
+      <div class="legend"><span><span class="pill pass">적합</span> 기준 미충족·주의 없음</span><span><span class="pill warn">주의</span> 진단 경고만 있음</span><span><span class="pill fail">미충족</span> 설정된 기준을 벗어남</span></div></div>
+    <div class="grid2">
+      <div class="panel"><h2>먼저 볼 항목</h2><div id="dash-top"></div></div>
+      <div class="panel"><h2>검토가 필요한 시료 <small id="dash-review-count"></small></h2><div class="table-wrap" id="dash-review" style="max-height:340px;overflow-y:auto"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-import" role="tabpanel" aria-labelledby="tab-import" hidden>
+    <div class="view-head"><h1>데이터 가져오기</h1><p class="lead">장비에서 내보낸 정량 결과를 올립니다. 한 행이 한 주입의 한 분석물인 긴 형식(long format)의 CSV 또는 XLSX를 지원합니다. 읽을 수 없는 값은 채우지 않고 그대로 표시합니다.</p></div>
+    <div class="grid2">
+      <div class="drop" id="drop">
+        <h3>파일 올리기</h3>
+        <p class="note">CSV(.csv, .tsv, .txt) 또는 Excel(.xlsx). 파일은 이 브라우저 안에서만 처리되고 서버로 보내지 않습니다.</p>
+        <input type="file" id="file-input" accept=".csv,.tsv,.txt,.xlsx" aria-label="정량 결과 파일">
+        <p class="note">여기로 파일을 끌어다 놓아도 됩니다.</p>
+      </div>
+      <div class="panel">
+        <h3>합성 예시 데이터</h3>
+        <p class="note">실제 기관 데이터가 아닙니다. 정상 배치 1개와 오류를 하나씩 넣은 배치 8개입니다.</p>
+        <div class="toolbar"><label class="inline" for="demo-select">데이터 <select id="demo-select"></select></label><button class="btn" id="demo-load">불러오기</button></div>
+      </div>
+    </div>
+    <div id="import-error"></div>
+    <div id="import-body" style="display:flex;flex-direction:column;gap:20px"></div>
+  </section>
+
+  <section class="view" id="view-calibration" role="tabpanel" aria-labelledby="tab-calibration" hidden>
+    <div class="view-head"><h1>검량선</h1><p class="lead">적합성은 R²가 아니라 검량점별 역산 정확도, 농도 수준 수, 범위 끝점으로 판정합니다. R²는 참고값으로만 표시합니다.</p></div>
+    <div class="panel"><div class="toolbar" id="cal-toolbar"></div></div>
+    <div id="cal-body" style="display:flex;flex-direction:column;gap:16px"></div>
+  </section>
+
+  <section class="view" id="view-qc" role="tabpanel" aria-labelledby="tab-qc" hidden>
+    <div class="view-head"><h1>QC 검토</h1><p class="lead">설정된 기준을 그대로 적용한 판정입니다. 기본 기준은 예시이며, 실제 판정에는 해당 분석법·규격·SOP의 값을 아래 "QC 기준 설정"에 입력해야 합니다.</p></div>
+    <div class="panel"><div class="toolbar" id="qc-toolbar"></div></div>
+    <div class="table-wrap" id="qc-table"></div>
+    <div id="qc-detail" style="display:flex;flex-direction:column;gap:16px"></div>
+    <details class="panel" id="rules-panel"><summary><b>QC 기준 설정</b> <span class="tag">예시 기준</span> <span class="note" id="rules-state"></span></summary>
+      <div class="toolbar"><label class="inline" for="rules-profile">기준 묶음 <select id="rules-profile"></select></label><button class="btn" id="rules-apply-profile">이 묶음 적용</button><span class="note" id="rules-msg"></span></div>
+      <p class="note" id="rules-note"></p>
+      <div class="table-wrap rules" id="rules-table"></div>
+    </details>
+  </section>
+
+  <section class="view" id="view-assistant" role="tabpanel" aria-labelledby="tab-assistant" hidden>
+    <div class="view-head"><h1>AI 연구 보조</h1><p class="lead">계산은 엔진이 하고, 여기서는 그 결과를 읽어 원인 후보를 정리합니다. 관측 사실과 가설을 나눠 적으며, 데이터만으로 원인을 확정하지 않습니다.</p></div>
+    <div class="panel"><h2>분석 결과 요약 <small>계산값으로 만든 문장</small></h2><ul class="plain" id="as-summary"></ul></div>
+    <div class="panel">
+      <h2>LLM 해석 <small>선택 기능</small></h2>
+      <p class="note">아래 규칙 기반 진단과 엔진의 판정 결과만 Claude에게 보내 요약과 빠진 관점을 요청합니다. 원자료 행은 보내지 않습니다. 돌아온 글에 계산 결과에 없는 수치나 단정 표현이 있으면 표시합니다.</p>
+      <div class="toolbar"><button class="btn primary" id="llm-run" disabled>Claude에게 해석 요청</button><button class="btn" id="llm-stop" hidden>중지</button><span class="note" id="llm-state">연결 확인 중…</span></div>
+      <div id="llm-out"></div>
+    </div>
+    <div class="panel"><div class="toolbar" id="as-toolbar"></div><div class="legend"><span><svg width="14" height="14"><rect width="3" height="14" fill="var(--s1)"/></svg>관측 사실: 데이터에서 계산된 값</span><span><svg width="14" height="14"><rect width="3" height="14" fill="var(--warn)"/></svg>가능한 원인: 가설</span></div></div>
+    <div id="as-cards" style="display:flex;flex-direction:column;gap:16px"></div>
+  </section>
+
+  <section class="view" id="view-report" role="tabpanel" aria-labelledby="tab-report" hidden>
+    <div class="view-head"><h1>보고서</h1><p class="lead">분석 요약, QC 결과, 검토 기록을 한 문서로 묶어 내보냅니다.</p></div>
+    <div class="panel no-print">
+      <h2>내보내기</h2>
+      <div class="toolbar"><button class="btn primary" data-export="html">보고서 (HTML)</button><button class="btn" data-export="json">구조화 데이터 (JSON)</button><button class="btn" data-export="findings">QC 판정 표 (CSV)</button><button class="btn" data-export="quant">정량 결과 표 (CSV)</button><button class="btn" id="print-btn" hidden>인쇄 · PDF로 저장</button></div>
+      <p class="note" id="export-msg">HTML 보고서는 브라우저에서 열어 인쇄하면 PDF로 저장할 수 있습니다.</p>
+    </div>
+    <div class="panel no-print" id="eln-panel">
+      <h2>BioPilot 본편(ELN)으로 보내기 <small>원자료만 옮깁니다</small></h2>
+      <p class="note">검증한 배치의 검량 표준과 첨가 시료 원자료를 BioPilot ELN의 데이터셋 형식(calibration, recovery)으로 내보냅니다. 계산 결과는 넣지 않습니다. 본편은 올린 원본에서 Python 코드로 다시 계산합니다.</p>
+      <div class="toolbar"><label class="inline" for="eln-batch">배치 <select id="eln-batch"></select></label><button class="btn" data-eln="calibration">calibration CSV</button><button class="btn" data-eln="recovery">recovery CSV</button></div>
+      <div id="eln-summary"></div>
+    </div>
+    <div class="panel no-print"><h2>검토 메모 추가</h2><div class="toolbar"><input type="text" id="memo-text" placeholder="예: 11/11 표준 재조제 후 재분석 결정" style="flex:1;min-width:220px" aria-label="검토 메모"><button class="btn" id="memo-add">기록에 추가</button></div></div>
+    <div class="panel" id="report-preview"></div>
+  </section>
+</main>
+<footer class="wrapx">BIOPILOT 분석 엔진 v<span id="ft-version"></span> · 계산은 결정론적이며 LLM이 수정하지 않습니다 · 기본 QC 기준은 예시입니다.</footer>
+
+<script>
+/*__JS__*/
+</script>

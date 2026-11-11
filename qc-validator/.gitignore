@@ -1,0 +1,5 @@
+# 빌드 산출물 중 게시용 조각과 시험 임시 파일은 커밋하지 않는다 (dist/index.html은 커밋)
+dist/artifact.html
+dist/_*.html
+tests/last-browser-*.json
+node_modules/
