@@ -260,9 +260,20 @@ cd frontend && npm run check:api && npm run typecheck && npm test && npm run bui
 cd frontend && E2E_PYTHON=../backend/.venv/bin/python npm run e2e   # Playwright, reference + lab
 ```
 
+### 배치 QC 검증 도구 (qc-validator)
+
+본편과 별개로, 한 배치의 LC-MS/MS 정량 결과 파일(CSV·XLSX)을 브라우저에서 바로 검증하는 독립 도구가 [qc-validator/](qc-validator/README.md)에 있다.
+서버와 설치 없이 `qc-validator/dist/index.html`을 열면 된다.
+
+- 점검: 검량선 적합성(R² 단독 판정 아님)·비선형·이상점, 바탕 오염, QC 정확도, 중복, 첨가 회수율, 내부표준 응답, 머무름 시간, 필수 QC 누락. 기준은 화면에서 바꾸며 기본값은 예시다.
+- 이상 항목마다 관측 사실과 원인 가설을 나눠 적고, 원인은 확정하지 않는다.
+- 본편과의 연결: 검증한 배치의 **원자료만** 본편 데이터셋 계약(`calibration@1`, `recovery@1`)으로 내보낸다. 본편은 올린 원본에서 Python 코드로 다시 계산하므로 "수치 계산은 Python" 원칙은 그대로다. 같은 원자료에서 두 구현의 기울기·절편·R²·회수율이 일치함을 `qc-validator/scripts/verify_eln_bridge.py`로 확인했다.
+- 시험: `cd qc-validator && node --test tests/*.test.mjs` (Node 22, 외부 패키지 없음). CI와 Pages 연결은 [CHANGES_REQUESTED.md](CHANGES_REQUESTED.md)에 요청으로 남아 있다.
+
 ## 8. 더 읽을 것
 
 - 작업 규칙: [CLAUDE.md](CLAUDE.md) · 구조와 계약: [ARCHITECTURE.md](ARCHITECTURE.md)
 - 남은 일과 알려진 한계: [ISSUES.md](ISSUES.md) · 모듈 간 요청: [CHANGES_REQUESTED.md](CHANGES_REQUESTED.md) · 백로그: [TASKS.md](TASKS.md)
 - 성능(1000 실험): [PERFORMANCE.md](PERFORMANCE.md) · 보안·견고성 점검: [SECURITY_REVIEW.md](SECURITY_REVIEW.md) · 제출 전 최종 점검: [FINAL_CHECK.md](FINAL_CHECK.md)
+- 배치 QC 검증 도구(브라우저 단독 실행): [qc-validator/README.md](qc-validator/README.md) · 기준과 출처: [qc-validator/docs/QC-규칙-명세.md](qc-validator/docs/QC-규칙-명세.md)
 - 시드 시나리오(6개월의 연구실 이야기): [backend/app/seed/SCENARIO.md](backend/app/seed/SCENARIO.md)

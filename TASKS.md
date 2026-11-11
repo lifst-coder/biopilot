@@ -179,3 +179,26 @@ API 변경 시 `openapi.json`/`schema.d.ts` 재생성, 새 쓰기 경로는 Audi
 - [ ] **FE-9 번들 최적화**
   Recharts 분리 청크, 탭 프리페치.
   완료 기준: 초기 JS < 250 kB gzip, 빌드 경고 없음.
+
+## QC Validator (`qc-validator/**`)
+
+> 2026-11-11 병합. 본편 모듈과 독립인 브라우저 도구다. 도구의 실행 코드(`src/`)는 본편 코드를 쓰지 않고, 본편도 이 폴더를 import하지 않는다.
+> 예외는 대조용 스크립트 `scripts/verify_eln_bridge.py` 하나로, 본편 모듈을 읽기만 한다.
+> 연결은 `src/eln.js`의 원자료 내보내기(본편 데이터셋 계약)뿐이다.
+
+- [x] **QCV-1 독립 도구 병합** (2026-11-11)
+  분석 엔진(JS)·화면 6개·합성 시나리오 9개와 정답표·문서 4종. 완료 기준: `node --test tests/*.test.mjs` 통과,
+  `dist/index.html`이 소스와 일치(`tests/eln.test.mjs`).
+- [x] **QCV-2 본편 ELN 형식 내보내기** (2026-11-11)
+  `calibration@1`·`recovery@1` 계약으로 원자료만 내보내기(화면 Report, CLI `scripts/eln-export.mjs`).
+  완료 기준: 본편 `validate_csv_text` 통과 + 본편 L3 계산과 수치 일치(`scripts/verify_eln_bridge.py`, B04-SPIKE·B02-OUTLIER에서 확인).
+- [ ] **QCV-3 CI 잡과 Pages 배포**
+  CI·Pages 워크플로는 공유 파일 → CHANGES_REQUESTED 경유. 완료 기준: PR마다 `node --test` 실행, 데모 사이트의 `/qc/`에서 도구가 열림.
+- [ ] **QCV-4 넓은 형식(장비 내보내기) 입력**
+  지금은 긴 형식만 읽는다. 본편 ELN-9 변환기의 규칙을 참고해 넓은 형식을 긴 형식으로 바꾸는 매핑 단계 추가.
+  완료 기준: 샘플 파일 2종 변환 시험, 변환 전 원본 값 보존.
+- [ ] **QCV-5 실제 Claude 호출 경로 검증**
+  LLM 해석은 가짜 응답으로만 시험했다. Artifact 게시본에서 실제 호출 후 가드(근거 없는 수치·단정 표현) 동작을 기록.
+- [ ] **QCV-6 본편 L3 포팅 이후 정리**
+  바탕·머무름 시간·중복·필수 QC·검량선 진단이 본편 Analysis로 옮겨지면(CHANGES_REQUESTED), 이 도구의 같은 계산은
+  본편 결과와의 대조 시험으로 남기고 문서에서 중복 구현임을 밝힌다.
