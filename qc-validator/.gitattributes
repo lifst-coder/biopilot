@@ -1,0 +1,5 @@
+# 시험 입력과 빌드 산출물은 바이트 그대로 보관한다(줄바꿈·인코딩 변환 금지)
+data/** -text
+dist/index.html -text
+*.xlsx binary
+*.xls binary

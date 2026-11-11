@@ -1,0 +1,267 @@
+{
+ "note": "합성 데이터 정답표. expected는 반드시 탐지해야 하는 (오류 코드, 분석물), expectedAny는 그중 하나 이상, allowed는 주입한 오류의 직접적 결과로 함께 나와도 되는 항목. rootCause는 합성 시 실제로 넣은 원인이며 도구는 이를 확정하지 않아야 한다(모든 진단의 원인 상태는 \"원인 미확정\").",
+ "seed": 1,
+ "header": [
+  "Batch ID",
+  "Sample ID",
+  "Sample Type",
+  "Analyte",
+  "Concentration Level",
+  "Nominal Concentration",
+  "Peak Area",
+  "Internal Standard Area",
+  "Retention Time",
+  "Dilution Factor",
+  "Replicate",
+  "Injection Order",
+  "Parent Sample ID"
+ ],
+ "scenarios": [
+  {
+   "id": "S0",
+   "batch": "B00-NORMAL",
+   "name": "정상 배치",
+   "file": "scenarios/S0_B00-NORMAL.csv",
+   "rootCause": "오류 없음",
+   "expected": [],
+   "expectedAny": [],
+   "allowed": [],
+   "expectedCauseStatus": "원인 미확정"
+  },
+  {
+   "id": "S1",
+   "batch": "B01-NONLINEAR",
+   "name": "검량선 비선형성",
+   "file": "scenarios/S1_B01-NONLINEAR.csv",
+   "rootCause": "Caffeine 응답을 고농도에서 포화시킴(500에서 약 −28%)",
+   "expected": [
+    [
+     "CAL_NONLINEAR",
+     "Caffeine"
+    ]
+   ],
+   "expectedAny": [],
+   "allowed": [
+    [
+     "CAL_POINT_DEV",
+     "Caffeine"
+    ],
+    [
+     "CAL_FAIL",
+     "Caffeine"
+    ],
+    [
+     "QC_ACCURACY",
+     "Caffeine"
+    ],
+    [
+     "QC_BATCH_FAIL",
+     "Caffeine"
+    ],
+    [
+     "SAMPLE_ABOVE_RANGE",
+     "Caffeine"
+    ],
+    [
+     "SPIKE_LOW",
+     "Caffeine"
+    ],
+    [
+     "SPIKE_HIGH",
+     "Caffeine"
+    ],
+    [
+     "DUP_RPD",
+     "Caffeine"
+    ]
+   ],
+   "expectedCauseStatus": "원인 미확정"
+  },
+  {
+   "id": "S2",
+   "batch": "B02-OUTLIER",
+   "name": "검량점 이상치",
+   "file": "scenarios/S2_B02-OUTLIER.csv",
+   "rootCause": "Carbamazepine 50 ng/mL 표준의 분석물 면적을 1.45배로 만듦",
+   "expected": [
+    [
+     "CAL_OUTLIER",
+     "Carbamazepine"
+    ]
+   ],
+   "expectedAny": [],
+   "allowed": [
+    [
+     "CAL_POINT_DEV",
+     "Carbamazepine"
+    ],
+    [
+     "CAL_FAIL",
+     "Carbamazepine"
+    ],
+    [
+     "QC_ACCURACY",
+     "Carbamazepine"
+    ],
+    [
+     "QC_BATCH_FAIL",
+     "Carbamazepine"
+    ],
+    [
+     "SPIKE_LOW",
+     "Carbamazepine"
+    ],
+    [
+     "SPIKE_HIGH",
+     "Carbamazepine"
+    ]
+   ],
+   "expectedCauseStatus": "원인 미확정"
+  },
+  {
+   "id": "S3",
+   "batch": "B03-BLANK",
+   "name": "Blank 오염 신호",
+   "file": "scenarios/S3_B03-BLANK.csv",
+   "rootCause": "Caffeine 방법 바탕에 LLOQ 응답의 약 60%에 해당하는 신호를 넣음",
+   "expected": [
+    [
+     "MB_CONTAM",
+     "Caffeine"
+    ]
+   ],
+   "expectedAny": [],
+   "allowed": [],
+   "expectedCauseStatus": "원인 미확정"
+  },
+  {
+   "id": "S4",
+   "batch": "B04-SPIKE",
+   "name": "낮은 Spike Recovery",
+   "file": "scenarios/S4_B04-SPIKE.csv",
+   "rootCause": "Sulfamethoxazole 첨가 시료의 분석물 면적을 0.45배로 만듦(내부표준은 그대로)",
+   "expected": [
+    [
+     "SPIKE_LOW",
+     "Sulfamethoxazole"
+    ]
+   ],
+   "expectedAny": [],
+   "allowed": [],
+   "expectedCauseStatus": "원인 미확정"
+  },
+  {
+   "id": "S5",
+   "batch": "B05-IS",
+   "name": "내부표준 응답 이상",
+   "file": "scenarios/S5_B05-IS.csv",
+   "rootCause": "Carbamazepine의 미지 시료 3개에서 분석물과 내부표준 면적을 함께 0.3배로 만듦",
+   "expected": [
+    [
+     "IS_RESPONSE",
+     "Carbamazepine"
+    ]
+   ],
+   "expectedAny": [],
+   "allowed": [],
+   "expectedCauseStatus": "원인 미확정"
+  },
+  {
+   "id": "S6",
+   "batch": "B06-RT",
+   "name": "Retention Time Shift",
+   "file": "scenarios/S6_B06-RT.csv",
+   "rootCause": "배치 후반으로 갈수록 모든 분석물의 머무름 시간이 최대 +0.28분 늦어짐",
+   "expected": [
+    [
+     "RT_SHIFT",
+     "Caffeine"
+    ],
+    [
+     "RT_SHIFT",
+     "Carbamazepine"
+    ],
+    [
+     "RT_SHIFT",
+     "Sulfamethoxazole"
+    ]
+   ],
+   "expectedAny": [],
+   "allowed": [],
+   "expectedCauseStatus": "원인 미확정"
+  },
+  {
+   "id": "S7",
+   "batch": "B07-PRECISION",
+   "name": "반복 측정 변동 증가",
+   "file": "scenarios/S7_B07-PRECISION.csv",
+   "rootCause": "Caffeine의 QC·중복 시료에 CV 약 28%의 추가 변동을 넣음(내부표준은 그대로)",
+   "expected": [],
+   "expectedAny": [
+    [
+     "QC_PRECISION",
+     "Caffeine"
+    ],
+    [
+     "DUP_RPD",
+     "Caffeine"
+    ]
+   ],
+   "allowed": [
+    [
+     "QC_PRECISION",
+     "Caffeine"
+    ],
+    [
+     "QC_ACCURACY",
+     "Caffeine"
+    ],
+    [
+     "QC_BATCH_FAIL",
+     "Caffeine"
+    ],
+    [
+     "DUP_RPD",
+     "Caffeine"
+    ],
+    [
+     "SPIKE_LOW",
+     "Caffeine"
+    ],
+    [
+     "SPIKE_HIGH",
+     "Caffeine"
+    ],
+    [
+     "SAMPLE_ABOVE_RANGE",
+     "Caffeine"
+    ]
+   ],
+   "expectedCauseStatus": "원인 미확정"
+  },
+  {
+   "id": "S8",
+   "batch": "B08-MISSINGQC",
+   "name": "누락된 QC",
+   "file": "scenarios/S8_B08-MISSINGQC.csv",
+   "rootCause": "방법 바탕, 고농도 QC, 첨가 시료를 배치에서 뺌",
+   "expected": [
+    [
+     "QC_MISSING",
+     "Caffeine"
+    ],
+    [
+     "QC_MISSING",
+     "Carbamazepine"
+    ],
+    [
+     "QC_MISSING",
+     "Sulfamethoxazole"
+    ]
+   ],
+   "expectedAny": [],
+   "allowed": [],
+   "expectedCauseStatus": "원인 미확정"
+  }
+ ]
+}

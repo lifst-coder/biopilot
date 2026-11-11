@@ -1,0 +1,15 @@
+{
+  "name": "biopilot-qc-validator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "LC-MS/MS 정량 데이터 품질 검증 도구 (브라우저 단독 실행, 의존성 없음)",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "test:browser": "node tests/browser.mjs && node tests/browser.mjs 400",
+    "data": "node scripts/gen-data.mjs",
+    "eval": "node scripts/evaluate.mjs 300",
+    "docs": "node scripts/gen-docs.mjs 300"
+  }
+}
